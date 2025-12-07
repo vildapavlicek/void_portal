@@ -61,6 +61,12 @@ mod tests {
         ));
 
         app.insert_resource(EnemySpawnTimer(Timer::from_seconds(7.5, TimerMode::Repeating)));
+        app.insert_resource(crate::configs::EnemyConfig {
+            max_health: 100.0,
+            lifetime: 10.0,
+            speed: 100.0,
+            spawn_limit: 5,
+        });
 
         // Add systems
         app.add_systems(Update, (spawn_enemies, enemy_lifetime));

@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use rand::Rng;
+use crate::configs::EnemyConfig;
 
 // Components
 #[derive(Component)]
@@ -59,6 +60,7 @@ pub fn spawn_enemies(
     mut commands: Commands,
     time: Res<Time>,
     mut spawn_timer: ResMut<EnemySpawnTimer>,
+    enemy_config: Res<EnemyConfig>,
     enemy_query: Query<Entity, With<Enemy>>,
     portal_query: Query<&Transform, With<Portal>>,
     window_query: Query<&Window, With<PrimaryWindow>>,
@@ -66,7 +68,7 @@ pub fn spawn_enemies(
     spawn_timer.0.tick(time.delta());
 
     if spawn_timer.0.just_finished() {
-        if enemy_query.iter().count() >= 5 {
+        if enemy_query.iter().count() >= enemy_config.spawn_limit {
             info!("Max enemies reached, skipping spawn");
             return;
         }
@@ -98,15 +100,15 @@ pub fn spawn_enemies(
             Transform::from_translation(portal_transform.translation),
             Enemy { target_position },
             Health {
-                current: 100.0,
-                max: 100.0,
+                current: enemy_config.max_health,
+                max: enemy_config.max_health,
             },
             Lifetime {
-                timer: Timer::from_seconds(10.0, TimerMode::Once),
+                timer: Timer::from_seconds(enemy_config.lifetime, TimerMode::Once),
             },
         )).with_children(|parent| {
             parent.spawn((
-                Text2d::new("100"),
+                Text2d::new(format!("{:.0}", enemy_config.max_health)),
                 TextFont {
                     font_size: 10.0,
                     ..default()
@@ -146,9 +148,10 @@ pub fn update_enemy_health_ui(
 
 pub fn move_enemies(
     time: Res<Time>,
+    enemy_config: Res<EnemyConfig>,
     mut enemy_query: Query<(&mut Transform, &Enemy)>,
 ) {
-    let speed = 100.0; // Pixels per second
+    let speed = enemy_config.speed;
 
     for (mut transform, enemy) in enemy_query.iter_mut() {
         let direction = (enemy.target_position - transform.translation.truncate()).normalize_or_zero();

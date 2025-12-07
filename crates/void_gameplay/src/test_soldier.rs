@@ -14,21 +14,27 @@ mod tests {
 
         app.world_mut().spawn((
             Window {
-                resolution: bevy::window::WindowResolution::new(800.0, 600.0),
+                resolution: bevy::window::WindowResolution::new(800, 600),
                 ..default()
             },
             PrimaryWindow,
         ));
 
         app.insert_resource(EnemySpawnTimer(Timer::from_seconds(1.0, TimerMode::Repeating)));
+        app.insert_resource(crate::configs::SoldierConfig {
+            attack_timer: 1.0,
+            projectile_speed: 400.0,
+            projectile_damage: 20.0,
+            projectile_lifetime: 2.0,
+        });
 
         app.add_systems(Update, (
             spawn_soldier,
             soldier_acquire_target,
             soldier_attack,
             move_projectiles,
-            projectile_collision,
-            despawn_dead_enemies
+            projectile_collision.after(move_projectiles),
+            despawn_dead_enemies.after(projectile_collision)
         ));
 
         // 1. Check Soldier Spawning

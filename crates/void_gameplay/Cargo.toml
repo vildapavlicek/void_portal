@@ -8,3 +8,5 @@ bevy = { workspace = true }
 void_core = { path = "../void_core" }
 void_assets = { path = "../void_assets" }
 rand = "0.9.2"
+serde = { version = "1", features = ["derive"] }
+bevy_common_assets = { version = "0.14", features = ["ron"] }

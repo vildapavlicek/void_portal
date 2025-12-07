@@ -1,0 +1,6 @@
+(
+    attack_timer: 1.0,
+    projectile_speed: 400.0,
+    projectile_damage: 20.0,
+    projectile_lifetime: 2.0,
+)
