@@ -1,0 +1,9 @@
+[package]
+name = "void_gameplay"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy = { workspace = true }
+void_core = { path = "../void_core" }
+void_assets = { path = "../void_assets" }
