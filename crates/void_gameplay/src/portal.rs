@@ -12,6 +12,12 @@ pub struct Enemy {
 }
 
 #[derive(Component)]
+pub struct Health {
+    pub current: f32,
+    pub max: f32,
+}
+
+#[derive(Component)]
 pub struct Lifetime {
     pub timer: Timer,
 }
@@ -91,11 +97,50 @@ pub fn spawn_enemies(
             },
             Transform::from_translation(portal_transform.translation),
             Enemy { target_position },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
             Lifetime {
                 timer: Timer::from_seconds(10.0, TimerMode::Once),
             },
-        ));
+        )).with_children(|parent| {
+            parent.spawn((
+                Text2d::new("100"),
+                TextFont {
+                    font_size: 10.0,
+                    ..default()
+                },
+                TextColor(Color::WHITE),
+                Transform::from_translation(Vec3::new(0.0, 20.0, 1.0)),
+            ));
+        });
         info!("Enemy spawned! Target: {:?}", target_position);
+    }
+}
+
+pub fn despawn_dead_enemies(
+    mut commands: Commands,
+    query: Query<(Entity, &Health), With<Enemy>>,
+) {
+    for (entity, health) in query.iter() {
+        if health.current <= 0.0 {
+            commands.entity(entity).despawn();
+            info!("Enemy despawned due to being killed");
+        }
+    }
+}
+
+pub fn update_enemy_health_ui(
+    enemy_query: Query<(&Health, &Children), (With<Enemy>, Changed<Health>)>,
+    mut text_query: Query<&mut Text2d>,
+) {
+    for (health, children) in enemy_query.iter() {
+        for child in children.iter() {
+            if let Ok(mut text) = text_query.get_mut(child) {
+                text.0 = format!("{:.0}", health.current);
+            }
+        }
     }
 }
 

@@ -3,10 +3,20 @@ use void_core::VoidCorePlugin;
 use void_assets::VoidAssetsPlugin;
 
 mod portal;
-use portal::{spawn_portal, spawn_enemies, move_enemies, enemy_lifetime, EnemySpawnTimer};
+mod soldier;
+
+use portal::{
+    spawn_portal, spawn_enemies, move_enemies, enemy_lifetime, despawn_dead_enemies,
+    update_enemy_health_ui, EnemySpawnTimer
+};
+use soldier::{
+    spawn_soldier, soldier_acquire_target, soldier_attack, move_projectiles, projectile_collision
+};
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod test_soldier;
 
 pub struct VoidGameplayPlugin;
 
@@ -25,7 +35,14 @@ impl Plugin for VoidGameplayPlugin {
             spawn_portal,
             spawn_enemies,
             move_enemies,
-            enemy_lifetime
+            enemy_lifetime,
+            despawn_dead_enemies,
+            update_enemy_health_ui,
+            spawn_soldier,
+            soldier_acquire_target,
+            soldier_attack,
+            move_projectiles,
+            projectile_collision,
         ));
 
         info!("Void Gameplay initialized");
