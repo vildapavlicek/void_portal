@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use rand::Rng;
+use void_core::config::EnemyConfig;
+use crate::GameConfigHandles;
 
 // Components
 #[derive(Component)]
@@ -62,7 +64,17 @@ pub fn spawn_enemies(
     enemy_query: Query<Entity, With<Enemy>>,
     portal_query: Query<&Transform, With<Portal>>,
     window_query: Query<&Window, With<PrimaryWindow>>,
+    config_handles: Option<Res<GameConfigHandles>>,
+    enemy_configs: Res<Assets<EnemyConfig>>,
 ) {
+    let Some(config_handles) = config_handles else { return; };
+    let Some(config) = enemy_configs.get(&config_handles.enemy) else { return; };
+
+    // Update timer duration from config if changed (simple approach)
+    if spawn_timer.0.duration() != std::time::Duration::from_secs_f32(config.spawn_timer) {
+         spawn_timer.0.set_duration(std::time::Duration::from_secs_f32(config.spawn_timer));
+    }
+
     spawn_timer.0.tick(time.delta());
 
     if spawn_timer.0.just_finished() {
@@ -98,15 +110,15 @@ pub fn spawn_enemies(
             Transform::from_translation(portal_transform.translation),
             Enemy { target_position },
             Health {
-                current: 100.0,
-                max: 100.0,
+                current: config.hp,
+                max: config.hp,
             },
             Lifetime {
-                timer: Timer::from_seconds(10.0, TimerMode::Once),
+                timer: Timer::from_seconds(config.lifetime, TimerMode::Once),
             },
         )).with_children(|parent| {
             parent.spawn((
-                Text2d::new("100"),
+                Text2d::new(format!("{:.0}", config.hp)),
                 TextFont {
                     font_size: 10.0,
                     ..default()
@@ -147,8 +159,18 @@ pub fn update_enemy_health_ui(
 pub fn move_enemies(
     time: Res<Time>,
     mut enemy_query: Query<(&mut Transform, &Enemy)>,
+    config_handles: Option<Res<GameConfigHandles>>,
+    enemy_configs: Res<Assets<EnemyConfig>>,
 ) {
-    let speed = 100.0; // Pixels per second
+    let speed = if let Some(handles) = config_handles {
+        if let Some(config) = enemy_configs.get(&handles.enemy) {
+            config.speed
+        } else {
+            100.0
+        }
+    } else {
+        100.0
+    };
 
     for (mut transform, enemy) in enemy_query.iter_mut() {
         let direction = (enemy.target_position - transform.translation.truncate()).normalize_or_zero();

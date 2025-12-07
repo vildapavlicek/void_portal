@@ -1,9 +1,13 @@
 use bevy::prelude::*;
 
+pub mod config;
+use config::VoidConfigPlugin;
+
 pub struct VoidCorePlugin;
 
 impl Plugin for VoidCorePlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(VoidConfigPlugin);
         app.add_systems(Startup, setup_camera);
         info!("Void Core initialized");
     }

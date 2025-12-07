@@ -13,6 +13,14 @@ use soldier::{
     spawn_soldier, soldier_acquire_target, soldier_attack, move_projectiles, projectile_collision
 };
 
+use void_core::config::{EnemyConfig, SoldierConfig};
+
+#[derive(Resource)]
+pub struct GameConfigHandles {
+    pub enemy: Handle<EnemyConfig>,
+    pub soldier: Handle<SoldierConfig>,
+}
+
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
@@ -29,6 +37,7 @@ impl Plugin for VoidGameplayPlugin {
             app.add_plugins(VoidAssetsPlugin);
         }
 
+        app.add_systems(Startup, load_configs);
         app.insert_resource(EnemySpawnTimer(Timer::from_seconds(7.5, TimerMode::Repeating)));
 
         app.add_systems(Update, (
@@ -47,4 +56,14 @@ impl Plugin for VoidGameplayPlugin {
 
         info!("Void Gameplay initialized");
     }
+}
+
+fn load_configs(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let enemy_handle = asset_server.load("configs/enemy.ron");
+    let soldier_handle = asset_server.load("configs/soldier.ron");
+
+    commands.insert_resource(GameConfigHandles {
+        enemy: enemy_handle,
+        soldier: soldier_handle,
+    });
 }

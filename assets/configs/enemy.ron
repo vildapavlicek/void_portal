@@ -1,0 +1,6 @@
+(
+    spawn_timer: 7.5,
+    lifetime: 10.0,
+    hp: 100.0,
+    speed: 100.0,
+)

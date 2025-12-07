@@ -2,6 +2,8 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use crate::portal::{Enemy, Health};
 use rand::seq::IteratorRandom;
+use void_core::config::SoldierConfig;
+use crate::GameConfigHandles;
 
 #[derive(Component)]
 pub struct Soldier {
@@ -80,8 +82,18 @@ pub fn soldier_attack(
     time: Res<Time>,
     mut soldier_query: Query<(&Transform, &mut Soldier)>,
     enemy_query: Query<&Transform, With<Enemy>>,
+    config_handles: Option<Res<GameConfigHandles>>,
+    soldier_configs: Res<Assets<SoldierConfig>>,
 ) {
+    let Some(config_handles) = config_handles else { return; };
+    let Some(config) = soldier_configs.get(&config_handles.soldier) else { return; };
+
     for (soldier_transform, mut soldier) in soldier_query.iter_mut() {
+        // Update timer duration if needed (simple check)
+        if soldier.attack_timer.duration() != std::time::Duration::from_secs_f32(config.attack_cooldown) {
+            soldier.attack_timer.set_duration(std::time::Duration::from_secs_f32(config.attack_cooldown));
+        }
+
         soldier.attack_timer.tick(time.delta());
 
         if soldier.attack_timer.just_finished() {
@@ -89,7 +101,7 @@ pub fn soldier_attack(
                 if let Ok(target_transform) = enemy_query.get(target) {
                     // Spawn projectile
                     let direction = (target_transform.translation - soldier_transform.translation).normalize_or_zero();
-                    let speed = 400.0;
+                    let speed = config.projectile_speed;
 
                     commands.spawn((
                         Sprite {
@@ -100,7 +112,7 @@ pub fn soldier_attack(
                         Transform::from_translation(soldier_transform.translation),
                         Projectile {
                             velocity: direction * speed,
-                            damage: 20.0,
+                            damage: config.attack_damage,
                             lifetime: Timer::from_seconds(2.0, TimerMode::Once),
                         },
                     ));

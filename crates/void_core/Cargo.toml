@@ -4,4 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.100"
 bevy = { workspace = true }
+ron = "0.12.0"
+serde = { version = "1.0.228", features = ["derive"] }
