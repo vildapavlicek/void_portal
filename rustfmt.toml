@@ -1,0 +1,4 @@
+# unstable options, requires nightly rustfmt
+format_code_in_doc_comments = true
+group_imports = "One"
+imports_granularity = "One"
