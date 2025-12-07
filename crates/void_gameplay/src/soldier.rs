@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use crate::portal::{Enemy, Health};
+use crate::configs::SoldierConfig;
 use rand::seq::IteratorRandom;
 
 #[derive(Component)]
@@ -19,6 +20,7 @@ pub struct Projectile {
 pub fn spawn_soldier(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
+    soldier_config: Res<SoldierConfig>,
     soldier_query: Query<Entity, With<Soldier>>,
 ) {
     if !soldier_query.is_empty() {
@@ -42,7 +44,7 @@ pub fn spawn_soldier(
             },
             Transform::from_xyz(0.0, soldier_y, 0.0),
             Soldier {
-                attack_timer: Timer::from_seconds(1.0, TimerMode::Repeating),
+                attack_timer: Timer::from_seconds(soldier_config.attack_timer, TimerMode::Repeating),
                 target: None,
             },
         ));
@@ -78,6 +80,7 @@ pub fn soldier_acquire_target(
 pub fn soldier_attack(
     mut commands: Commands,
     time: Res<Time>,
+    soldier_config: Res<SoldierConfig>,
     mut soldier_query: Query<(&Transform, &mut Soldier)>,
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
@@ -89,7 +92,7 @@ pub fn soldier_attack(
                 if let Ok(target_transform) = enemy_query.get(target) {
                     // Spawn projectile
                     let direction = (target_transform.translation - soldier_transform.translation).normalize_or_zero();
-                    let speed = 400.0;
+                    let speed = soldier_config.projectile_speed;
 
                     commands.spawn((
                         Sprite {
@@ -100,8 +103,8 @@ pub fn soldier_attack(
                         Transform::from_translation(soldier_transform.translation),
                         Projectile {
                             velocity: direction * speed,
-                            damage: 20.0,
-                            lifetime: Timer::from_seconds(2.0, TimerMode::Once),
+                            damage: soldier_config.projectile_damage,
+                            lifetime: Timer::from_seconds(soldier_config.projectile_lifetime, TimerMode::Once),
                         },
                     ));
                 }
