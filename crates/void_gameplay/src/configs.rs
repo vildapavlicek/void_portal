@@ -1,5 +1,4 @@
-use bevy::prelude::*;
-use serde::Deserialize;
+use {bevy::prelude::*, serde::Deserialize};
 
 #[derive(Deserialize, Asset, TypePath, Clone, Debug, Resource)]
 pub struct GlobalConfig {

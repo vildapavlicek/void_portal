@@ -1,11 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use bevy::prelude::*;
-    use bevy::window::PrimaryWindow;
-    use bevy::time::TimePlugin;
-
     // Import from the sibling module 'portal'
-    use crate::portal::{spawn_portal, spawn_enemies, enemy_lifetime, Portal, Enemy, EnemySpawnTimer};
+    use crate::portal::{
+        enemy_lifetime, spawn_enemies, spawn_portal, Enemy, EnemySpawnTimer, Portal,
+    };
+    use bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow};
 
     #[test]
     fn test_portal_spawn() {
@@ -55,12 +54,13 @@ mod tests {
             PrimaryWindow,
         ));
 
-        app.world_mut().spawn((
-            Transform::from_xyz(0.0, 250.0, 0.0),
-            Portal,
-        ));
+        app.world_mut()
+            .spawn((Transform::from_xyz(0.0, 250.0, 0.0), Portal));
 
-        app.insert_resource(EnemySpawnTimer(Timer::from_seconds(7.5, TimerMode::Repeating)));
+        app.insert_resource(EnemySpawnTimer(Timer::from_seconds(
+            7.5,
+            TimerMode::Repeating,
+        )));
         app.insert_resource(crate::configs::EnemyConfig {
             max_health: 100.0,
             lifetime: 10.0,
