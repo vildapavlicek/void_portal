@@ -1,8 +1,7 @@
-use bevy::prelude::*;
-use void_assets::VoidAssetsPlugin;
-use void_core::VoidCorePlugin;
-use void_gameplay::VoidGameplayPlugin;
-use void_ui::VoidUiPlugin;
+use {
+    bevy::prelude::*, void_assets::VoidAssetsPlugin, void_core::VoidCorePlugin,
+    void_gameplay::VoidGameplayPlugin, void_ui::VoidUiPlugin,
+};
 
 fn main() {
     App::new()

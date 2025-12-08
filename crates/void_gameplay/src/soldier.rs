@@ -1,8 +1,11 @@
-use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
-use crate::portal::{Enemy, Health};
-use crate::configs::SoldierConfig;
-use rand::seq::IteratorRandom;
+use {
+    crate::{
+        configs::SoldierConfig,
+        portal::{Enemy, Health},
+    },
+    bevy::{prelude::*, window::PrimaryWindow},
+    rand::seq::IteratorRandom,
+};
 
 #[derive(Component)]
 pub struct Soldier {
@@ -44,7 +47,10 @@ pub fn spawn_soldier(
             },
             Transform::from_xyz(0.0, soldier_y, 0.0),
             Soldier {
-                attack_timer: Timer::from_seconds(soldier_config.attack_timer, TimerMode::Repeating),
+                attack_timer: Timer::from_seconds(
+                    soldier_config.attack_timer,
+                    TimerMode::Repeating,
+                ),
                 target: None,
             },
         ));
@@ -91,7 +97,8 @@ pub fn soldier_attack(
             if let Some(target) = soldier.target {
                 if let Ok(target_transform) = enemy_query.get(target) {
                     // Spawn projectile
-                    let direction = (target_transform.translation - soldier_transform.translation).normalize_or_zero();
+                    let direction = (target_transform.translation - soldier_transform.translation)
+                        .normalize_or_zero();
                     let speed = soldier_config.projectile_speed;
 
                     commands.spawn((
@@ -104,7 +111,10 @@ pub fn soldier_attack(
                         Projectile {
                             velocity: direction * speed,
                             damage: soldier_config.projectile_damage,
-                            lifetime: Timer::from_seconds(soldier_config.projectile_lifetime, TimerMode::Once),
+                            lifetime: Timer::from_seconds(
+                                soldier_config.projectile_lifetime,
+                                TimerMode::Once,
+                            ),
                         },
                     ));
                 }
@@ -137,7 +147,9 @@ pub fn projectile_collision(
     for (proj_entity, proj_transform, projectile) in projectile_query.iter() {
         let mut hit = false;
         for (_, enemy_transform, mut health) in enemy_query.iter_mut() {
-            let distance = proj_transform.translation.distance(enemy_transform.translation);
+            let distance = proj_transform
+                .translation
+                .distance(enemy_transform.translation);
             // Enemy size is 24, Projectile 8. Radius approx 12 + 4 = 16. Use 20 for buffer.
             if distance < 20.0 {
                 health.current -= projectile.damage;

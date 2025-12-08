@@ -1,7 +1,8 @@
-use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
-use rand::Rng;
-use crate::configs::EnemyConfig;
+use {
+    crate::configs::EnemyConfig,
+    bevy::{prelude::*, window::PrimaryWindow},
+    rand::Rng,
+};
 
 // Components
 #[derive(Component)]
@@ -91,40 +92,39 @@ pub fn spawn_enemies(
         let target_y = rng.random_range(-half_height..half_height);
         let target_position = Vec2::new(target_x, target_y);
 
-        commands.spawn((
-            Sprite {
-                color: Color::srgb(0.0, 0.0, 1.0), // Blue
-                custom_size: Some(Vec2::new(24.0, 24.0)),
-                ..default()
-            },
-            Transform::from_translation(portal_transform.translation),
-            Enemy { target_position },
-            Health {
-                current: enemy_config.max_health,
-                max: enemy_config.max_health,
-            },
-            Lifetime {
-                timer: Timer::from_seconds(enemy_config.lifetime, TimerMode::Once),
-            },
-        )).with_children(|parent| {
-            parent.spawn((
-                Text2d::new(format!("{:.0}", enemy_config.max_health)),
-                TextFont {
-                    font_size: 10.0,
+        commands
+            .spawn((
+                Sprite {
+                    color: Color::srgb(0.0, 0.0, 1.0), // Blue
+                    custom_size: Some(Vec2::new(24.0, 24.0)),
                     ..default()
                 },
-                TextColor(Color::WHITE),
-                Transform::from_translation(Vec3::new(0.0, 20.0, 1.0)),
-            ));
-        });
+                Transform::from_translation(portal_transform.translation),
+                Enemy { target_position },
+                Health {
+                    current: enemy_config.max_health,
+                    max: enemy_config.max_health,
+                },
+                Lifetime {
+                    timer: Timer::from_seconds(enemy_config.lifetime, TimerMode::Once),
+                },
+            ))
+            .with_children(|parent| {
+                parent.spawn((
+                    Text2d::new(format!("{:.0}", enemy_config.max_health)),
+                    TextFont {
+                        font_size: 10.0,
+                        ..default()
+                    },
+                    TextColor(Color::WHITE),
+                    Transform::from_translation(Vec3::new(0.0, 20.0, 1.0)),
+                ));
+            });
         info!("Enemy spawned! Target: {:?}", target_position);
     }
 }
 
-pub fn despawn_dead_enemies(
-    mut commands: Commands,
-    query: Query<(Entity, &Health), With<Enemy>>,
-) {
+pub fn despawn_dead_enemies(mut commands: Commands, query: Query<(Entity, &Health), With<Enemy>>) {
     for (entity, health) in query.iter() {
         if health.current <= 0.0 {
             commands.entity(entity).despawn();
@@ -154,8 +154,12 @@ pub fn move_enemies(
     let speed = enemy_config.speed;
 
     for (mut transform, enemy) in enemy_query.iter_mut() {
-        let direction = (enemy.target_position - transform.translation.truncate()).normalize_or_zero();
-        let distance = transform.translation.truncate().distance(enemy.target_position);
+        let direction =
+            (enemy.target_position - transform.translation.truncate()).normalize_or_zero();
+        let distance = transform
+            .translation
+            .truncate()
+            .distance(enemy.target_position);
 
         if distance > 1.0 {
             transform.translation += (direction * speed * time.delta_secs()).extend(0.0);
