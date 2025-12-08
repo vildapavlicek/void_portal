@@ -1,8 +1,11 @@
 use {bevy::prelude::*, serde::Deserialize};
 
 #[derive(Deserialize, Asset, TypePath, Clone, Debug, Resource)]
-pub struct GlobalConfig {
+pub struct PortalConfig {
     pub spawn_timer: f32,
+    pub base_void_shards_reward: f32,
+    pub base_upgrade_price: f32,
+    pub upgrade_price_increase_coef: f32,
 }
 
 #[derive(Deserialize, Asset, TypePath, Clone, Debug, Resource)]
