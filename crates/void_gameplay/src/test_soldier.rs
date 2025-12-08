@@ -8,8 +8,9 @@ mod tests {
                 SpawnIndex,
             },
             soldier::{
-                move_projectiles, projectile_collision, soldier_decision_logic, soldier_attack_logic,
-                soldier_movement_logic, spawn_soldier, AttackRange, Projectile, Soldier, Moving, Attacking
+                move_projectiles, projectile_collision, soldier_attack_logic,
+                soldier_decision_logic, soldier_movement_logic, spawn_soldier, AttackRange,
+                Attacking, Moving, Projectile, Soldier,
             },
         },
         bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow},
@@ -296,10 +297,17 @@ mod tests {
         // Spawn Soldier manually to control position
         app.update(); // Spawns soldier at default pos (0, -225, 0)
 
-        let soldier_entity = app.world_mut().query_filtered::<Entity, With<Soldier>>().single(app.world()).expect("Soldier should be spawned");
+        let soldier_entity = app
+            .world_mut()
+            .query_filtered::<Entity, With<Soldier>>()
+            .single(app.world())
+            .expect("Soldier should be spawned");
 
         // Move soldier to (0, -500)
-        let mut soldier_transform = app.world_mut().get_mut::<Transform>(soldier_entity).expect("Soldier entity should have Transform");
+        let mut soldier_transform = app
+            .world_mut()
+            .get_mut::<Transform>(soldier_entity)
+            .expect("Soldier entity should have Transform");
         soldier_transform.translation = Vec3::new(0.0, -500.0, 0.0);
 
         // Attack Range is 150.
@@ -334,8 +342,8 @@ mod tests {
         // 1. Advance time 1 second.
         // Soldier should move 100 units towards (0,0). New pos: (0, -400)
         {
-             let mut time = app.world_mut().resource_mut::<Time>();
-             time.advance_by(std::time::Duration::from_secs_f32(1.0));
+            let mut time = app.world_mut().resource_mut::<Time>();
+            time.advance_by(std::time::Duration::from_secs_f32(1.0));
         }
         app.update(); // movement logic runs.
 
@@ -344,15 +352,18 @@ mod tests {
         assert!((soldier_transform.translation.y - -400.0).abs() < 1.0); // Approx -400
 
         // Check NO projectile (distance 400 > 150)
-        assert_eq!(app.world().query::<&Projectile>().iter(app.world()).count(), 0);
+        assert_eq!(
+            app.world().query::<&Projectile>().iter(app.world()).count(),
+            0
+        );
 
         // 2. Advance time to get within range.
         // Current Y: -400. Target Y: -150 (boundary). Distance to travel: 250.
         // Speed 100. Need 2.5 seconds.
         // Let's go 2.6 seconds.
         {
-             let mut time = app.world_mut().resource_mut::<Time>();
-             time.advance_by(std::time::Duration::from_secs_f32(2.6));
+            let mut time = app.world_mut().resource_mut::<Time>();
+            time.advance_by(std::time::Duration::from_secs_f32(2.6));
         }
         app.update();
 

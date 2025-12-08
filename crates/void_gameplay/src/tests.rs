@@ -1,11 +1,13 @@
 #[cfg(test)]
 mod tests {
     // Import from the sibling module 'portal'
-    use crate::portal::{
-        enemy_lifetime, spawn_enemies, spawn_portal, Enemy, EnemySpawnTimer, Portal,
-        PortalSpawnTracker,
+    use {
+        crate::portal::{
+            enemy_lifetime, spawn_enemies, spawn_portal, Enemy, EnemySpawnTimer, Portal,
+            PortalSpawnTracker,
+        },
+        bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow},
     };
-    use bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow};
 
     #[test]
     fn test_portal_spawn() {
