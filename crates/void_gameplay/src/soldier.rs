@@ -74,19 +74,10 @@ pub fn soldier_acquire_target(
         }
 
         if !target_valid {
-            // Find oldest target (max wrapping age)
-            let mut best_target: Option<Entity> = None;
-            let mut max_age: u32 = 0;
-
-            for (entity, spawn_index) in enemy_query.iter() {
-                let age = current_spawn_count.wrapping_sub(spawn_index.0);
-                if best_target.is_none() || age > max_age {
-                    max_age = age;
-                    best_target = Some(entity);
-                }
-            }
-
-            soldier.target = best_target;
+            soldier.target = enemy_query
+                .iter()
+                .max_by_key(|(_, index)| current_spawn_count.wrapping_sub(index.0))
+                .map(|(entity, _)| entity);
         }
     }
 }
