@@ -4,7 +4,8 @@ mod tests {
         crate::{
             portal::{
                 despawn_dead_enemies, enemy_lifetime, spawn_enemies, spawn_portal,
-                update_enemy_health_ui, Enemy, EnemySpawnTimer, Health, Portal,
+                update_enemy_health_ui, Enemy, EnemySpawnTimer, Health, Portal, PortalSpawnTracker,
+                SpawnIndex,
             },
             soldier::{
                 move_projectiles, projectile_collision, soldier_acquire_target, soldier_attack,
@@ -14,8 +15,7 @@ mod tests {
         bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow},
     };
 
-    #[test]
-    fn test_soldier_spawn_and_combat() {
+    fn setup_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins.build().disable::<TimePlugin>());
         app.insert_resource(Time::<()>::default());
@@ -26,6 +26,13 @@ mod tests {
                 ..default()
             },
             PrimaryWindow,
+        ));
+
+        // Spawn Portal with Tracker (required for targeting)
+        app.world_mut().spawn((
+            Transform::default(),
+            Portal,
+            PortalSpawnTracker(10), // Start at 10 to allow testing wrapping/subtraction
         ));
 
         app.insert_resource(EnemySpawnTimer(Timer::from_seconds(
@@ -50,18 +57,21 @@ mod tests {
                 despawn_dead_enemies.after(projectile_collision),
             ),
         );
+        app
+    }
+
+    #[test]
+    fn test_soldier_spawn_and_combat() {
+        let mut app = setup_app();
 
         // 1. Check Soldier Spawning
         app.update();
         let soldier_entity = {
-            let mut query = app.world_mut().query::<Entity>();
-            let entities: Vec<Entity> = query.iter(app.world()).collect();
             let mut soldier_query = app.world_mut().query::<(&Transform, &Soldier)>();
             let (transform, _) = soldier_query
                 .iter(app.world())
                 .next()
                 .expect("Soldier should be spawned");
-            // Window height 600. Bottom 25% starts at -300. Middle of bottom 25% is -300 + (600 * 0.125) = -300 + 75 = -225.
             assert_eq!(transform.translation.y, -225.0);
             soldier_query.iter(app.world()).next().unwrap().1.target
         };
@@ -75,6 +85,7 @@ mod tests {
                 Enemy {
                     target_position: Vec2::ZERO,
                 },
+                SpawnIndex(9), // Tracker is at 10, so age = 10 - 9 = 1
                 Health {
                     current: 100.0,
                     max: 100.0,
@@ -151,6 +162,135 @@ mod tests {
         {
             let mut query = app.world_mut().query::<&Enemy>();
             assert_eq!(query.iter(app.world()).count(), 0);
+        }
+    }
+
+    #[test]
+    fn test_soldier_targeting_oldest() {
+        let mut app = setup_app();
+        app.update(); // Spawn soldier
+
+        // Spawn 3 Enemies with different indices
+        // Tracker at 10.
+        // Enemy A: Index 8. Age = 2.
+        // Enemy B: Index 5. Age = 5. (Oldest)
+        // Enemy C: Index 9. Age = 1.
+
+        let enemy_a = app
+            .world_mut()
+            .spawn((
+                Enemy {
+                    target_position: Vec2::ZERO,
+                },
+                SpawnIndex(8),
+                Health {
+                    current: 10.0,
+                    max: 10.0,
+                },
+            ))
+            .id();
+
+        let enemy_b = app
+            .world_mut()
+            .spawn((
+                Enemy {
+                    target_position: Vec2::ZERO,
+                },
+                SpawnIndex(5),
+                Health {
+                    current: 10.0,
+                    max: 10.0,
+                },
+            ))
+            .id();
+
+        let enemy_c = app
+            .world_mut()
+            .spawn((
+                Enemy {
+                    target_position: Vec2::ZERO,
+                },
+                SpawnIndex(9),
+                Health {
+                    current: 10.0,
+                    max: 10.0,
+                },
+            ))
+            .id();
+
+        // 1. Check targeting oldest (B)
+        app.update();
+        {
+            let mut soldier_query = app.world_mut().query::<&Soldier>();
+            let soldier = soldier_query.iter(app.world()).next().unwrap();
+            assert_eq!(soldier.target, Some(enemy_b));
+        }
+
+        // 2. Kill B, check retargeting to next oldest (A)
+        app.world_mut().entity_mut(enemy_b).despawn();
+        app.update(); // Retarget
+        {
+            let mut soldier_query = app.world_mut().query::<&Soldier>();
+            let soldier = soldier_query.iter(app.world()).next().unwrap();
+            assert_eq!(soldier.target, Some(enemy_a));
+        }
+    }
+
+    #[test]
+    fn test_soldier_targeting_wrapping() {
+        let mut app = setup_app();
+        app.update();
+
+        // Set tracker to 2 (just wrapped around u32::MAX)
+        if let Some(mut tracker) = app
+            .world_mut()
+            .query::<&mut PortalSpawnTracker>()
+            .iter_mut(app.world_mut())
+            .next()
+        {
+            tracker.0 = 2;
+        }
+
+        // Enemy A: Index 1. Age = 2 - 1 = 1. (New)
+        // Enemy B: Index u32::MAX. Age = 2 - u32::MAX = 3. (Oldest, wrapped)
+
+        let enemy_a = app
+            .world_mut()
+            .spawn((
+                Enemy {
+                    target_position: Vec2::ZERO,
+                },
+                SpawnIndex(1),
+                Health {
+                    current: 10.0,
+                    max: 10.0,
+                },
+            ))
+            .id();
+
+        let enemy_b = app
+            .world_mut()
+            .spawn((
+                Enemy {
+                    target_position: Vec2::ZERO,
+                },
+                SpawnIndex(u32::MAX),
+                Health {
+                    current: 10.0,
+                    max: 10.0,
+                },
+            ))
+            .id();
+
+        app.update();
+        {
+            let mut soldier_query = app.world_mut().query::<&Soldier>();
+            let soldier = soldier_query.iter(app.world()).next().unwrap();
+            assert_eq!(
+                soldier.target,
+                Some(enemy_b),
+                "Should target Enemy B because it is older across the wrap boundary"
+            );
         }
     }
 }

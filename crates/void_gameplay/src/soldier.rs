@@ -1,10 +1,9 @@
 use {
     crate::{
         configs::SoldierConfig,
-        portal::{Enemy, Health},
+        portal::{Enemy, Health, PortalSpawnTracker, SpawnIndex},
     },
     bevy::{prelude::*, window::PrimaryWindow},
-    rand::seq::IteratorRandom,
 };
 
 #[derive(Component)]
@@ -60,9 +59,14 @@ pub fn spawn_soldier(
 
 pub fn soldier_acquire_target(
     mut soldier_query: Query<&mut Soldier>,
-    enemy_query: Query<Entity, With<Enemy>>,
+    enemy_query: Query<(Entity, &SpawnIndex), With<Enemy>>,
+    portal_tracker_query: Query<&PortalSpawnTracker>,
 ) {
-    let mut rng = rand::rng();
+    let Some(portal_tracker) = portal_tracker_query.iter().next() else {
+        return;
+    };
+    let current_spawn_count = portal_tracker.0;
+
     for mut soldier in soldier_query.iter_mut() {
         // Check if current target is valid
         let mut target_valid = false;
@@ -73,12 +77,19 @@ pub fn soldier_acquire_target(
         }
 
         if !target_valid {
-            // Find new random target
-            if let Some(new_target) = enemy_query.iter().choose(&mut rng) {
-                soldier.target = Some(new_target);
-            } else {
-                soldier.target = None;
+            // Find oldest target (max wrapping age)
+            let mut best_target: Option<Entity> = None;
+            let mut max_age: u32 = 0;
+
+            for (entity, spawn_index) in enemy_query.iter() {
+                let age = current_spawn_count.wrapping_sub(spawn_index.0);
+                if best_target.is_none() || age > max_age {
+                    max_age = age;
+                    best_target = Some(entity);
+                }
             }
+
+            soldier.target = best_target;
         }
     }
 }
