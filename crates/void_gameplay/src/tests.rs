@@ -71,6 +71,7 @@ mod tests {
             lifetime: 10.0,
             speed: 100.0,
             spawn_limit: 5,
+            reward: 10.0,
         });
 
         // Add systems

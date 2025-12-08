@@ -3,4 +3,5 @@
     lifetime: 10.0,
     speed: 150.0,
     spawn_limit: 5,
+    reward: 10.0,
 )

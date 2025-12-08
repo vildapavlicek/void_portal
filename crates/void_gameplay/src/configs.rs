@@ -11,6 +11,7 @@ pub struct EnemyConfig {
     pub lifetime: f32,
     pub speed: f32,
     pub spawn_limit: usize,
+    pub reward: f32,
 }
 
 #[derive(Deserialize, Asset, TypePath, Clone, Debug, Resource)]

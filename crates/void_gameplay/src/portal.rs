@@ -2,6 +2,7 @@ use {
     crate::configs::EnemyConfig,
     bevy::{prelude::*, window::PrimaryWindow},
     rand::Rng,
+    void_core::events::EnemyKilled,
 };
 
 // Components
@@ -26,6 +27,9 @@ pub struct Lifetime {
 
 #[derive(Component)]
 pub struct SpawnIndex(pub u32);
+
+#[derive(Component)]
+pub struct Reward(pub f32);
 
 // Resources
 #[derive(Resource, Default)]
@@ -116,6 +120,7 @@ pub fn spawn_enemies(
                 Lifetime {
                     timer: Timer::from_seconds(enemy_config.lifetime, TimerMode::Once),
                 },
+                Reward(enemy_config.reward),
             ))
             .with_children(|parent| {
                 parent.spawn((
@@ -134,10 +139,15 @@ pub fn spawn_enemies(
     }
 }
 
-pub fn despawn_dead_enemies(mut commands: Commands, query: Query<(Entity, &Health), With<Enemy>>) {
-    for (entity, health) in query.iter() {
+pub fn despawn_dead_enemies(
+    mut commands: Commands,
+    query: Query<(Entity, &Health, &Reward), With<Enemy>>,
+    mut events: MessageWriter<EnemyKilled>,
+) {
+    for (entity, health, reward) in query.iter() {
         if health.current <= 0.0 {
             commands.entity(entity).despawn();
+            events.write(EnemyKilled { reward: reward.0 });
             info!("Enemy despawned due to being killed");
         }
     }

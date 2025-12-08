@@ -25,6 +25,8 @@ use {
 mod test_soldier;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod test_events;
 
 pub struct VoidGameplayPlugin;
 

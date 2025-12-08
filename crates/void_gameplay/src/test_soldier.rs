@@ -112,7 +112,7 @@ mod tests {
         app.update(); // decision -> attack logic runs
 
         // Check Projectile Spawned
-        let projectile_entity = {
+        let _projectile_entity = {
             let mut query = app.world_mut().query::<&Projectile>();
             assert_eq!(query.iter(app.world()).count(), 1);
             app.world_mut()
@@ -353,7 +353,7 @@ mod tests {
 
         // Check NO projectile (distance 400 > 150)
         assert_eq!(
-            app.world().query::<&Projectile>().iter(app.world()).count(),
+            app.world_mut().query::<&Projectile>().iter(app.world()).count(),
             0
         );
 
@@ -395,6 +395,6 @@ mod tests {
 
         // Check Projectile Spawned
         // Timer should tick.
-        assert!(app.world().query::<&Projectile>().iter(app.world()).count() > 0);
+        assert!(app.world_mut().query::<&Projectile>().iter(app.world()).count() > 0);
     }
 }
