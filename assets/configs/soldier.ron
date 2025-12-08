@@ -3,4 +3,6 @@
     projectile_speed: 800.0,
     projectile_damage: 1.0,
     projectile_lifetime: 2.0,
+    attack_range: 150.0,
+    move_speed: 150.0,
 )
