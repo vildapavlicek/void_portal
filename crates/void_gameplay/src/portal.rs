@@ -1,5 +1,5 @@
 use {
-    crate::configs::EnemyConfig,
+    crate::configs::{EnemyConfig, PortalConfig},
     bevy::{prelude::*, window::PrimaryWindow},
     rand::Rng,
     void_core::events::EnemyKilled,
@@ -8,6 +8,15 @@ use {
 // Components
 #[derive(Component)]
 pub struct Portal;
+
+#[derive(Component)]
+pub struct VoidShardsReward(pub f32);
+
+#[derive(Component)]
+pub struct UpgradePrice(pub f32);
+
+#[derive(Component)]
+pub struct UpgradeCoef(pub f32);
 
 #[derive(Component)]
 pub struct Enemy {
@@ -44,6 +53,7 @@ pub fn spawn_portal(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
     portal_query: Query<Entity, With<Portal>>,
+    portal_config: Res<PortalConfig>,
 ) {
     // Only spawn if not already spawned
     if !portal_query.is_empty() {
@@ -62,6 +72,9 @@ pub fn spawn_portal(
             },
             Transform::from_xyz(0.0, portal_y, 0.0),
             Portal,
+            VoidShardsReward(portal_config.base_void_shards_reward),
+            UpgradePrice(portal_config.base_upgrade_price),
+            UpgradeCoef(portal_config.upgrade_price_increase_coef),
         ));
         info!("Portal spawned at y={}", portal_y);
     }

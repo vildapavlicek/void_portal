@@ -1,0 +1,6 @@
+(
+    spawn_timer: 5.0,
+    base_void_shards_reward: 10.0,
+    base_upgrade_price: 500.0,
+    upgrade_price_increase_coef: 1.5,
+)

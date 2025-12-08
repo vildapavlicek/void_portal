@@ -12,24 +12,42 @@ mod tests {
                 soldier_decision_logic, soldier_movement_logic, spawn_soldier, AttackRange,
                 Attacking, Moving, Projectile, Soldier,
             },
+            configs::PortalConfig, // Added import
         },
         bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow},
+        void_core::events::EnemyKilled, // Added import
     };
 
     fn setup_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins.build().disable::<TimePlugin>());
         app.insert_resource(Time::<()>::default());
+        app.add_message::<EnemyKilled>(); // Added message registration
 
         app.world_mut().spawn((
             Window {
+                // Bevy 0.17+ WindowResolution::new takes u32
                 resolution: bevy::window::WindowResolution::new(800, 600),
                 ..default()
             },
             PrimaryWindow,
         ));
 
-        // Spawn Portal
+        // Insert PortalConfig resource (needed if spawn_portal is used, or generally good to have)
+        app.insert_resource(PortalConfig {
+            spawn_timer: 1.0,
+            base_void_shards_reward: 10.0,
+            base_upgrade_price: 500.0,
+            upgrade_price_increase_coef: 1.5,
+        });
+
+        // Spawn Portal (spawn_portal system needs PortalConfig, but here we spawn manually sometimes?
+        // No, the test manually spawns a Portal entity below.
+        // However, if we use `spawn_portal` system anywhere, we need the resource.
+        // `spawn_soldier` uses `Portal` entity position.
+
+        // Let's spawn the Portal entity manually as before, but ensure it matches component expectations if systems rely on them.
+        // `spawn_soldier` queries `&Portal`.
         app.world_mut().spawn((Transform::default(), Portal));
 
         // Insert Tracker Resource (required for targeting)
@@ -93,6 +111,7 @@ mod tests {
                     current: 100.0,
                     max: 100.0,
                 },
+                crate::portal::Reward(10.0), // Added Reward component as required by despawn_dead_enemies
             ))
             .id();
 
@@ -190,6 +209,7 @@ mod tests {
                     current: 10.0,
                     max: 10.0,
                 },
+                crate::portal::Reward(10.0),
             ))
             .id();
 
@@ -204,6 +224,7 @@ mod tests {
                     current: 10.0,
                     max: 10.0,
                 },
+                crate::portal::Reward(10.0),
             ))
             .id();
 
@@ -218,6 +239,7 @@ mod tests {
                     current: 10.0,
                     max: 10.0,
                 },
+                crate::portal::Reward(10.0),
             ))
             .id();
 
@@ -261,6 +283,7 @@ mod tests {
                     current: 10.0,
                     max: 10.0,
                 },
+                crate::portal::Reward(10.0),
             ))
             .id();
 
@@ -275,6 +298,7 @@ mod tests {
                     current: 10.0,
                     max: 10.0,
                 },
+                crate::portal::Reward(10.0),
             ))
             .id();
 
@@ -326,6 +350,7 @@ mod tests {
                     current: 100.0,
                     max: 100.0,
                 },
+                crate::portal::Reward(10.0),
             ))
             .id();
 

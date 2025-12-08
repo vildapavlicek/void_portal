@@ -8,6 +8,7 @@ mod tests {
         },
         bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow},
     };
+    use crate::configs::PortalConfig;
 
     #[test]
     fn test_portal_spawn() {
@@ -15,9 +16,18 @@ mod tests {
         app.add_plugins(MinimalPlugins);
         // We don't add WindowPlugin to avoid window creation in tests
 
+        // Insert PortalConfig resource required by spawn_portal
+        app.insert_resource(PortalConfig {
+            spawn_timer: 5.0,
+            base_void_shards_reward: 10.0,
+            base_upgrade_price: 500.0,
+            upgrade_price_increase_coef: 1.5,
+        });
+
         // Spawn a window with specific resolution.
         app.world_mut().spawn((
             Window {
+                // Bevy 0.17+ WindowResolution::new takes u32
                 resolution: bevy::window::WindowResolution::new(800, 600),
                 ..default()
             },
@@ -51,6 +61,7 @@ mod tests {
 
         app.world_mut().spawn((
             Window {
+                // Bevy 0.17+ WindowResolution::new takes u32
                 resolution: bevy::window::WindowResolution::new(800, 600),
                 ..default()
             },

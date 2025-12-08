@@ -10,7 +10,7 @@ mod portal;
 mod soldier;
 
 use {
-    configs::{EnemyConfig, GlobalConfig, SoldierConfig},
+    configs::{EnemyConfig, PortalConfig, SoldierConfig},
     portal::{
         despawn_dead_enemies, enemy_lifetime, move_enemies, spawn_enemies, spawn_portal,
         update_enemy_health_ui, EnemySpawnTimer, PortalSpawnTracker,
@@ -32,7 +32,7 @@ pub struct VoidGameplayPlugin;
 
 #[derive(Resource, Default)]
 struct GameConfigHandles {
-    global: Handle<GlobalConfig>,
+    portal: Handle<PortalConfig>,
     enemy: Handle<EnemyConfig>,
     soldier: Handle<SoldierConfig>,
 }
@@ -47,7 +47,7 @@ impl Plugin for VoidGameplayPlugin {
         }
 
         app.add_plugins((
-            RonAssetPlugin::<GlobalConfig>::new(&["global.ron"]),
+            RonAssetPlugin::<PortalConfig>::new(&["portal.ron"]),
             RonAssetPlugin::<EnemyConfig>::new(&["enemy.ron"]),
             RonAssetPlugin::<SoldierConfig>::new(&["soldier.ron"]),
         ));
@@ -89,7 +89,7 @@ fn start_loading(
     asset_server: Res<AssetServer>,
     mut handles: ResMut<GameConfigHandles>,
 ) {
-    handles.global = asset_server.load("configs/global.ron");
+    handles.portal = asset_server.load("configs/portal.ron");
     handles.enemy = asset_server.load("configs/enemy.ron");
     handles.soldier = asset_server.load("configs/soldier.ron");
 
@@ -112,25 +112,25 @@ struct LoadingText;
 fn check_assets_ready(
     mut commands: Commands,
     handles: Res<GameConfigHandles>,
-    global_assets: Res<Assets<GlobalConfig>>,
+    portal_assets: Res<Assets<PortalConfig>>,
     enemy_assets: Res<Assets<EnemyConfig>>,
     soldier_assets: Res<Assets<SoldierConfig>>,
     mut next_state: ResMut<NextState<GameState>>,
     loading_text_query: Query<Entity, With<LoadingText>>,
 ) {
-    if let (Some(global), Some(enemy), Some(soldier)) = (
-        global_assets.get(&handles.global),
+    if let (Some(portal), Some(enemy), Some(soldier)) = (
+        portal_assets.get(&handles.portal),
         enemy_assets.get(&handles.enemy),
         soldier_assets.get(&handles.soldier),
     ) {
         // Insert resources
-        commands.insert_resource(global.clone());
+        commands.insert_resource(portal.clone());
         commands.insert_resource(enemy.clone());
         commands.insert_resource(soldier.clone());
 
         // Initialize EnemySpawnTimer from config
         commands.insert_resource(EnemySpawnTimer(Timer::from_seconds(
-            global.spawn_timer,
+            portal.spawn_timer,
             TimerMode::Repeating,
         )));
 
