@@ -69,7 +69,10 @@ pub fn spawn_soldier(
 
 pub fn soldier_decision_logic(
     mut commands: Commands,
-    mut soldier_query: Query<(Entity, &Transform, &mut Soldier, &AttackRange), (Without<Moving>, Without<Attacking>)>,
+    mut soldier_query: Query<
+        (Entity, &Transform, &mut Soldier, &AttackRange),
+        (Without<Moving>, Without<Attacking>),
+    >,
     enemy_query: Query<(Entity, &Transform, &SpawnIndex), With<Enemy>>,
     portal_tracker: Res<PortalSpawnTracker>,
 ) {
@@ -109,18 +112,25 @@ pub fn soldier_movement_logic(
     mut commands: Commands,
     time: Res<Time>,
     soldier_config: Res<SoldierConfig>,
-    mut soldier_query: Query<(Entity, &mut Transform, &Moving, &AttackRange), Without<Attacking>>,
+    mut soldier_query: Query<
+        (Entity, &mut Transform, &Moving, &AttackRange),
+        (Without<Attacking>, Without<Enemy>),
+    >,
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
     for (entity, mut soldier_transform, moving, attack_range) in soldier_query.iter_mut() {
         let target = moving.0;
 
         if let Ok(target_transform) = enemy_query.get(target) {
-            let distance = soldier_transform.translation.distance(target_transform.translation);
+            let distance = soldier_transform
+                .translation
+                .distance(target_transform.translation);
 
             if distance > attack_range.0 {
-                let direction = (target_transform.translation - soldier_transform.translation).normalize_or_zero();
-                soldier_transform.translation += direction * soldier_config.move_speed * time.delta_secs();
+                let direction = (target_transform.translation - soldier_transform.translation)
+                    .normalize_or_zero();
+                soldier_transform.translation +=
+                    direction * soldier_config.move_speed * time.delta_secs();
             } else {
                 // Arrived
                 commands.entity(entity).remove::<Moving>();
@@ -136,14 +146,21 @@ pub fn soldier_attack_logic(
     mut commands: Commands,
     time: Res<Time>,
     soldier_config: Res<SoldierConfig>,
-    mut soldier_query: Query<(Entity, &Transform, &mut Soldier, &Attacking, &AttackRange), Without<Moving>>,
+    mut soldier_query: Query<
+        (Entity, &Transform, &mut Soldier, &Attacking, &AttackRange),
+        Without<Moving>,
+    >,
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
-    for (entity, soldier_transform, mut soldier, attacking, attack_range) in soldier_query.iter_mut() {
+    for (entity, soldier_transform, mut soldier, attacking, attack_range) in
+        soldier_query.iter_mut()
+    {
         let target = attacking.0;
 
         if let Ok(target_transform) = enemy_query.get(target) {
-            let distance = soldier_transform.translation.distance(target_transform.translation);
+            let distance = soldier_transform
+                .translation
+                .distance(target_transform.translation);
 
             if distance > attack_range.0 {
                 // Target moved out of range
@@ -152,7 +169,8 @@ pub fn soldier_attack_logic(
                 // Process Attack
                 soldier.attack_timer.tick(time.delta());
                 if soldier.attack_timer.just_finished() {
-                    let direction = (target_transform.translation - soldier_transform.translation).normalize_or_zero();
+                    let direction = (target_transform.translation - soldier_transform.translation)
+                        .normalize_or_zero();
                     let speed = soldier_config.projectile_speed;
 
                     commands.spawn((
@@ -174,8 +192,8 @@ pub fn soldier_attack_logic(
                 }
             }
         } else {
-             // Target invalid/despawned
-             commands.entity(entity).remove::<Attacking>();
+            // Target invalid/despawned
+            commands.entity(entity).remove::<Attacking>();
         }
     }
 }
