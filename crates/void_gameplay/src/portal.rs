@@ -27,10 +27,10 @@ pub struct Lifetime {
 #[derive(Component)]
 pub struct SpawnIndex(pub u32);
 
-#[derive(Component)]
+// Resources
+#[derive(Resource, Default)]
 pub struct PortalSpawnTracker(pub u32);
 
-// Resources
 #[derive(Resource)]
 pub struct EnemySpawnTimer(pub Timer);
 
@@ -58,7 +58,6 @@ pub fn spawn_portal(
             },
             Transform::from_xyz(0.0, portal_y, 0.0),
             Portal,
-            PortalSpawnTracker(0),
         ));
         info!("Portal spawned at y={}", portal_y);
     }
@@ -70,7 +69,8 @@ pub fn spawn_enemies(
     mut spawn_timer: ResMut<EnemySpawnTimer>,
     enemy_config: Res<EnemyConfig>,
     enemy_query: Query<Entity, With<Enemy>>,
-    mut portal_query: Query<(&Transform, &mut PortalSpawnTracker), With<Portal>>,
+    portal_query: Query<&Transform, With<Portal>>,
+    mut spawn_tracker: ResMut<PortalSpawnTracker>,
     window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
     spawn_timer.0.tick(time.delta());
@@ -81,7 +81,7 @@ pub fn spawn_enemies(
             return;
         }
 
-        let Some((portal_transform, mut spawn_tracker)) = portal_query.iter_mut().next() else {
+        let Some(portal_transform) = portal_query.iter().next() else {
             warn!("No portal found to spawn enemies from");
             return;
         };

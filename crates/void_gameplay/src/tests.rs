@@ -55,11 +55,10 @@ mod tests {
             PrimaryWindow,
         ));
 
-        app.world_mut().spawn((
-            Transform::from_xyz(0.0, 250.0, 0.0),
-            Portal,
-            PortalSpawnTracker(0),
-        ));
+        app.world_mut()
+            .spawn((Transform::from_xyz(0.0, 250.0, 0.0), Portal));
+
+        app.insert_resource(PortalSpawnTracker(0));
 
         app.insert_resource(EnemySpawnTimer(Timer::from_seconds(
             7.5,

@@ -28,12 +28,11 @@ mod tests {
             PrimaryWindow,
         ));
 
-        // Spawn Portal with Tracker (required for targeting)
-        app.world_mut().spawn((
-            Transform::default(),
-            Portal,
-            PortalSpawnTracker(10), // Start at 10 to allow testing wrapping/subtraction
-        ));
+        // Spawn Portal
+        app.world_mut().spawn((Transform::default(), Portal));
+
+        // Insert Tracker Resource (required for targeting)
+        app.insert_resource(PortalSpawnTracker(10)); // Start at 10 to allow testing wrapping/subtraction
 
         app.insert_resource(EnemySpawnTimer(Timer::from_seconds(
             1.0,
@@ -242,14 +241,7 @@ mod tests {
         app.update();
 
         // Set tracker to 2 (just wrapped around u32::MAX)
-        if let Some(mut tracker) = app
-            .world_mut()
-            .query::<&mut PortalSpawnTracker>()
-            .iter_mut(app.world_mut())
-            .next()
-        {
-            tracker.0 = 2;
-        }
+        app.insert_resource(PortalSpawnTracker(2));
 
         // Enemy A: Index 1. Age = 2 - 1 = 1. (New)
         // Enemy B: Index u32::MAX. Age = 2 - u32::MAX = 3. (Oldest, wrapped)
