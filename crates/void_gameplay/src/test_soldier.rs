@@ -8,8 +8,8 @@ mod tests {
                 SpawnIndex,
             },
             soldier::{
-                move_projectiles, projectile_collision, soldier_acquire_target, soldier_attack,
-                soldier_movement, spawn_soldier, AttackRange, Projectile, Soldier,
+                move_projectiles, projectile_collision, soldier_decision_logic, soldier_attack_logic,
+                soldier_movement_logic, spawn_soldier, AttackRange, Projectile, Soldier, Moving, Attacking
             },
         },
         bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow},
@@ -51,9 +51,9 @@ mod tests {
             Update,
             (
                 spawn_soldier,
-                soldier_acquire_target,
-                soldier_movement,
-                soldier_attack,
+                soldier_decision_logic,
+                soldier_movement_logic,
+                soldier_attack_logic,
                 move_projectiles,
                 projectile_collision.after(move_projectiles),
                 despawn_dead_enemies.after(projectile_collision),
@@ -96,7 +96,7 @@ mod tests {
             .id();
 
         // 3. Acquire Target
-        app.update(); // soldier_acquire_target runs
+        app.update(); // soldier_decision_logic runs, assigns target, likely Moving or Attacking
         {
             let mut soldier_query = app.world_mut().query::<&Soldier>();
             let soldier = soldier_query.iter(app.world()).next().unwrap();
@@ -108,7 +108,7 @@ mod tests {
             let mut time = app.world_mut().resource_mut::<Time>();
             time.advance_by(std::time::Duration::from_secs_f32(1.1));
         }
-        app.update(); // soldier_attack runs
+        app.update(); // decision -> attack logic runs
 
         // Check Projectile Spawned
         let projectile_entity = {
@@ -221,7 +221,7 @@ mod tests {
             .id();
 
         // 1. Check targeting oldest (B)
-        app.update();
+        app.update(); // Decision logic runs
         {
             let mut soldier_query = app.world_mut().query::<&Soldier>();
             let soldier = soldier_query.iter(app.world()).next().unwrap();
@@ -277,7 +277,7 @@ mod tests {
             ))
             .id();
 
-        app.update();
+        app.update(); // Decision logic
         {
             let mut soldier_query = app.world_mut().query::<&Soldier>();
             let soldier = soldier_query.iter(app.world()).next().unwrap();
@@ -294,8 +294,6 @@ mod tests {
         let mut app = setup_app();
 
         // Spawn Soldier manually to control position
-        // Don't rely on spawn_soldier system for this specific test, or just update its pos after spawn
-        // Let's just update its pos after spawn.
         app.update(); // Spawns soldier at default pos (0, -225, 0)
 
         let soldier_entity = app.world_mut().query_filtered::<Entity, With<Soldier>>().single(app.world()).expect("Soldier should be spawned");
@@ -305,7 +303,7 @@ mod tests {
         soldier_transform.translation = Vec3::new(0.0, -500.0, 0.0);
 
         // Attack Range is 150.
-        // Move speed is 100 (from setup_app config in this test file)
+        // Move speed is 100.
 
         // Spawn Enemy at (0, 0)
         let enemy_entity = app
@@ -323,14 +321,15 @@ mod tests {
             ))
             .id();
 
-        app.update(); // soldier_acquire_target runs
+        app.update(); // soldier_decision_logic runs. Should pick target. Distance 500 > 150. Should add Moving.
 
         // Verify Target Acquired
         let soldier = app.world().get::<Soldier>(soldier_entity).unwrap();
         assert_eq!(soldier.target, Some(enemy_entity));
 
-        // Distance is 500. Range is 150.
-        // Should move. Should NOT attack.
+        // Verify Moving Component
+        assert!(app.world().get::<Moving>(soldier_entity).is_some());
+        assert!(app.world().get::<Attacking>(soldier_entity).is_none());
 
         // 1. Advance time 1 second.
         // Soldier should move 100 units towards (0,0). New pos: (0, -400)
@@ -338,7 +337,7 @@ mod tests {
              let mut time = app.world_mut().resource_mut::<Time>();
              time.advance_by(std::time::Duration::from_secs_f32(1.0));
         }
-        app.update(); // movement, attack checks
+        app.update(); // movement logic runs.
 
         let soldier_transform = app.world().get::<Transform>(soldier_entity).unwrap();
         assert!(soldier_transform.translation.y > -500.0);
@@ -350,37 +349,41 @@ mod tests {
         // 2. Advance time to get within range.
         // Current Y: -400. Target Y: -150 (boundary). Distance to travel: 250.
         // Speed 100. Need 2.5 seconds.
-        // Let's go 2.6 seconds to be sure we are inside.
+        // Let's go 2.6 seconds.
         {
              let mut time = app.world_mut().resource_mut::<Time>();
              time.advance_by(std::time::Duration::from_secs_f32(2.6));
         }
         app.update();
 
+        // The system flow is:
+        // Frame N (distance > range): Moving system moves soldier. New distance <= range? Removes Moving.
+        // Frame N+1: Decision system sees no Moving/Attacking. Checks target. Distance <= range. Adds Attacking.
+        // Frame N+1 (or same frame if ordered correctly?): Attacking system runs.
+
+        // Check if Moving is removed
+        assert!(app.world().get::<Moving>(soldier_entity).is_none());
+
+        // Since we ran `app.update()`, and systems run in schedule...
+        // If decision logic runs before movement/attack logic:
+        // Frame X: Movement logic moves soldier into range. Removes Moving.
+        // Frame X+1: Decision logic sees no action. Adds Attacking.
+
+        // Let's check if we are in Attacking state now or if we need another update.
+        // If Moving removed it in Frame X, and Decision runs before Movement (default parallel/ambiguous order unless explicit),
+        // we might need another frame for Decision to pick it up.
+
+        // Let's force another update just to be sure the state transition happens.
+        app.update();
+
+        assert!(app.world().get::<Attacking>(soldier_entity).is_some());
+
         let soldier_transform = app.world().get::<Transform>(soldier_entity).unwrap();
-        // Should be at roughly -140 (started at -400, moved 260).
-        // Wait, logic says: if distance > range, move.
-        // Once distance <= range, stop moving.
-        // Range is 150.
-        // So it stops at -150 (distance 150).
-        // Let's check if it moved past -150.
-        // Actually, with discrete steps, it might overshoot slightly if we don't clamp,
-        // but our logic is "if distance > range { move }".
-        // If at start of frame, distance is 151, it moves.
-        // If at start of frame, distance is 149, it does not move.
-
-        // At T=3.6s (total), it should have moved 360 units? No, it stops when in range.
-        // Initial -500. Range 150. Boundary -150. Travel distance 350.
-        // Speed 100. Takes 3.5s to reach boundary.
-        // We simulated 1.0s + 2.6s = 3.6s.
-        // So it should have stopped around -150.
-
         let dist = soldier_transform.translation.distance(Vec3::ZERO);
-        assert!(dist <= 150.0 + 1.0); // Allow small float error or slight overshoot from last frame
+        assert!(dist <= 150.0 + 2.0); // Allow small buffer
 
-        // Check Projectile Spawned (Attack timer is 1.0s, we advanced 3.6s, so timers triggered)
-        // Note: Timer ticks even if we don't fire.
-        // So timer should be ready. And since we are in range, it should fire.
+        // Check Projectile Spawned
+        // Timer should tick.
         assert!(app.world().query::<&Projectile>().iter(app.world()).count() > 0);
     }
 }

@@ -16,8 +16,8 @@ use {
         update_enemy_health_ui, EnemySpawnTimer, PortalSpawnTracker,
     },
     soldier::{
-        move_projectiles, projectile_collision, soldier_acquire_target, soldier_attack,
-        soldier_movement, spawn_soldier,
+        move_projectiles, projectile_collision, soldier_attack_logic, soldier_decision_logic,
+        soldier_movement_logic, spawn_soldier,
     },
 };
 
@@ -69,9 +69,9 @@ impl Plugin for VoidGameplayPlugin {
                 enemy_lifetime,
                 despawn_dead_enemies,
                 update_enemy_health_ui,
-                soldier_acquire_target,
-                soldier_movement,
-                soldier_attack,
+                soldier_decision_logic,
+                soldier_movement_logic,
+                soldier_attack_logic,
                 move_projectiles,
                 projectile_collision,
             )
