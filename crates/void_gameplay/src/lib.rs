@@ -17,7 +17,7 @@ use {
     },
     soldier::{
         move_projectiles, projectile_collision, soldier_acquire_target, soldier_attack,
-        spawn_soldier,
+        soldier_movement, spawn_soldier,
     },
 };
 
@@ -70,6 +70,7 @@ impl Plugin for VoidGameplayPlugin {
                 despawn_dead_enemies,
                 update_enemy_health_ui,
                 soldier_acquire_target,
+                soldier_movement,
                 soldier_attack,
                 move_projectiles,
                 projectile_collision,

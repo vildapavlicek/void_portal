@@ -19,4 +19,6 @@ pub struct SoldierConfig {
     pub projectile_speed: f32,
     pub projectile_damage: f32,
     pub projectile_lifetime: f32,
+    pub attack_range: f32,
+    pub move_speed: f32,
 }

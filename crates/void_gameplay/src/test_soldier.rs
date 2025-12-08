@@ -9,7 +9,7 @@ mod tests {
             },
             soldier::{
                 move_projectiles, projectile_collision, soldier_acquire_target, soldier_attack,
-                spawn_soldier, Projectile, Soldier,
+                soldier_movement, spawn_soldier, AttackRange, Projectile, Soldier,
             },
         },
         bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow},
@@ -43,6 +43,8 @@ mod tests {
             projectile_speed: 400.0,
             projectile_damage: 20.0,
             projectile_lifetime: 2.0,
+            attack_range: 150.0,
+            move_speed: 100.0,
         });
 
         app.add_systems(
@@ -50,6 +52,7 @@ mod tests {
             (
                 spawn_soldier,
                 soldier_acquire_target,
+                soldier_movement,
                 soldier_attack,
                 move_projectiles,
                 projectile_collision.after(move_projectiles),
@@ -284,5 +287,100 @@ mod tests {
                 "Should target Enemy B because it is older across the wrap boundary"
             );
         }
+    }
+
+    #[test]
+    fn test_soldier_movement_and_range() {
+        let mut app = setup_app();
+
+        // Spawn Soldier manually to control position
+        // Don't rely on spawn_soldier system for this specific test, or just update its pos after spawn
+        // Let's just update its pos after spawn.
+        app.update(); // Spawns soldier at default pos (0, -225, 0)
+
+        let soldier_entity = app.world_mut().query_filtered::<Entity, With<Soldier>>().single(app.world()).expect("Soldier should be spawned");
+
+        // Move soldier to (0, -500)
+        let mut soldier_transform = app.world_mut().get_mut::<Transform>(soldier_entity).expect("Soldier entity should have Transform");
+        soldier_transform.translation = Vec3::new(0.0, -500.0, 0.0);
+
+        // Attack Range is 150.
+        // Move speed is 100 (from setup_app config in this test file)
+
+        // Spawn Enemy at (0, 0)
+        let enemy_entity = app
+            .world_mut()
+            .spawn((
+                Transform::from_xyz(0.0, 0.0, 0.0),
+                Enemy {
+                    target_position: Vec2::ZERO,
+                },
+                SpawnIndex(0),
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+            ))
+            .id();
+
+        app.update(); // soldier_acquire_target runs
+
+        // Verify Target Acquired
+        let soldier = app.world().get::<Soldier>(soldier_entity).unwrap();
+        assert_eq!(soldier.target, Some(enemy_entity));
+
+        // Distance is 500. Range is 150.
+        // Should move. Should NOT attack.
+
+        // 1. Advance time 1 second.
+        // Soldier should move 100 units towards (0,0). New pos: (0, -400)
+        {
+             let mut time = app.world_mut().resource_mut::<Time>();
+             time.advance_by(std::time::Duration::from_secs_f32(1.0));
+        }
+        app.update(); // movement, attack checks
+
+        let soldier_transform = app.world().get::<Transform>(soldier_entity).unwrap();
+        assert!(soldier_transform.translation.y > -500.0);
+        assert!((soldier_transform.translation.y - -400.0).abs() < 1.0); // Approx -400
+
+        // Check NO projectile (distance 400 > 150)
+        assert_eq!(app.world().query::<&Projectile>().iter(app.world()).count(), 0);
+
+        // 2. Advance time to get within range.
+        // Current Y: -400. Target Y: -150 (boundary). Distance to travel: 250.
+        // Speed 100. Need 2.5 seconds.
+        // Let's go 2.6 seconds to be sure we are inside.
+        {
+             let mut time = app.world_mut().resource_mut::<Time>();
+             time.advance_by(std::time::Duration::from_secs_f32(2.6));
+        }
+        app.update();
+
+        let soldier_transform = app.world().get::<Transform>(soldier_entity).unwrap();
+        // Should be at roughly -140 (started at -400, moved 260).
+        // Wait, logic says: if distance > range, move.
+        // Once distance <= range, stop moving.
+        // Range is 150.
+        // So it stops at -150 (distance 150).
+        // Let's check if it moved past -150.
+        // Actually, with discrete steps, it might overshoot slightly if we don't clamp,
+        // but our logic is "if distance > range { move }".
+        // If at start of frame, distance is 151, it moves.
+        // If at start of frame, distance is 149, it does not move.
+
+        // At T=3.6s (total), it should have moved 360 units? No, it stops when in range.
+        // Initial -500. Range 150. Boundary -150. Travel distance 350.
+        // Speed 100. Takes 3.5s to reach boundary.
+        // We simulated 1.0s + 2.6s = 3.6s.
+        // So it should have stopped around -150.
+
+        let dist = soldier_transform.translation.distance(Vec3::ZERO);
+        assert!(dist <= 150.0 + 1.0); // Allow small float error or slight overshoot from last frame
+
+        // Check Projectile Spawned (Attack timer is 1.0s, we advanced 3.6s, so timers triggered)
+        // Note: Timer ticks even if we don't fire.
+        // So timer should be ready. And since we are in range, it should fire.
+        assert!(app.world().query::<&Projectile>().iter(app.world()).count() > 0);
     }
 }

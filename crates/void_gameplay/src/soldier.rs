@@ -13,6 +13,9 @@ pub struct Soldier {
 }
 
 #[derive(Component)]
+pub struct AttackRange(pub f32);
+
+#[derive(Component)]
 pub struct Projectile {
     pub velocity: Vec3,
     pub damage: f32,
@@ -52,6 +55,7 @@ pub fn spawn_soldier(
                 ),
                 target: None,
             },
+            AttackRange(soldier_config.attack_range),
         ));
         info!("Soldier spawned at y={}", soldier_y);
     }
@@ -82,40 +86,70 @@ pub fn soldier_acquire_target(
     }
 }
 
+pub fn soldier_movement(
+    time: Res<Time>,
+    soldier_config: Res<SoldierConfig>,
+    mut soldier_query: Query<(&mut Transform, &Soldier, &AttackRange)>,
+    enemy_query: Query<&Transform, (With<Enemy>, Without<Soldier>)>,
+) {
+    for (mut soldier_transform, soldier, attack_range) in soldier_query.iter_mut() {
+        if let Some(target) = soldier.target {
+            if let Ok(target_transform) = enemy_query.get(target) {
+                let distance = soldier_transform
+                    .translation
+                    .distance(target_transform.translation);
+
+                if distance > attack_range.0 {
+                    let direction = (target_transform.translation - soldier_transform.translation)
+                        .normalize_or_zero();
+                    soldier_transform.translation +=
+                        direction * soldier_config.move_speed * time.delta_secs();
+                }
+            }
+        }
+    }
+}
+
 pub fn soldier_attack(
     mut commands: Commands,
     time: Res<Time>,
     soldier_config: Res<SoldierConfig>,
-    mut soldier_query: Query<(&Transform, &mut Soldier)>,
+    mut soldier_query: Query<(&Transform, &mut Soldier, &AttackRange)>,
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
-    for (soldier_transform, mut soldier) in soldier_query.iter_mut() {
+    for (soldier_transform, mut soldier, attack_range) in soldier_query.iter_mut() {
         soldier.attack_timer.tick(time.delta());
 
         if soldier.attack_timer.just_finished() {
             if let Some(target) = soldier.target {
                 if let Ok(target_transform) = enemy_query.get(target) {
-                    // Spawn projectile
-                    let direction = (target_transform.translation - soldier_transform.translation)
-                        .normalize_or_zero();
-                    let speed = soldier_config.projectile_speed;
+                    let distance = soldier_transform
+                        .translation
+                        .distance(target_transform.translation);
 
-                    commands.spawn((
-                        Sprite {
-                            color: Color::srgb(1.0, 1.0, 0.0), // Yellow
-                            custom_size: Some(Vec2::new(8.0, 8.0)),
-                            ..default()
-                        },
-                        Transform::from_translation(soldier_transform.translation),
-                        Projectile {
-                            velocity: direction * speed,
-                            damage: soldier_config.projectile_damage,
-                            lifetime: Timer::from_seconds(
-                                soldier_config.projectile_lifetime,
-                                TimerMode::Once,
-                            ),
-                        },
-                    ));
+                    if distance <= attack_range.0 {
+                         // Spawn projectile
+                        let direction = (target_transform.translation - soldier_transform.translation)
+                            .normalize_or_zero();
+                        let speed = soldier_config.projectile_speed;
+
+                        commands.spawn((
+                            Sprite {
+                                color: Color::srgb(1.0, 1.0, 0.0), // Yellow
+                                custom_size: Some(Vec2::new(8.0, 8.0)),
+                                ..default()
+                            },
+                            Transform::from_translation(soldier_transform.translation),
+                            Projectile {
+                                velocity: direction * speed,
+                                damage: soldier_config.projectile_damage,
+                                lifetime: Timer::from_seconds(
+                                    soldier_config.projectile_lifetime,
+                                    TimerMode::Once,
+                                ),
+                            },
+                        ));
+                    }
                 }
             }
         }
