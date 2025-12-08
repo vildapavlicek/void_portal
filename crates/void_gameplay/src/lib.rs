@@ -13,7 +13,7 @@ use {
     configs::{EnemyConfig, GlobalConfig, SoldierConfig},
     portal::{
         despawn_dead_enemies, enemy_lifetime, move_enemies, spawn_enemies, spawn_portal,
-        update_enemy_health_ui, EnemySpawnTimer,
+        update_enemy_health_ui, EnemySpawnTimer, PortalSpawnTracker,
     },
     soldier::{
         move_projectiles, projectile_collision, soldier_acquire_target, soldier_attack,
@@ -51,12 +51,7 @@ impl Plugin for VoidGameplayPlugin {
         ));
 
         app.init_resource::<GameConfigHandles>();
-
-        // Remove the hardcoded timer resource here, it will be added when loading is done
-        // However, existing systems might need it to exist or we should add it with a dummy value until loaded?
-        // But since we switch to Playing state only after loading, systems in Playing won't run yet.
-        // Wait, current systems are in Update without run conditions. They run always.
-        // I need to change that.
+        app.init_resource::<PortalSpawnTracker>();
 
         app.add_systems(Startup, start_loading);
         app.add_systems(

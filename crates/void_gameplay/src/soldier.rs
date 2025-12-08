@@ -60,11 +60,8 @@ pub fn spawn_soldier(
 pub fn soldier_acquire_target(
     mut soldier_query: Query<&mut Soldier>,
     enemy_query: Query<(Entity, &SpawnIndex), With<Enemy>>,
-    portal_tracker_query: Query<&PortalSpawnTracker>,
+    portal_tracker: Res<PortalSpawnTracker>,
 ) {
-    let Some(portal_tracker) = portal_tracker_query.iter().next() else {
-        return;
-    };
     let current_spawn_count = portal_tracker.0;
 
     for mut soldier in soldier_query.iter_mut() {
