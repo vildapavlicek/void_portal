@@ -24,6 +24,12 @@ pub struct Lifetime {
     pub timer: Timer,
 }
 
+#[derive(Component)]
+pub struct SpawnIndex(pub u32);
+
+#[derive(Component)]
+pub struct PortalSpawnTracker(pub u32);
+
 // Resources
 #[derive(Resource)]
 pub struct EnemySpawnTimer(pub Timer);
@@ -52,6 +58,7 @@ pub fn spawn_portal(
             },
             Transform::from_xyz(0.0, portal_y, 0.0),
             Portal,
+            PortalSpawnTracker(0),
         ));
         info!("Portal spawned at y={}", portal_y);
     }
@@ -63,7 +70,7 @@ pub fn spawn_enemies(
     mut spawn_timer: ResMut<EnemySpawnTimer>,
     enemy_config: Res<EnemyConfig>,
     enemy_query: Query<Entity, With<Enemy>>,
-    portal_query: Query<&Transform, With<Portal>>,
+    mut portal_query: Query<(&Transform, &mut PortalSpawnTracker), With<Portal>>,
     window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
     spawn_timer.0.tick(time.delta());
@@ -74,7 +81,7 @@ pub fn spawn_enemies(
             return;
         }
 
-        let Some(portal_transform) = portal_query.iter().next() else {
+        let Some((portal_transform, mut spawn_tracker)) = portal_query.iter_mut().next() else {
             warn!("No portal found to spawn enemies from");
             return;
         };
@@ -101,6 +108,7 @@ pub fn spawn_enemies(
                 },
                 Transform::from_translation(portal_transform.translation),
                 Enemy { target_position },
+                SpawnIndex(spawn_tracker.0),
                 Health {
                     current: enemy_config.max_health,
                     max: enemy_config.max_health,
@@ -120,6 +128,8 @@ pub fn spawn_enemies(
                     Transform::from_translation(Vec3::new(0.0, 20.0, 1.0)),
                 ));
             });
+
+        spawn_tracker.0 = spawn_tracker.0.wrapping_add(1);
         info!("Enemy spawned! Target: {:?}", target_position);
     }
 }
