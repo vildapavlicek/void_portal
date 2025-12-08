@@ -1,6 +1,6 @@
 use {
     bevy::prelude::*, void_assets::VoidAssetsPlugin, void_core::VoidCorePlugin,
-    void_gameplay::VoidGameplayPlugin, void_ui::VoidUiPlugin,
+    void_gameplay::VoidGameplayPlugin, void_ui::VoidUiPlugin, void_wallet::VoidWalletPlugin,
 };
 
 fn main() {
@@ -16,5 +16,6 @@ fn main() {
         .add_plugins(VoidAssetsPlugin)
         .add_plugins(VoidUiPlugin)
         .add_plugins(VoidGameplayPlugin)
+        .add_plugins(VoidWalletPlugin)
         .run();
 }

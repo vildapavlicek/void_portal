@@ -9,6 +9,7 @@ void_core = { path = "crates/void_core" }
 void_assets = { path = "crates/void_assets" }
 void_ui = { path = "crates/void_ui" }
 void_gameplay = { path = "crates/void_gameplay" }
+void_wallet = { path = "crates/void_wallet" }
 
 # Enable dynamic linking for faster compile times in development
 [features]

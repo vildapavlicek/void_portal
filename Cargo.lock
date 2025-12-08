@@ -4672,10 +4672,19 @@ dependencies = [
  "void_core",
  "void_gameplay",
  "void_ui",
+ "void_wallet",
 ]
 
 [[package]]
 name = "void_ui"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "void_core",
+]
+
+[[package]]
+name = "void_wallet"
 version = "0.1.0"
 dependencies = [
  "bevy",
