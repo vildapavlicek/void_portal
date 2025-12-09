@@ -131,6 +131,14 @@ pub fn soldier_movement_logic(
                     .normalize_or_zero();
                 soldier_transform.translation +=
                     direction * soldier_config.move_speed * time.delta_secs();
+
+                // Check if we reached range
+                let new_distance = soldier_transform
+                    .translation
+                    .distance(target_transform.translation);
+                if new_distance <= attack_range.0 {
+                    commands.entity(entity).remove::<Moving>();
+                }
             } else {
                 // Arrived
                 commands.entity(entity).remove::<Moving>();
