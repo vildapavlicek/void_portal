@@ -22,6 +22,6 @@ impl Plugin for VoidCorePlugin {
 }
 
 fn setup_camera(mut commands: Commands) {
-    commands.spawn(Camera2d::default());
+    commands.spawn(Camera2d);
     debug!("Camera setup complete");
 }
