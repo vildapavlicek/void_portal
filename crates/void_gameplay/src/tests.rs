@@ -24,6 +24,7 @@ mod tests {
             base_void_shards_reward: 10.0,
             base_upgrade_price: 500.0,
             upgrade_price_increase_coef: 1.5,
+            portal_top_offset: 100.0,
             base_enemy_health: 5.0,
             base_enemy_speed: 150.0,
             base_enemy_lifetime: 10.0,
@@ -52,8 +53,8 @@ mod tests {
         let mut transform_query = app.world_mut().query::<(&Transform, &Portal)>();
         let (transform, _) = transform_query.iter(app.world()).next().unwrap();
 
-        // Window height 600, half is 300. Portal should be at 300 - 50 = 250.
-        assert_eq!(transform.translation.y, 250.0);
+        // Window height 600, half is 300. Portal should be at 300 - 100 = 200.
+        assert_eq!(transform.translation.y, 200.0);
     }
 
     #[test]
@@ -89,6 +90,7 @@ mod tests {
             base_void_shards_reward: 10.0,
             base_upgrade_price: 500.0,
             upgrade_price_increase_coef: 1.5,
+            portal_top_offset: 100.0,
             base_enemy_health: 100.0,
             base_enemy_speed: 100.0,
             base_enemy_lifetime: 10.0,
