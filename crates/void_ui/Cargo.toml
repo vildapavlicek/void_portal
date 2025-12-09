@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 bevy = { workspace = true }
 void_core = { path = "../void_core" }
+void_wallet = { path = "../void_wallet" }
