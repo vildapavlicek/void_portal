@@ -37,3 +37,8 @@ The project is organized as a Cargo workspace with the following crates:
 * **`void_ui`**: Dedicated crate for User Interface systems and components.
 * **`void_assets`**: Handles asset loading and management.
 * **`src/` (Root)**: Contains the main binary entry point and high-level application setup.
+
+# Pre-commit
+Always run `cargo +nightly fmt` before pushing any changes to ensure code is well formatted.
+Always run `cargo c` and check for lints.
+Always run `cargo clippy` to check for lints.
