@@ -6,15 +6,20 @@ pub struct PortalConfig {
     pub base_void_shards_reward: f32,
     pub base_upgrade_price: f32,
     pub upgrade_price_increase_coef: f32,
+    // Base enemy stats
+    pub base_enemy_health: f32,
+    pub base_enemy_speed: f32,
+    pub base_enemy_lifetime: f32,
+    pub base_enemy_reward: f32,
 }
 
 #[derive(Deserialize, Asset, TypePath, Clone, Debug, Resource)]
 pub struct EnemyConfig {
-    pub max_health: f32,
-    pub lifetime: f32,
-    pub speed: f32,
+    pub health_coef: f32,
+    pub lifetime_coef: f32,
+    pub speed_coef: f32,
+    pub reward_coef: f32,
     pub spawn_limit: usize,
-    pub reward: f32,
 }
 
 #[derive(Deserialize, Asset, TypePath, Clone, Debug, Resource)]

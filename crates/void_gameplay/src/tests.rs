@@ -3,12 +3,12 @@ mod tests {
     // Import from the sibling module 'portal'
     use {
         crate::portal::{
-            enemy_lifetime, spawn_enemies, spawn_portal, Enemy, EnemySpawnTimer, Portal,
-            PortalSpawnTracker,
+            enemy_lifetime, spawn_enemies, spawn_portal, AvailableEnemies, Enemy, EnemySpawnTimer,
+            Portal, PortalSpawnTracker, Speed,
         },
         bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow},
     };
-    use crate::configs::PortalConfig;
+    use crate::configs::{EnemyConfig, PortalConfig};
 
     #[test]
     fn test_portal_spawn() {
@@ -22,6 +22,10 @@ mod tests {
             base_void_shards_reward: 10.0,
             base_upgrade_price: 500.0,
             upgrade_price_increase_coef: 1.5,
+            base_enemy_health: 5.0,
+            base_enemy_speed: 150.0,
+            base_enemy_lifetime: 10.0,
+            base_enemy_reward: 10.0,
         });
 
         // Spawn a window with specific resolution.
@@ -77,13 +81,27 @@ mod tests {
             7.5,
             TimerMode::Repeating,
         )));
-        app.insert_resource(crate::configs::EnemyConfig {
-            max_health: 100.0,
-            lifetime: 10.0,
-            speed: 100.0,
-            spawn_limit: 5,
-            reward: 10.0,
+
+        app.insert_resource(PortalConfig {
+            spawn_timer: 5.0,
+            base_void_shards_reward: 10.0,
+            base_upgrade_price: 500.0,
+            upgrade_price_increase_coef: 1.5,
+            base_enemy_health: 100.0,
+            base_enemy_speed: 100.0,
+            base_enemy_lifetime: 10.0,
+            base_enemy_reward: 10.0,
         });
+
+        app.insert_resource(AvailableEnemies(vec![
+            EnemyConfig {
+                health_coef: 1.0,
+                lifetime_coef: 1.0,
+                speed_coef: 1.0,
+                spawn_limit: 5,
+                reward_coef: 1.0,
+            }
+        ]));
 
         // Add systems
         app.add_systems(Update, (spawn_enemies, enemy_lifetime));
@@ -108,6 +126,11 @@ mod tests {
         {
             let mut query = app.world_mut().query::<&Enemy>();
             assert_eq!(query.iter(app.world()).count(), 1);
+
+            // Check speed component
+             let mut speed_query = app.world_mut().query::<&Speed>();
+             let speed = speed_query.iter(app.world()).next().unwrap();
+             assert_eq!(speed.0, 100.0);
         }
 
         // Tick by 7.5s -> Spawn another

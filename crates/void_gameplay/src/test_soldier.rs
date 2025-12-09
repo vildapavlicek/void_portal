@@ -5,7 +5,7 @@ mod tests {
             portal::{
                 despawn_dead_enemies, enemy_lifetime, spawn_enemies, spawn_portal,
                 update_enemy_health_ui, Enemy, EnemySpawnTimer, Health, Portal, PortalSpawnTracker,
-                SpawnIndex,
+                SpawnIndex, Speed,
             },
             soldier::{
                 move_projectiles, projectile_collision, soldier_attack_logic,
@@ -39,6 +39,10 @@ mod tests {
             base_void_shards_reward: 10.0,
             base_upgrade_price: 500.0,
             upgrade_price_increase_coef: 1.5,
+            base_enemy_health: 10.0,
+            base_enemy_speed: 150.0,
+            base_enemy_lifetime: 10.0,
+            base_enemy_reward: 10.0,
         });
 
         // Spawn Portal (spawn_portal system needs PortalConfig, but here we spawn manually sometimes?
@@ -112,6 +116,7 @@ mod tests {
                     max: 100.0,
                 },
                 crate::portal::Reward(10.0), // Added Reward component as required by despawn_dead_enemies
+                Speed(150.0), // Added Speed component
             ))
             .id();
 
@@ -211,6 +216,7 @@ mod tests {
                     max: 10.0,
                 },
                 crate::portal::Reward(10.0),
+                Speed(150.0),
             ))
             .id();
 
@@ -227,10 +233,11 @@ mod tests {
                     max: 10.0,
                 },
                 crate::portal::Reward(10.0),
+                Speed(150.0),
             ))
             .id();
 
-        let enemy_c = app
+        let _enemy_c = app
             .world_mut()
             .spawn((
                 Transform::default(),
@@ -243,6 +250,7 @@ mod tests {
                     max: 10.0,
                 },
                 crate::portal::Reward(10.0),
+                Speed(150.0),
             ))
             .id();
 
@@ -275,7 +283,7 @@ mod tests {
         // Enemy A: Index 1. Age = 2 - 1 = 1. (New)
         // Enemy B: Index u32::MAX. Age = 2 - u32::MAX = 3. (Oldest, wrapped)
 
-        let enemy_a = app
+        let _enemy_a = app
             .world_mut()
             .spawn((
                 Transform::default(),
@@ -288,6 +296,7 @@ mod tests {
                     max: 10.0,
                 },
                 crate::portal::Reward(10.0),
+                Speed(150.0),
             ))
             .id();
 
@@ -304,6 +313,7 @@ mod tests {
                     max: 10.0,
                 },
                 crate::portal::Reward(10.0),
+                Speed(150.0),
             ))
             .id();
 
@@ -356,6 +366,7 @@ mod tests {
                     max: 100.0,
                 },
                 crate::portal::Reward(10.0),
+                Speed(150.0),
             ))
             .id();
 
