@@ -12,8 +12,9 @@ mod soldier;
 use {
     configs::{EnemyConfig, PortalConfig, SoldierConfig},
     portal::{
-        despawn_dead_enemies, enemy_lifetime, move_enemies, spawn_enemies, spawn_portal,
-        update_enemy_health_ui, AvailableEnemies, EnemySpawnTimer, PortalSpawnTracker,
+        despawn_dead_enemies, enemy_lifetime, move_enemies, on_enemy_spawned, spawn_enemies,
+        spawn_portal, update_enemy_health_ui, AvailableEnemies, Enemy, EnemySpawnTimer, Health,
+        Lifetime, LoadedEnemy, PendingEnemyStats, PortalSpawnTracker, Reward, SpawnIndex, Speed,
     },
     soldier::{
         move_projectiles, projectile_collision, soldier_attack_logic, soldier_decision_logic,
@@ -46,6 +47,22 @@ impl Plugin for VoidGameplayPlugin {
             app.add_plugins(VoidAssetsPlugin);
         }
 
+        // Register types for Scene usage
+        app.register_type::<Enemy>();
+        app.register_type::<Health>();
+        app.register_type::<Lifetime>();
+        app.register_type::<Reward>();
+        app.register_type::<Speed>();
+        app.register_type::<SpawnIndex>();
+        app.register_type::<PendingEnemyStats>();
+
+        // Ensure core Bevy types used in scene are registered (usually they are by DefaultPlugins)
+        app.register_type::<Text2d>();
+        app.register_type::<TextFont>();
+        app.register_type::<TextColor>();
+        app.register_type::<Sprite>();
+        app.register_type::<Transform>();
+
         // Use specific extensions to disambiguate different RON config types
         app.add_plugins((
             RonAssetPlugin::<PortalConfig>::new(&["portal.ron"]),
@@ -56,6 +73,8 @@ impl Plugin for VoidGameplayPlugin {
         app.init_resource::<GameConfigHandles>();
         app.init_resource::<PortalSpawnTracker>();
         app.init_resource::<AvailableEnemies>();
+
+        app.add_observer(on_enemy_spawned);
 
         app.add_systems(Startup, start_loading);
         app.add_systems(
@@ -113,6 +132,7 @@ struct LoadingText;
 
 fn check_assets_ready(
     mut commands: Commands,
+    asset_server: Res<AssetServer>,
     handles: Res<GameConfigHandles>,
     portal_assets: Res<Assets<PortalConfig>>,
     soldier_assets: Res<Assets<SoldierConfig>>,
@@ -137,7 +157,11 @@ fn check_assets_ready(
             // Cast untyped handle to typed handle
             let typed_handle: Handle<EnemyConfig> = handle.clone().typed();
             if let Some(config) = enemy_assets.get(&typed_handle) {
-                available_enemies.0.push(config.clone());
+                let scene_handle = asset_server.load(&config.scene_path);
+                available_enemies.0.push(LoadedEnemy {
+                    config: config.clone(),
+                    scene: scene_handle,
+                });
             }
         }
 

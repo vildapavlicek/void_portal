@@ -20,6 +20,7 @@ pub struct EnemyConfig {
     pub speed_coef: f32,
     pub reward_coef: f32,
     pub spawn_limit: usize,
+    pub scene_path: String,
 }
 
 #[derive(Deserialize, Asset, TypePath, Clone, Debug, Resource)]
