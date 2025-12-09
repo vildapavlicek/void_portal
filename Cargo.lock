@@ -4645,6 +4645,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "void_components"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "void_assets",
+ "void_core",
+]
+
+[[package]]
 name = "void_core"
 version = "0.1.0"
 dependencies = [
@@ -4660,6 +4669,7 @@ dependencies = [
  "rand",
  "serde",
  "void_assets",
+ "void_components",
  "void_core",
 ]
 
@@ -4680,6 +4690,7 @@ name = "void_ui"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "void_components",
  "void_core",
  "void_wallet",
 ]

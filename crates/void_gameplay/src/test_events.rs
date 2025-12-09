@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 use crate::{
-    portal::{despawn_dead_enemies, Enemy, Health, Reward},
+    portal::despawn_dead_enemies,
+};
+use void_components::{
+    enemy::{Enemy, Reward},
+    common::Health,
 };
 use void_core::events::EnemyKilled;
 

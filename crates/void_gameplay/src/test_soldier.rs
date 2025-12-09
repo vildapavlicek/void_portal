@@ -4,18 +4,22 @@ mod tests {
         crate::{
             portal::{
                 despawn_dead_enemies, enemy_lifetime, spawn_enemies, spawn_portal,
-                update_enemy_health_ui, Enemy, EnemySpawnTimer, Health, Portal, PortalSpawnTracker,
-                SpawnIndex, Speed,
+                update_enemy_health_ui, EnemySpawnTimer, PortalSpawnTracker,
             },
             soldier::{
                 move_projectiles, projectile_collision, soldier_attack_logic,
-                soldier_decision_logic, soldier_movement_logic, spawn_soldier, AttackRange,
-                Attacking, Moving, Projectile, Soldier,
+                soldier_decision_logic, soldier_movement_logic, spawn_soldier,
             },
             configs::PortalConfig, // Added import
         },
         bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow},
         void_core::events::EnemyKilled, // Added import
+        void_components::{
+            portal::{Portal, VoidShardsReward, UpgradePrice, UpgradeCoef}, // Reward might conflict so aliasing if needed, but Portal doesn't have Reward anymore. Wait, Portal has VoidShardsReward. Enemy has Reward.
+            enemy::{Enemy, SpawnIndex, Reward},
+            common::{Health, Speed},
+            soldier::{Soldier, AttackRange, Moving, Attacking, Projectile},
+        },
     };
 
     fn setup_app() -> App {
@@ -115,7 +119,7 @@ mod tests {
                     current: 100.0,
                     max: 100.0,
                 },
-                crate::portal::Reward(10.0), // Added Reward component as required by despawn_dead_enemies
+                Reward(10.0), // Added Reward component as required by despawn_dead_enemies
                 Speed(150.0), // Added Speed component
             ))
             .id();
@@ -215,7 +219,7 @@ mod tests {
                     current: 10.0,
                     max: 10.0,
                 },
-                crate::portal::Reward(10.0),
+                Reward(10.0),
                 Speed(150.0),
             ))
             .id();
@@ -232,7 +236,7 @@ mod tests {
                     current: 10.0,
                     max: 10.0,
                 },
-                crate::portal::Reward(10.0),
+                Reward(10.0),
                 Speed(150.0),
             ))
             .id();
@@ -249,7 +253,7 @@ mod tests {
                     current: 10.0,
                     max: 10.0,
                 },
-                crate::portal::Reward(10.0),
+                Reward(10.0),
                 Speed(150.0),
             ))
             .id();
@@ -295,7 +299,7 @@ mod tests {
                     current: 10.0,
                     max: 10.0,
                 },
-                crate::portal::Reward(10.0),
+                Reward(10.0),
                 Speed(150.0),
             ))
             .id();
@@ -312,7 +316,7 @@ mod tests {
                     current: 10.0,
                     max: 10.0,
                 },
-                crate::portal::Reward(10.0),
+                Reward(10.0),
                 Speed(150.0),
             ))
             .id();
@@ -365,7 +369,7 @@ mod tests {
                     current: 100.0,
                     max: 100.0,
                 },
-                crate::portal::Reward(10.0),
+                Reward(10.0),
                 Speed(150.0),
             ))
             .id();
@@ -420,10 +424,6 @@ mod tests {
         // If decision logic runs before movement/attack logic:
         // Frame X: Movement logic moves soldier into range. Removes Moving.
         // Frame X+1: Decision logic sees no action. Adds Attacking.
-
-        // Let's check if we are in Attacking state now or if we need another update.
-        // If Moving removed it in Frame X, and Decision runs before Movement (default parallel/ambiguous order unless explicit),
-        // we might need another frame for Decision to pick it up.
 
         // Let's force another update just to be sure the state transition happens.
         app.update();

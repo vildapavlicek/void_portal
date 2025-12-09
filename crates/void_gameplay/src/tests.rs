@@ -3,7 +3,11 @@ mod tests {
     use super::*;
     use void_core::events::EnemyKilled;
     use crate::portal::{
-        Portal, PortalSpawnTracker, EnemySpawnTimer, LoadedEnemy, PendingEnemyStats, spawn_enemies, AvailableEnemies
+        PortalSpawnTracker, EnemySpawnTimer, LoadedEnemy, spawn_enemies, AvailableEnemies
+    };
+    use void_components::{
+        portal::Portal,
+        enemy::PendingEnemyStats,
     };
     use crate::configs::{PortalConfig, EnemyConfig};
     use bevy::prelude::*;

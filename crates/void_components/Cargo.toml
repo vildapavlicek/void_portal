@@ -1,0 +1,9 @@
+[package]
+name = "void_components"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy = { workspace = true }
+void_core = { path = "../void_core" }
+void_assets = { path = "../void_assets" } # Probably needed if any component uses assets, but maybe not? LoadedEnemy uses it.

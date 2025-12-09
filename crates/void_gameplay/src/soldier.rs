@@ -1,32 +1,15 @@
 use {
     crate::{
         configs::SoldierConfig,
-        portal::{Enemy, Health, PortalSpawnTracker, SpawnIndex},
+        portal::{PortalSpawnTracker},
     },
     bevy::{prelude::*, window::PrimaryWindow},
+    void_components::{
+        soldier::{Soldier, AttackRange, Moving, Attacking, Projectile},
+        enemy::{Enemy, SpawnIndex},
+        common::Health,
+    },
 };
-
-#[derive(Component, Reflect)]
-pub struct Soldier {
-    pub attack_timer: Timer,
-    pub target: Option<Entity>,
-}
-
-#[derive(Component, Reflect)]
-pub struct AttackRange(pub f32);
-
-#[derive(Component)]
-pub struct Moving(pub Entity);
-
-#[derive(Component)]
-pub struct Attacking(pub Entity);
-
-#[derive(Component, Reflect)]
-pub struct Projectile {
-    pub velocity: Vec3,
-    pub damage: f32,
-    pub lifetime: Timer,
-}
 
 pub fn spawn_soldier(
     mut commands: Commands,

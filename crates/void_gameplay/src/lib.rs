@@ -2,6 +2,12 @@ use {
     bevy::{asset::LoadedFolder, prelude::*},
     bevy_common_assets::ron::RonAssetPlugin,
     void_assets::VoidAssetsPlugin,
+    void_components::{
+        common::{Health, Lifetime},
+        enemy::{Enemy, PendingEnemyStats, Reward, SpawnIndex},
+        portal::{EnemySpawner, Portal, UpgradeCoef, UpgradePrice, VoidShardsReward},
+        soldier::{AttackRange, Projectile, Soldier},
+    },
     void_core::{GameState, VoidCorePlugin},
 };
 
@@ -13,8 +19,8 @@ use {
     configs::{EnemyConfig, PortalConfig, SoldierConfig},
     portal::{
         despawn_dead_enemies, enemy_lifetime, move_enemies, on_enemy_spawned, spawn_enemies,
-        spawn_portal, update_enemy_health_ui, AvailableEnemies, Enemy, EnemySpawnTimer, Health,
-        Lifetime, LoadedEnemy, PendingEnemyStats, PortalSpawnTracker, Reward, SpawnIndex, Speed,
+        spawn_portal, update_enemy_health_ui, AvailableEnemies, EnemySpawnTimer,
+        LoadedEnemy, PortalSpawnTracker,
     },
     soldier::{
         move_projectiles, projectile_collision, soldier_attack_logic, soldier_decision_logic,
@@ -52,19 +58,19 @@ impl Plugin for VoidGameplayPlugin {
         app.register_type::<Health>();
         app.register_type::<Lifetime>();
         app.register_type::<Reward>();
-        app.register_type::<Speed>();
+        app.register_type::<void_components::common::Speed>();
         app.register_type::<SpawnIndex>();
         app.register_type::<PendingEnemyStats>();
         // Portal
-        app.register_type::<crate::portal::EnemySpawner>();
-        app.register_type::<crate::portal::VoidShardsReward>();
-        app.register_type::<crate::portal::UpgradePrice>();
-        app.register_type::<crate::portal::UpgradeCoef>();
-        app.register_type::<crate::portal::Portal>();
+        app.register_type::<EnemySpawner>();
+        app.register_type::<VoidShardsReward>();
+        app.register_type::<UpgradePrice>();
+        app.register_type::<UpgradeCoef>();
+        app.register_type::<Portal>();
         // Soldier
-        app.register_type::<crate::soldier::Soldier>();
-        app.register_type::<crate::soldier::AttackRange>();
-        app.register_type::<crate::soldier::Projectile>();
+        app.register_type::<Soldier>();
+        app.register_type::<AttackRange>();
+        app.register_type::<Projectile>();
 
         // Ensure core Bevy types used in scene are registered (usually they are by DefaultPlugins)
         app.register_type::<Text2d>();

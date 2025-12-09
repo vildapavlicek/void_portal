@@ -2,6 +2,7 @@ use {
     bevy::prelude::*,
     void_core::{GameState, VoidCorePlugin},
     void_wallet::Wallet,
+    void_components::ui::{WalletText, WalletUiRoot},
 };
 
 pub struct VoidUiPlugin;
@@ -19,12 +20,6 @@ impl Plugin for VoidUiPlugin {
         info!("Void UI initialized");
     }
 }
-
-#[derive(Component)]
-struct WalletText;
-
-#[derive(Component)]
-struct WalletUiRoot;
 
 fn spawn_wallet_ui(mut commands: Commands) {
     commands

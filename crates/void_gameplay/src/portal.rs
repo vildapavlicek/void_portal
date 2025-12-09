@@ -3,63 +3,12 @@ use {
     bevy::{prelude::*, window::PrimaryWindow},
     rand::Rng,
     void_core::events::EnemyKilled,
+    void_components::{
+        portal::{Portal, VoidShardsReward, UpgradePrice, UpgradeCoef, EnemySpawner},
+        enemy::{Enemy, Reward, SpawnIndex, PendingEnemyStats},
+        common::{Health, Lifetime, Speed},
+    },
 };
-
-// Components
-#[derive(Component, Reflect)]
-pub struct Portal;
-
-#[derive(Component, Reflect)]
-pub struct VoidShardsReward(pub f32);
-
-#[derive(Component, Reflect)]
-pub struct UpgradePrice(pub f32);
-
-#[derive(Component, Reflect)]
-pub struct UpgradeCoef(pub f32);
-
-#[derive(Component, Reflect, Default)]
-#[reflect(Component)]
-pub struct EnemySpawner {
-    pub timer: Timer,
-}
-
-#[derive(Component, Reflect, Default)]
-#[reflect(Component)]
-pub struct Enemy {
-    pub target_position: Vec2,
-}
-
-#[derive(Component, Reflect)]
-pub struct Health {
-    pub current: f32,
-    pub max: f32,
-}
-
-#[derive(Component, Reflect)]
-pub struct Lifetime {
-    pub timer: Timer,
-}
-
-#[derive(Component, Reflect, Default)]
-pub struct SpawnIndex(pub u32);
-
-#[derive(Component, Reflect)]
-pub struct Reward(pub f32);
-
-#[derive(Component, Reflect)]
-pub struct Speed(pub f32);
-
-#[derive(Component, Reflect, Default)]
-#[reflect(Component)]
-pub struct PendingEnemyStats {
-    pub max_health: f32,
-    pub speed: f32,
-    pub reward: f32,
-    pub lifetime: f32,
-    pub spawn_index: u32,
-    pub target_position: Vec2,
-}
 
 #[derive(Clone)]
 pub struct LoadedEnemy {
