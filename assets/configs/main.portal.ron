@@ -3,6 +3,7 @@
     base_void_shards_reward: 10.0,
     base_upgrade_price: 500.0,
     upgrade_price_increase_coef: 1.5,
+    portal_top_offset: 100.0,
     base_enemy_health: 5.0,
     base_enemy_speed: 150.0,
     base_enemy_lifetime: 10.0,

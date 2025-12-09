@@ -68,7 +68,7 @@ pub fn spawn_portal(
 
     if let Some(window) = window_query.iter().next() {
         let half_height = window.height() / 2.0;
-        let portal_y = half_height - 50.0; // Fixed offset from top
+        let portal_y = half_height - portal_config.portal_top_offset;
 
         commands.spawn((
             Sprite {

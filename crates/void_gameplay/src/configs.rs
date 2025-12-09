@@ -6,6 +6,7 @@ pub struct PortalConfig {
     pub base_void_shards_reward: f32,
     pub base_upgrade_price: f32,
     pub upgrade_price_increase_coef: f32,
+    pub portal_top_offset: f32,
     // Base enemy stats
     pub base_enemy_health: f32,
     pub base_enemy_speed: f32,
