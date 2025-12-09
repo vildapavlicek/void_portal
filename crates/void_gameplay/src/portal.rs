@@ -6,42 +6,60 @@ use {
 };
 
 // Components
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct Portal;
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct VoidShardsReward(pub f32);
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct UpgradePrice(pub f32);
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct UpgradeCoef(pub f32);
 
-#[derive(Component)]
+#[derive(Component, Reflect, Default)]
+#[reflect(Component)]
 pub struct Enemy {
     pub target_position: Vec2,
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct Health {
     pub current: f32,
     pub max: f32,
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct Lifetime {
     pub timer: Timer,
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect, Default)]
 pub struct SpawnIndex(pub u32);
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct Reward(pub f32);
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct Speed(pub f32);
+
+#[derive(Component, Reflect, Default)]
+#[reflect(Component)]
+pub struct PendingEnemyStats {
+    pub max_health: f32,
+    pub speed: f32,
+    pub reward: f32,
+    pub lifetime: f32,
+    pub spawn_index: u32,
+    pub target_position: Vec2,
+}
+
+#[derive(Clone)]
+pub struct LoadedEnemy {
+    pub config: EnemyConfig,
+    pub scene: Handle<Scene>,
+}
 
 // Resources
 #[derive(Resource, Default)]
@@ -51,7 +69,7 @@ pub struct PortalSpawnTracker(pub u32);
 pub struct EnemySpawnTimer(pub Timer);
 
 #[derive(Resource, Default)]
-pub struct AvailableEnemies(pub Vec<EnemyConfig>);
+pub struct AvailableEnemies(pub Vec<LoadedEnemy>);
 
 // Systems
 
@@ -107,7 +125,8 @@ pub fn spawn_enemies(
 
         // For now, pick the first available enemy.
         // In the future, logic could select specific enemies.
-        let enemy_config = &available_enemies.0[0];
+        let loaded_enemy = &available_enemies.0[0];
+        let enemy_config = &loaded_enemy.config;
 
         if enemy_query.iter().count() >= enemy_config.spawn_limit {
             info!("Max enemies reached, skipping spawn");
@@ -140,38 +159,69 @@ pub fn spawn_enemies(
 
         commands
             .spawn((
-                Sprite {
-                    color: Color::srgb(0.0, 0.0, 1.0), // Blue
-                    custom_size: Some(Vec2::new(24.0, 24.0)),
-                    ..default()
-                },
+                SceneRoot(loaded_enemy.scene.clone()),
                 Transform::from_translation(portal_transform.translation),
-                Enemy { target_position },
-                SpawnIndex(spawn_tracker.0),
-                Health {
-                    current: max_health,
-                    max: max_health,
+                PendingEnemyStats {
+                    max_health,
+                    speed,
+                    reward,
+                    lifetime,
+                    spawn_index: spawn_tracker.0,
+                    target_position,
                 },
-                Lifetime {
-                    timer: Timer::from_seconds(lifetime, TimerMode::Once),
-                },
-                Reward(reward),
-                Speed(speed),
-            ))
-            .with_children(|parent| {
-                parent.spawn((
-                    Text2d::new(format!("{:.0}", max_health)),
-                    TextFont {
-                        font_size: 10.0,
-                        ..default()
-                    },
-                    TextColor(Color::WHITE),
-                    Transform::from_translation(Vec3::new(0.0, 20.0, 1.0)),
-                ));
-            });
+            ));
 
         spawn_tracker.0 = spawn_tracker.0.wrapping_add(1);
-        info!("Enemy spawned! Target: {:?}", target_position);
+        info!("Enemy spawned via scene! Target: {:?}", target_position);
+    }
+}
+
+pub fn on_enemy_spawned(
+    trigger: On<Add, Enemy>,
+    mut commands: Commands,
+    query: Query<(Entity, Option<&PendingEnemyStats>, Option<&Children>)>,
+    mut text_query: Query<&mut Text2d>,
+) {
+    // The trigger entity is the one that just got the Enemy component.
+    // In our scene structure, the Enemy component is on the root entity.
+    let entity = trigger.entity;
+
+    if let Ok((_ent, pending_stats_opt, children_opt)) = query.get(entity) {
+         if let Some(stats) = pending_stats_opt {
+             commands.entity(entity).insert((
+                 Health {
+                     current: stats.max_health,
+                     max: stats.max_health,
+                 },
+                 Lifetime {
+                     timer: Timer::from_seconds(stats.lifetime, TimerMode::Once),
+                 },
+                 Reward(stats.reward),
+                 Speed(stats.speed),
+                 SpawnIndex(stats.spawn_index),
+                 // Update the target position in the Enemy component (which was just added from scene)
+                 Enemy { target_position: stats.target_position },
+             ));
+
+             // Update children text
+             if let Some(children) = children_opt {
+                 for child in children.iter() {
+                     // Removed * dereference
+                     if let Ok(mut text) = text_query.get_mut(child) {
+                         text.0 = format!("{:.0}", stats.max_health);
+                     }
+                 }
+             }
+
+             // Remove pending stats
+             commands.entity(entity).remove::<PendingEnemyStats>();
+
+             info!("Enemy stats initialized from PendingEnemyStats");
+         } else {
+             // If PendingEnemyStats is missing, maybe it's on the parent?
+             // But for SceneRoot, the components are added to the entity itself.
+             // warn!("Enemy spawned but PendingEnemyStats not found on entity {:?}", entity);
+         }
     }
 }
 
@@ -195,6 +245,7 @@ pub fn update_enemy_health_ui(
 ) {
     for (health, children) in enemy_query.iter() {
         for child in children.iter() {
+            // Removed * dereference
             if let Ok(mut text) = text_query.get_mut(child) {
                 text.0 = format!("{:.0}", health.current);
             }
