@@ -20,6 +20,12 @@ pub struct UpgradeCoef(pub f32);
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
+pub struct EnemySpawner {
+    pub timer: Timer,
+}
+
+#[derive(Component, Reflect, Default)]
+#[reflect(Component)]
 pub struct Enemy {
     pub target_position: Vec2,
 }
