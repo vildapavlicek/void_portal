@@ -28,3 +28,12 @@
 * **Error Handling:** Use `expect("context")` for unrecoverable errors to aid debugging. Avoid naked `unwrap()`.
 * **No Unsafe:** `unsafe` code is strictly forbidden unless absolutely unavoidable.
 * **Intentional Documentation:** Comments must explain the *reasoning* ("why we chose this specific approach") rather than just describing what the code does.
+
+## 4. Project Structure
+
+The project is organized as a Cargo workspace with the following crates:
+* **`void_core`**: Contains shared types, states (`GameState`), messages, and core plugins that are used across the entire project.
+* **`void_gameplay`**: Implements the core game logic, systems, and gameplay-specific resources.
+* **`void_ui`**: Dedicated crate for User Interface systems and components.
+* **`void_assets`**: Handles asset loading and management.
+* **`src/` (Root)**: Contains the main binary entry point and high-level application setup.
