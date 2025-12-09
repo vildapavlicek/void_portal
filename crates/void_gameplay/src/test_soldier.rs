@@ -70,9 +70,9 @@ mod tests {
             Update,
             (
                 spawn_soldier,
-                soldier_decision_logic,
                 soldier_movement_logic,
-                soldier_attack_logic,
+                soldier_decision_logic.after(soldier_movement_logic),
+                soldier_attack_logic.after(soldier_decision_logic),
                 move_projectiles,
                 projectile_collision.after(move_projectiles),
                 despawn_dead_enemies.after(projectile_collision),
@@ -142,11 +142,11 @@ mod tests {
         };
 
         // 5. Move Projectile to hit Enemy
-        // Soldier at (0, -225). Enemy at (0, 0). Distance 225.
-        // Projectile speed 400. Should hit in ~0.56s.
+        // Soldier moved to ~115 (Start -225 + 1.1*100 = -115).
+        // Distance 115. Speed 400. Hit in ~0.2875s.
         {
             let mut time = app.world_mut().resource_mut::<Time>();
-            time.advance_by(std::time::Duration::from_secs_f32(0.6));
+            time.advance_by(std::time::Duration::from_secs_f32(0.3));
         }
         app.update(); // move_projectiles, projectile_collision
 
@@ -175,7 +175,7 @@ mod tests {
                           // Travel
             {
                 let mut time = app.world_mut().resource_mut::<Time>();
-                time.advance_by(std::time::Duration::from_secs_f32(0.6));
+                time.advance_by(std::time::Duration::from_secs_f32(0.3));
             }
             app.update(); // hit
         }
@@ -201,6 +201,7 @@ mod tests {
         let enemy_a = app
             .world_mut()
             .spawn((
+                Transform::default(),
                 Enemy {
                     target_position: Vec2::ZERO,
                 },
@@ -216,6 +217,7 @@ mod tests {
         let enemy_b = app
             .world_mut()
             .spawn((
+                Transform::default(),
                 Enemy {
                     target_position: Vec2::ZERO,
                 },
@@ -231,6 +233,7 @@ mod tests {
         let enemy_c = app
             .world_mut()
             .spawn((
+                Transform::default(),
                 Enemy {
                     target_position: Vec2::ZERO,
                 },
@@ -275,6 +278,7 @@ mod tests {
         let enemy_a = app
             .world_mut()
             .spawn((
+                Transform::default(),
                 Enemy {
                     target_position: Vec2::ZERO,
                 },
@@ -290,6 +294,7 @@ mod tests {
         let enemy_b = app
             .world_mut()
             .spawn((
+                Transform::default(),
                 Enemy {
                     target_position: Vec2::ZERO,
                 },
