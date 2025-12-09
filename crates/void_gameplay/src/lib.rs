@@ -1,5 +1,7 @@
 use {
     bevy::{asset::LoadedFolder, prelude::*},
+    bevy_common_assets::ron::RonAssetPlugin,
+    void_assets::VoidAssetsPlugin,
     void_core::{GameState, VoidCorePlugin},
 };
 
@@ -12,7 +14,7 @@ use {
     portal::{
         despawn_dead_enemies, enemy_lifetime, move_enemies, on_enemy_spawned, spawn_enemies,
         spawn_portal, update_enemy_health_ui, AvailableEnemies, Enemy, EnemySpawnTimer, Health,
-        Lifetime, PortalSpawnTracker, Reward, SpawnIndex, Speed,
+        Lifetime, LoadedEnemy, PendingEnemyStats, PortalSpawnTracker, Reward, SpawnIndex, Speed,
     },
     soldier::{
         move_projectiles, projectile_collision, soldier_attack_logic, soldier_decision_logic,
@@ -62,8 +64,7 @@ impl Plugin for VoidGameplayPlugin {
         // Soldier
         app.register_type::<crate::soldier::Soldier>();
         app.register_type::<crate::soldier::AttackRange>();
-        app.register_type::<crate::soldier::MoveSpeed>();
-        app.register_type::<crate::soldier::ProjectileStats>();
+        app.register_type::<crate::soldier::Projectile>();
 
         // Ensure core Bevy types used in scene are registered (usually they are by DefaultPlugins)
         app.register_type::<Text2d>();
