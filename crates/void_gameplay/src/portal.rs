@@ -202,10 +202,7 @@ pub fn update_enemy_health_ui(
     }
 }
 
-pub fn move_enemies(
-    time: Res<Time>,
-    mut enemy_query: Query<(&mut Transform, &Enemy, &Speed)>,
-) {
+pub fn move_enemies(time: Res<Time>, mut enemy_query: Query<(&mut Transform, &Enemy, &Speed)>) {
     for (mut transform, enemy, speed) in enemy_query.iter_mut() {
         let direction =
             (enemy.target_position - transform.translation.truncate()).normalize_or_zero();

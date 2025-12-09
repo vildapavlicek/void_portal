@@ -22,11 +22,11 @@ use {
 };
 
 #[cfg(test)]
+mod test_events;
+#[cfg(test)]
 mod test_soldier;
 #[cfg(test)]
 mod tests;
-#[cfg(test)]
-mod test_events;
 
 pub struct VoidGameplayPlugin;
 
@@ -144,7 +144,7 @@ fn check_assets_ready(
         if available_enemies.0.is_empty() {
             warn!("No enemies loaded from configs/enemies/");
         } else {
-             info!("Loaded {} enemy configs", available_enemies.0.len());
+            info!("Loaded {} enemy configs", available_enemies.0.len());
         }
 
         // Initialize EnemySpawnTimer from config

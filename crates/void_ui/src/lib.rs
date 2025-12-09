@@ -13,7 +13,10 @@ impl Plugin for VoidUiPlugin {
         }
 
         app.add_systems(OnEnter(GameState::Playing), spawn_wallet_ui)
-            .add_systems(Update, update_wallet_ui.run_if(in_state(GameState::Playing)))
+            .add_systems(
+                Update,
+                update_wallet_ui.run_if(in_state(GameState::Playing)),
+            )
             .add_systems(OnExit(GameState::Playing), despawn_wallet_ui);
 
         info!("Void UI initialized");
@@ -67,35 +70,47 @@ fn despawn_wallet_ui(mut commands: Commands, query: Query<Entity, With<WalletUiR
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use bevy::state::app::StatesPlugin;
+    use {super::*, bevy::state::app::StatesPlugin};
 
     #[test]
     fn test_wallet_ui_lifecycle() {
         let mut app = App::new();
 
         app.add_plugins(MinimalPlugins)
-           .add_plugins(StatesPlugin)
-           .add_plugins(AssetPlugin::default());
+            .add_plugins(StatesPlugin)
+            .add_plugins(AssetPlugin::default());
 
         app.init_resource::<Wallet>();
         app.init_state::<GameState>();
 
         app.add_systems(OnEnter(GameState::Playing), spawn_wallet_ui)
-            .add_systems(Update, update_wallet_ui.run_if(in_state(GameState::Playing)))
+            .add_systems(
+                Update,
+                update_wallet_ui.run_if(in_state(GameState::Playing)),
+            )
             .add_systems(OnExit(GameState::Playing), despawn_wallet_ui);
 
         // Start app
         app.update();
 
         // State is Loading
-        assert_eq!(*app.world().resource::<State<GameState>>(), GameState::Loading);
+        assert_eq!(
+            *app.world().resource::<State<GameState>>(),
+            GameState::Loading
+        );
 
         // UI should not exist
-        assert!(app.world_mut().query::<&WalletText>().iter(app.world()).next().is_none());
+        assert!(app
+            .world_mut()
+            .query::<&WalletText>()
+            .iter(app.world())
+            .next()
+            .is_none());
 
         // Transition to Playing
-        app.world_mut().resource_mut::<NextState<GameState>>().set(GameState::Playing);
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Playing);
         app.update(); // Transition
         app.update(); // OnEnter
 
@@ -113,11 +128,18 @@ mod tests {
         assert_eq!(**text, "void shards: 100.5");
 
         // Transition back to Loading
-        app.world_mut().resource_mut::<NextState<GameState>>().set(GameState::Loading);
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Loading);
         app.update(); // Transition
         app.update(); // OnExit
 
         // Verify UI despawned
-        assert!(app.world_mut().query::<&WalletText>().iter(app.world()).next().is_none());
+        assert!(app
+            .world_mut()
+            .query::<&WalletText>()
+            .iter(app.world())
+            .next()
+            .is_none());
     }
 }

@@ -1,9 +1,11 @@
-use bevy::prelude::*;
-use crate::{
-    configs::{EnemyConfig, PortalConfig, SoldierConfig},
-    portal::{despawn_dead_enemies, Enemy, Health, Reward},
+use {
+    crate::{
+        configs::{EnemyConfig, PortalConfig, SoldierConfig},
+        portal::{despawn_dead_enemies, Enemy, Health, Reward},
+    },
+    bevy::prelude::*,
+    void_core::events::EnemyKilled,
 };
-use void_core::events::EnemyKilled;
 
 #[test]
 fn test_enemy_killed_event() {
@@ -55,11 +57,14 @@ fn test_enemy_killed_event() {
 
     app.init_resource::<CapturedEvents>();
 
-    app.add_systems(Update, |mut events: MessageReader<EnemyKilled>, mut captured: ResMut<CapturedEvents>| {
-        for event in events.read() {
-            captured.0.push(event.clone());
-        }
-    });
+    app.add_systems(
+        Update,
+        |mut events: MessageReader<EnemyKilled>, mut captured: ResMut<CapturedEvents>| {
+            for event in events.read() {
+                captured.0.push(event.clone());
+            }
+        },
+    );
 
     // Run update again to let the reader system pick up the events
     // Note: Messages sent in one frame are usually available in the next frame or same frame depending on ordering.
@@ -69,6 +74,13 @@ fn test_enemy_killed_event() {
     app.update();
 
     let captured = app.world().resource::<CapturedEvents>();
-    assert_eq!(captured.0.len(), 1, "Should emit exactly one EnemyKilled event");
-    assert_eq!(captured.0[0].reward, reward_amount, "Reward amount should match");
+    assert_eq!(
+        captured.0.len(),
+        1,
+        "Should emit exactly one EnemyKilled event"
+    );
+    assert_eq!(
+        captured.0[0].reward, reward_amount,
+        "Reward amount should match"
+    );
 }

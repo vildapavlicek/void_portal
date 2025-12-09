@@ -2,6 +2,7 @@
 mod tests {
     use {
         crate::{
+            configs::PortalConfig, // Added import
             portal::{
                 despawn_dead_enemies, enemy_lifetime, spawn_enemies, spawn_portal,
                 update_enemy_health_ui, Enemy, EnemySpawnTimer, Health, Portal, PortalSpawnTracker,
@@ -12,7 +13,6 @@ mod tests {
                 soldier_decision_logic, soldier_movement_logic, spawn_soldier, AttackRange,
                 Attacking, Moving, Projectile, Soldier,
             },
-            configs::PortalConfig, // Added import
         },
         bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow},
         void_core::events::EnemyKilled, // Added import
@@ -116,7 +116,7 @@ mod tests {
                     max: 100.0,
                 },
                 crate::portal::Reward(10.0), // Added Reward component as required by despawn_dead_enemies
-                Speed(150.0), // Added Speed component
+                Speed(150.0),                // Added Speed component
             ))
             .id();
 
@@ -394,7 +394,10 @@ mod tests {
 
         // Check NO projectile (distance 400 > 150)
         assert_eq!(
-            app.world_mut().query::<&Projectile>().iter(app.world()).count(),
+            app.world_mut()
+                .query::<&Projectile>()
+                .iter(app.world())
+                .count(),
             0
         );
 
@@ -436,6 +439,12 @@ mod tests {
 
         // Check Projectile Spawned
         // Timer should tick.
-        assert!(app.world_mut().query::<&Projectile>().iter(app.world()).count() > 0);
+        assert!(
+            app.world_mut()
+                .query::<&Projectile>()
+                .iter(app.world())
+                .count()
+                > 0
+        );
     }
 }
