@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use crate::{
-    configs::{EnemyConfig, PortalConfig, SoldierConfig},
     portal::{despawn_dead_enemies, Enemy, Health, Reward},
 };
 use void_core::events::EnemyKilled;
