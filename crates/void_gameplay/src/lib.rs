@@ -1,5 +1,5 @@
 use {
-    bevy::prelude::*,
+    bevy::{asset::LoadedFolder, prelude::*},
     bevy_common_assets::ron::RonAssetPlugin,
     void_assets::VoidAssetsPlugin,
     void_core::{GameState, VoidCorePlugin},
@@ -13,7 +13,7 @@ use {
     configs::{EnemyConfig, PortalConfig, SoldierConfig},
     portal::{
         despawn_dead_enemies, enemy_lifetime, move_enemies, spawn_enemies, spawn_portal,
-        update_enemy_health_ui, EnemySpawnTimer, PortalSpawnTracker,
+        update_enemy_health_ui, AvailableEnemies, EnemySpawnTimer, PortalSpawnTracker,
     },
     soldier::{
         move_projectiles, projectile_collision, soldier_attack_logic, soldier_decision_logic,
@@ -33,7 +33,7 @@ pub struct VoidGameplayPlugin;
 #[derive(Resource, Default)]
 struct GameConfigHandles {
     portal: Handle<PortalConfig>,
-    enemy: Handle<EnemyConfig>,
+    enemies_folder: Handle<LoadedFolder>,
     soldier: Handle<SoldierConfig>,
 }
 
@@ -46,6 +46,7 @@ impl Plugin for VoidGameplayPlugin {
             app.add_plugins(VoidAssetsPlugin);
         }
 
+        // Use specific extensions to disambiguate different RON config types
         app.add_plugins((
             RonAssetPlugin::<PortalConfig>::new(&["portal.ron"]),
             RonAssetPlugin::<EnemyConfig>::new(&["enemy.ron"]),
@@ -54,6 +55,7 @@ impl Plugin for VoidGameplayPlugin {
 
         app.init_resource::<GameConfigHandles>();
         app.init_resource::<PortalSpawnTracker>();
+        app.init_resource::<AvailableEnemies>();
 
         app.add_systems(Startup, start_loading);
         app.add_systems(
@@ -89,9 +91,9 @@ fn start_loading(
     asset_server: Res<AssetServer>,
     mut handles: ResMut<GameConfigHandles>,
 ) {
-    handles.portal = asset_server.load("configs/portal.ron");
-    handles.enemy = asset_server.load("configs/enemy.ron");
-    handles.soldier = asset_server.load("configs/soldier.ron");
+    handles.portal = asset_server.load("configs/main.portal.ron");
+    handles.enemies_folder = asset_server.load_folder("configs/enemies");
+    handles.soldier = asset_server.load("configs/main.soldier.ron");
 
     // Spawn a simple loading text
     commands.spawn((
@@ -113,20 +115,37 @@ fn check_assets_ready(
     mut commands: Commands,
     handles: Res<GameConfigHandles>,
     portal_assets: Res<Assets<PortalConfig>>,
-    enemy_assets: Res<Assets<EnemyConfig>>,
     soldier_assets: Res<Assets<SoldierConfig>>,
+    loaded_folders: Res<Assets<LoadedFolder>>,
+    enemy_assets: Res<Assets<EnemyConfig>>,
+    mut available_enemies: ResMut<AvailableEnemies>,
     mut next_state: ResMut<NextState<GameState>>,
     loading_text_query: Query<Entity, With<LoadingText>>,
 ) {
-    if let (Some(portal), Some(enemy), Some(soldier)) = (
+    if let (Some(portal), Some(soldier), Some(enemies_folder)) = (
         portal_assets.get(&handles.portal),
-        enemy_assets.get(&handles.enemy),
         soldier_assets.get(&handles.soldier),
+        loaded_folders.get(&handles.enemies_folder),
     ) {
-        // Insert resources
+        // Insert singleton resources
         commands.insert_resource(portal.clone());
-        commands.insert_resource(enemy.clone());
         commands.insert_resource(soldier.clone());
+
+        // Process enemies folder
+        available_enemies.0.clear();
+        for handle in &enemies_folder.handles {
+            // Cast untyped handle to typed handle
+            let typed_handle: Handle<EnemyConfig> = handle.clone().typed();
+            if let Some(config) = enemy_assets.get(&typed_handle) {
+                available_enemies.0.push(config.clone());
+            }
+        }
+
+        if available_enemies.0.is_empty() {
+            warn!("No enemies loaded from configs/enemies/");
+        } else {
+             info!("Loaded {} enemy configs", available_enemies.0.len());
+        }
 
         // Initialize EnemySpawnTimer from config
         commands.insert_resource(EnemySpawnTimer(Timer::from_seconds(

@@ -40,12 +40,18 @@ pub struct SpawnIndex(pub u32);
 #[derive(Component)]
 pub struct Reward(pub f32);
 
+#[derive(Component)]
+pub struct Speed(pub f32);
+
 // Resources
 #[derive(Resource, Default)]
 pub struct PortalSpawnTracker(pub u32);
 
 #[derive(Resource)]
 pub struct EnemySpawnTimer(pub Timer);
+
+#[derive(Resource, Default)]
+pub struct AvailableEnemies(pub Vec<EnemyConfig>);
 
 // Systems
 
@@ -84,7 +90,8 @@ pub fn spawn_enemies(
     mut commands: Commands,
     time: Res<Time>,
     mut spawn_timer: ResMut<EnemySpawnTimer>,
-    enemy_config: Res<EnemyConfig>,
+    portal_config: Res<PortalConfig>,
+    available_enemies: Res<AvailableEnemies>,
     enemy_query: Query<Entity, With<Enemy>>,
     portal_query: Query<&Transform, With<Portal>>,
     mut spawn_tracker: ResMut<PortalSpawnTracker>,
@@ -93,6 +100,15 @@ pub fn spawn_enemies(
     spawn_timer.0.tick(time.delta());
 
     if spawn_timer.0.just_finished() {
+        if available_enemies.0.is_empty() {
+            warn!("No enemies available to spawn!");
+            return;
+        }
+
+        // For now, pick the first available enemy.
+        // In the future, logic could select specific enemies.
+        let enemy_config = &available_enemies.0[0];
+
         if enemy_query.iter().count() >= enemy_config.spawn_limit {
             info!("Max enemies reached, skipping spawn");
             return;
@@ -109,6 +125,12 @@ pub fn spawn_enemies(
 
         let half_width = window.width() / 2.0;
         let half_height = window.height() / 2.0;
+
+        // Calculate stats
+        let max_health = portal_config.base_enemy_health * enemy_config.health_coef;
+        let speed = portal_config.base_enemy_speed * enemy_config.speed_coef;
+        let lifetime = portal_config.base_enemy_lifetime * enemy_config.lifetime_coef;
+        let reward = portal_config.base_enemy_reward * enemy_config.reward_coef;
 
         // Random target position within window
         let mut rng = rand::rng();
@@ -127,17 +149,18 @@ pub fn spawn_enemies(
                 Enemy { target_position },
                 SpawnIndex(spawn_tracker.0),
                 Health {
-                    current: enemy_config.max_health,
-                    max: enemy_config.max_health,
+                    current: max_health,
+                    max: max_health,
                 },
                 Lifetime {
-                    timer: Timer::from_seconds(enemy_config.lifetime, TimerMode::Once),
+                    timer: Timer::from_seconds(lifetime, TimerMode::Once),
                 },
-                Reward(enemy_config.reward),
+                Reward(reward),
+                Speed(speed),
             ))
             .with_children(|parent| {
                 parent.spawn((
-                    Text2d::new(format!("{:.0}", enemy_config.max_health)),
+                    Text2d::new(format!("{:.0}", max_health)),
                     TextFont {
                         font_size: 10.0,
                         ..default()
@@ -181,12 +204,9 @@ pub fn update_enemy_health_ui(
 
 pub fn move_enemies(
     time: Res<Time>,
-    enemy_config: Res<EnemyConfig>,
-    mut enemy_query: Query<(&mut Transform, &Enemy)>,
+    mut enemy_query: Query<(&mut Transform, &Enemy, &Speed)>,
 ) {
-    let speed = enemy_config.speed;
-
-    for (mut transform, enemy) in enemy_query.iter_mut() {
+    for (mut transform, enemy, speed) in enemy_query.iter_mut() {
         let direction =
             (enemy.target_position - transform.translation.truncate()).normalize_or_zero();
         let distance = transform
@@ -195,7 +215,7 @@ pub fn move_enemies(
             .distance(enemy.target_position);
 
         if distance > 1.0 {
-            transform.translation += (direction * speed * time.delta_secs()).extend(0.0);
+            transform.translation += (direction * speed.0 * time.delta_secs()).extend(0.0);
         }
     }
 }
