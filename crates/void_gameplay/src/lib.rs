@@ -26,6 +26,8 @@ mod test_events;
 #[cfg(test)]
 mod test_soldier;
 #[cfg(test)]
+mod test_soldier_attack_timing;
+#[cfg(test)]
 mod tests;
 
 pub struct VoidGameplayPlugin;
