@@ -52,7 +52,7 @@ pub struct Dead {
 #[derive(Resource, Default)]
 pub struct PortalSpawnTracker(pub u32);
 
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct EnemySpawnTimer(pub Timer);
 
 #[derive(Resource, Default)]

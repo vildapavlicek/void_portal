@@ -5,8 +5,8 @@ use {
     void_core::{GameState, VoidCorePlugin},
 };
 
-mod configs;
-mod portal;
+pub mod configs;
+pub mod portal;
 mod soldier;
 
 use {

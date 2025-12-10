@@ -1,6 +1,6 @@
 use {bevy::prelude::*, serde::Deserialize};
 
-#[derive(Deserialize, Asset, TypePath, Clone, Debug, Resource)]
+#[derive(Deserialize, Asset, Clone, Debug, Resource, Reflect)]
 pub struct PortalConfig {
     pub spawn_timer: f32,
     pub base_void_shards_reward: f32,
@@ -14,7 +14,7 @@ pub struct PortalConfig {
     pub base_enemy_reward: f32,
 }
 
-#[derive(Deserialize, Asset, TypePath, Clone, Debug, Resource)]
+#[derive(Deserialize, Asset, Clone, Debug, Resource, Reflect)]
 pub struct EnemyConfig {
     pub health_coef: f32,
     pub lifetime_coef: f32,
@@ -23,7 +23,7 @@ pub struct EnemyConfig {
     pub spawn_limit: usize,
 }
 
-#[derive(Deserialize, Asset, TypePath, Clone, Debug, Resource)]
+#[derive(Deserialize, Asset, Clone, Debug, Resource, Reflect)]
 pub struct SoldierConfig {
     pub attack_timer: f32,
     pub projectile_speed: f32,
