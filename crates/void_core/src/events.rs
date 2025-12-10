@@ -4,3 +4,6 @@ use bevy::prelude::*;
 pub struct EnemyKilled {
     pub entity: Entity,
 }
+
+#[derive(Message, Debug, Clone)]
+pub struct UpgradePortal;

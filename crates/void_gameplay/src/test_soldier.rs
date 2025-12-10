@@ -116,7 +116,10 @@ fn test_soldier_moves_to_target() {
     spawn_portal_and_tracker(&mut app);
     insert_soldier_config(&mut app);
 
-    app.add_systems(Update, (soldier_decision_logic, soldier_movement_logic).chain());
+    app.add_systems(
+        Update,
+        (soldier_decision_logic, soldier_movement_logic).chain(),
+    );
 
     // Spawn Soldier (Idle) at (0,0)
     let soldier = app
@@ -178,7 +181,12 @@ fn test_soldier_attacks_target() {
     // soldier_attack_logic runs the timer
     app.add_systems(
         Update,
-        (soldier_decision_logic, soldier_attack_logic, handle_soldier_attack).chain(),
+        (
+            soldier_decision_logic,
+            soldier_attack_logic,
+            handle_soldier_attack,
+        )
+            .chain(),
     );
 
     // Add necessary event for damage (if implemented via events) or direct component modification.
@@ -339,7 +347,10 @@ fn test_soldier_switching_targets() {
     // So it should pick up immediately.
 
     let attacking = app.world().get::<Attacking>(soldier);
-    assert!(attacking.is_some(), "Soldier should have acquired new target");
+    assert!(
+        attacking.is_some(),
+        "Soldier should have acquired new target"
+    );
     // assert_eq!(attacking.unwrap().0, enemy2);
 }
 
@@ -548,7 +559,7 @@ fn test_soldier_attack_reset_on_switch() {
             Soldier {
                 damage: 10.0,
                 attack_range: 50.0,
-                attack_speed: 2.0,                                       // 2s duration
+                attack_speed: 2.0, // 2s duration
                 attack_timer: Timer::from_seconds(1.0, TimerMode::Once), // Halfway done
             },
             Idle,

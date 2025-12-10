@@ -4669,6 +4669,7 @@ dependencies = [
  "void_assets",
  "void_components",
  "void_core",
+ "void_wallet",
 ]
 
 [[package]]

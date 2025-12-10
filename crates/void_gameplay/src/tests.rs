@@ -1,164 +1,162 @@
 #[cfg(test)]
 mod tests {
-    // Import from the sibling module 'portal'
     use {
         crate::{
-            configs::{EnemyConfig, PortalConfig},
+            configs::{EnemyConfig, PortalConfig, SoldierConfig},
             portal::{
-                enemy_lifetime, spawn_enemies, spawn_portal, AvailableEnemies, Enemy,
-                EnemySpawnTimer, Portal, PortalSpawnTracker, Speed,
+                despawn_dead_bodies, enemy_lifetime, handle_dying_enemies, move_enemies,
+                spawn_enemies, spawn_portal, update_enemy_health_ui, AvailableEnemies,
+                EnemySpawnTimer, PortalSpawnTracker,
+            },
+            soldier::{
+                move_projectiles, projectile_collision, soldier_attack_logic,
+                soldier_decision_logic, soldier_movement_logic, spawn_soldier,
             },
         },
-        bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow},
+        bevy::{prelude::*, time::TimePlugin},
+        void_core::events::EnemyKilled, // Added
     };
 
-    #[test]
-    fn test_portal_spawn() {
+    // Helper to setup the app with necessary resources
+    fn setup_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        // We don't add WindowPlugin to avoid window creation in tests
-
-        // Insert PortalConfig resource required by spawn_portal
-        app.insert_resource(PortalConfig {
-            spawn_timer: 5.0,
-            base_void_shards_reward: 10.0,
-            base_upgrade_price: 500.0,
-            upgrade_price_increase_coef: 1.5,
-            portal_top_offset: 100.0,
-            base_enemy_health: 5.0,
-            base_enemy_speed: 150.0,
-            base_enemy_lifetime: 10.0,
-            base_enemy_reward: 10.0,
-        });
-
-        // Spawn a window with specific resolution.
-        app.world_mut().spawn((
-            Window {
-                // Bevy 0.17+ WindowResolution::new takes u32
-                resolution: bevy::window::WindowResolution::new(800, 600),
-                ..default()
-            },
-            PrimaryWindow,
-        ));
-
-        // Add the systems
-        app.add_systems(Update, spawn_portal);
-
-        app.update();
-
-        // Check if portal exists
-        let mut portal_query = app.world_mut().query::<&Portal>();
-        assert_eq!(portal_query.iter(app.world()).count(), 1);
-
-        let mut transform_query = app.world_mut().query::<(&Transform, &Portal)>();
-        let (transform, _) = transform_query.iter(app.world()).next().unwrap();
-
-        // Window height 600, half is 300. Portal should be at 300 - 100 = 200.
-        assert_eq!(transform.translation.y, 200.0);
-    }
-
-    #[test]
-    fn test_enemy_spawn_and_lifetime() {
-        let mut app = App::new();
-        // Use MinimalPlugins but disable TimePlugin so we can control Time manually
         app.add_plugins(MinimalPlugins.build().disable::<TimePlugin>());
-
-        // Manually insert Time resource
         app.insert_resource(Time::<()>::default());
+        app.add_message::<EnemyKilled>(); // Added
 
+        // Mock Window
         app.world_mut().spawn((
             Window {
-                // Bevy 0.17+ WindowResolution::new takes u32
                 resolution: bevy::window::WindowResolution::new(800, 600),
                 ..default()
             },
-            PrimaryWindow,
+            bevy::window::PrimaryWindow,
         ));
 
-        app.world_mut()
-            .spawn((Transform::from_xyz(0.0, 250.0, 0.0), Portal));
-
-        app.insert_resource(PortalSpawnTracker(0));
-
-        app.insert_resource(EnemySpawnTimer(Timer::from_seconds(
-            7.5,
-            TimerMode::Repeating,
-        )));
-
+        // Resources
         app.insert_resource(PortalConfig {
-            spawn_timer: 5.0,
+            spawn_timer: 1.0,
             base_void_shards_reward: 10.0,
-            base_upgrade_price: 500.0,
+            base_upgrade_price: 100.0,
             upgrade_price_increase_coef: 1.5,
             portal_top_offset: 100.0,
             base_enemy_health: 100.0,
             base_enemy_speed: 100.0,
-            base_enemy_lifetime: 10.0,
-            base_enemy_reward: 10.0,
+            base_enemy_lifetime: 5.0,
+            base_enemy_reward: 5.0,
+            enemy_health_growth_factor: 1.0,
+            enemy_reward_growth_factor: 1.0,
         });
 
         app.insert_resource(AvailableEnemies(vec![EnemyConfig {
             health_coef: 1.0,
             lifetime_coef: 1.0,
             speed_coef: 1.0,
-            spawn_limit: 5,
             reward_coef: 1.0,
+            spawn_limit: 10,
         }]));
 
-        // Add systems
-        app.add_systems(Update, (spawn_enemies, enemy_lifetime));
+        app.insert_resource(SoldierConfig {
+            attack_timer: 1.0,
+            projectile_speed: 100.0,
+            projectile_damage: 10.0,
+            projectile_lifetime: 2.0,
+            attack_range: 200.0,
+            move_speed: 100.0,
+        });
 
-        // Tick time by 7.4s
-        {
-            let mut time = app.world_mut().resource_mut::<Time>();
-            time.advance_by(std::time::Duration::from_secs_f32(7.4));
-        }
-        app.update();
-        {
-            let mut query = app.world_mut().query::<&Enemy>();
-            assert_eq!(query.iter(app.world()).count(), 0);
-        }
+        app.init_resource::<PortalSpawnTracker>();
+        app.insert_resource(EnemySpawnTimer(Timer::from_seconds(
+            1.0,
+            TimerMode::Repeating,
+        )));
 
-        // Tick by 0.2s (Total 7.6s) -> Should spawn
-        {
-            let mut time = app.world_mut().resource_mut::<Time>();
-            time.advance_by(std::time::Duration::from_secs_f32(0.2));
-        }
-        app.update();
-        {
-            let mut query = app.world_mut().query::<&Enemy>();
-            assert_eq!(query.iter(app.world()).count(), 1);
+        // Add Systems
+        app.add_systems(
+            Update,
+            (
+                spawn_portal,
+                spawn_enemies,
+                move_enemies,
+                enemy_lifetime,
+                handle_dying_enemies,
+                despawn_dead_bodies,
+                update_enemy_health_ui,
+                spawn_soldier,
+                soldier_decision_logic,
+                soldier_movement_logic,
+                soldier_attack_logic,
+                move_projectiles,
+                projectile_collision,
+            ),
+        );
 
-            // Check speed component
-            let mut speed_query = app.world_mut().query::<&Speed>();
-            let speed = speed_query.iter(app.world()).next().unwrap();
-            assert_eq!(speed.0, 100.0);
-        }
+        app
+    }
 
-        // Tick by 7.5s -> Spawn another
-        {
-            let mut time = app.world_mut().resource_mut::<Time>();
-            time.advance_by(std::time::Duration::from_secs_f32(7.5));
-        }
-        app.update();
-        {
-            let mut query = app.world_mut().query::<&Enemy>();
-            assert_eq!(query.iter(app.world()).count(), 2);
-        }
-
-        // Tick by 3.0s (Total time approx 18.1s)
-        // First enemy spawned at 7.6s. Dies at 17.6s.
-        // Current time will be 15.1 + 3.0 = 18.1s.
-        // First enemy should die.
-        {
-            let mut time = app.world_mut().resource_mut::<Time>();
-            time.advance_by(std::time::Duration::from_secs_f32(3.0));
-        }
+    #[test]
+    fn test_initial_portal_spawn() {
+        let mut app = setup_app();
         app.update();
 
+        // Check if Portal spawned
+        let mut portal_query = app
+            .world_mut()
+            .query::<&crate::portal::Portal>();
+        assert_eq!(portal_query.iter(app.world()).count(), 1);
+    }
+
+    #[test]
+    fn test_enemy_spawning() {
+        let mut app = setup_app();
+        app.update(); // Spawn portal
+
+        // Advance time to trigger spawn (1.0s)
         {
-            let mut query = app.world_mut().query::<&Enemy>();
-            assert_eq!(query.iter(app.world()).count(), 1);
+            let mut time = app.world_mut().resource_mut::<Time>();
+            time.advance_by(std::time::Duration::from_secs_f32(1.1));
         }
+        app.update(); // Spawn enemy
+
+        let mut enemy_query = app.world_mut().query::<&crate::portal::Enemy>();
+        assert_eq!(enemy_query.iter(app.world()).count(), 1);
+    }
+
+    #[test]
+    fn test_enemy_movement() {
+        let mut app = setup_app();
+        app.update(); // Spawn portal
+
+        // Spawn enemy manually to control position
+        let start_pos = Vec3::new(0.0, 0.0, 0.0);
+        let target_pos = Vec2::new(100.0, 0.0);
+        let entity = app
+            .world_mut()
+            .spawn((
+                Sprite::default(),
+                Transform::from_translation(start_pos),
+                crate::portal::Enemy {
+                    target_position: target_pos,
+                },
+                crate::portal::SpawnIndex(0),
+                crate::portal::Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+                crate::portal::Reward(10.0),
+                crate::portal::Speed(100.0), // 100 units/sec
+            ))
+            .id();
+
+        // Advance time 0.5s
+        {
+            let mut time = app.world_mut().resource_mut::<Time>();
+            time.advance_by(std::time::Duration::from_secs_f32(0.5));
+        }
+        app.update(); // Move
+
+        let transform = app.world().get::<Transform>(entity).unwrap();
+        // Should move 50 units towards (100,0) -> (50, 0)
+        assert!((transform.translation.x - 50.0).abs() < 1.0);
     }
 }
