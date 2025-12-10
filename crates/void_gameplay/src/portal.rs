@@ -72,20 +72,23 @@ pub fn spawn_portal(
         let half_height = window.height() / 2.0;
         let portal_y = half_height - portal_config.portal_top_offset;
 
-        commands.spawn((
-            Sprite {
-                color: Color::srgb(0.5, 0.0, 0.5), // Purple
-                custom_size: Some(Vec2::new(16.0, 32.0)),
-                ..default()
-            },
-            Transform::from_xyz(0.0, portal_y, 0.0),
-            Portal,
-            Level(1),
-            VoidShardsReward(portal_config.base_void_shards_reward),
-            UpgradePrice(portal_config.base_upgrade_price),
-            UpgradeCoef(portal_config.upgrade_price_increase_coef),
-        ));
-        info!("Portal spawned at y={}", portal_y);
+        let entity = commands
+            .spawn((
+                Sprite {
+                    color: Color::srgb(0.5, 0.0, 0.5), // Purple
+                    custom_size: Some(Vec2::new(16.0, 32.0)),
+                    ..default()
+                },
+                Transform::from_xyz(0.0, portal_y, 0.0),
+                Portal,
+                Level(1),
+                VoidShardsReward(portal_config.base_void_shards_reward),
+                UpgradePrice(portal_config.base_upgrade_price),
+                UpgradeCoef(portal_config.upgrade_price_increase_coef),
+                Pickable::default(),
+            ))
+            .id();
+        info!("Portal spawned at y={} | entity={entity:?}", portal_y);
     }
 }
 
