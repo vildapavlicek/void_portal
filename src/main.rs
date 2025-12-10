@@ -16,6 +16,5 @@ fn main() {
         .add_plugins(VoidAssetsPlugin)
         .add_plugins(VoidUiPlugin)
         .add_plugins(VoidGameplayPlugin)
-        .add_plugins(VoidWalletPlugin)
         .run();
 }
