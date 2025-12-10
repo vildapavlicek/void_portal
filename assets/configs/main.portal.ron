@@ -8,4 +8,6 @@
     base_enemy_speed: 150.0,
     base_enemy_lifetime: 10.0,
     base_enemy_reward: 10.0,
+    enemy_health_growth_factor: 1.5,
+    enemy_reward_growth_factor: 0.75,
 )

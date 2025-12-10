@@ -1,4 +1,8 @@
-use {bevy::prelude::*, void_core::events::EnemyKilled};
+use {
+    bevy::prelude::*,
+    void_components::{Dead, Reward},
+    void_core::events::EnemyKilled,
+};
 
 pub struct VoidWalletPlugin;
 
@@ -17,13 +21,18 @@ pub struct Wallet {
 fn update_wallet_from_enemy_killed(
     mut events: MessageReader<EnemyKilled>,
     mut wallet: ResMut<Wallet>,
+    reward_query: Query<&Reward, With<Dead>>,
 ) {
     for event in events.read() {
-        wallet.void_shards += event.reward;
-        info!(
-            "Wallet updated: +{} void shards. Total: {}",
-            event.reward, wallet.void_shards
-        );
+        if let Ok(reward) = reward_query.get(event.entity) {
+            wallet.void_shards += reward.0;
+            info!(
+                "Wallet updated: +{} void shards. Total: {}",
+                reward.0, wallet.void_shards
+            );
+        } else {
+            warn!("EnemyKilled event received for entity {:?} but no Reward/Dead component found", event.entity);
+        }
     }
 }
 
@@ -37,21 +46,25 @@ mod tests {
         // Add minimal plugins required for the test
         app.add_plugins(MinimalPlugins)
             .add_plugins(VoidWalletPlugin)
-            // EnemyKilled is a Message, so we need to add it as a message to the app
-            // (though VoidWalletPlugin doesn't add it, void_core might, but here we depend on void_core types)
-            // Actually, `update_wallet_from_enemy_killed` reads `MessageReader`.
-            // In Bevy 0.17 Messages, we need to register the message type `app.add_message::<T>()`
-            // The plugin assumes someone else registers it, OR the plugin should register it if it owns it.
-            // EnemyKilled is owned by void_core. So we should probably register it in the test manually
-            // if we don't include VoidCorePlugin.
             .add_message::<EnemyKilled>();
 
         // Check initial state
         assert_eq!(app.world().resource::<Wallet>().void_shards, 0.0);
 
+        // Spawn a dead enemy with reward
+        let entity1 = app
+            .world_mut()
+            .spawn((
+                Reward(10.0),
+                Dead {
+                    despawn_timer: Timer::from_seconds(1.0, TimerMode::Once),
+                },
+            ))
+            .id();
+
         // Send message
         let mut messages = app.world_mut().resource_mut::<Messages<EnemyKilled>>();
-        messages.write(EnemyKilled { reward: 10.0 });
+        messages.write(EnemyKilled { entity: entity1 });
 
         // Run systems
         app.update();
@@ -59,9 +72,20 @@ mod tests {
         // Check updated state
         assert_eq!(app.world().resource::<Wallet>().void_shards, 10.0);
 
+        // Spawn another dead enemy
+        let entity2 = app
+            .world_mut()
+            .spawn((
+                Reward(5.5),
+                Dead {
+                    despawn_timer: Timer::from_seconds(1.0, TimerMode::Once),
+                },
+            ))
+            .id();
+
         // Send another
         let mut messages = app.world_mut().resource_mut::<Messages<EnemyKilled>>();
-        messages.write(EnemyKilled { reward: 5.5 });
+        messages.write(EnemyKilled { entity: entity2 });
 
         app.update();
 

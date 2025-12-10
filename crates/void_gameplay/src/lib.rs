@@ -2,7 +2,11 @@ use {
     bevy::{asset::LoadedFolder, prelude::*},
     bevy_common_assets::ron::RonAssetPlugin,
     void_assets::VoidAssetsPlugin,
-    void_core::{GameState, VoidCorePlugin},
+    void_core::{
+        events::UpgradePortal,
+        GameState, VoidCorePlugin,
+    },
+    void_wallet::VoidWalletPlugin,
 };
 
 pub mod configs;
@@ -12,8 +16,9 @@ mod soldier;
 use {
     configs::{EnemyConfig, PortalConfig, SoldierConfig},
     portal::{
-        despawn_dead_bodies, enemy_lifetime, handle_dying_enemies, move_enemies, spawn_enemies,
-        spawn_portal, update_enemy_health_ui, AvailableEnemies, EnemySpawnTimer, PortalSpawnTracker,
+        despawn_dead_bodies, enemy_lifetime, handle_dying_enemies, handle_portal_upgrade,
+        move_enemies, spawn_enemies, spawn_portal, update_enemy_health_ui, AvailableEnemies,
+        EnemySpawnTimer, PortalSpawnTracker,
     },
     soldier::{
         move_projectiles, projectile_collision, soldier_attack_logic, soldier_decision_logic,
@@ -23,6 +28,8 @@ use {
 
 #[cfg(test)]
 mod test_events;
+#[cfg(test)]
+mod test_portal_mechanics;
 #[cfg(test)]
 mod test_soldier;
 #[cfg(test)]
@@ -47,6 +54,9 @@ impl Plugin for VoidGameplayPlugin {
         if !app.is_plugin_added::<VoidAssetsPlugin>() {
             app.add_plugins(VoidAssetsPlugin);
         }
+        if !app.is_plugin_added::<VoidWalletPlugin>() {
+            app.add_plugins(VoidWalletPlugin);
+        }
 
         // Use specific extensions to disambiguate different RON config types
         app.add_plugins((
@@ -54,6 +64,8 @@ impl Plugin for VoidGameplayPlugin {
             RonAssetPlugin::<EnemyConfig>::new(&["enemy.ron"]),
             RonAssetPlugin::<SoldierConfig>::new(&["soldier.ron"]),
         ));
+
+        app.add_message::<UpgradePortal>();
 
         app.init_resource::<GameConfigHandles>();
         app.init_resource::<PortalSpawnTracker>();
@@ -81,6 +93,7 @@ impl Plugin for VoidGameplayPlugin {
                 soldier_attack_logic,
                 move_projectiles,
                 projectile_collision,
+                handle_portal_upgrade,
             )
                 .run_if(in_state(GameState::Playing)),
         );

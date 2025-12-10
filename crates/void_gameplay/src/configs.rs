@@ -12,6 +12,9 @@ pub struct PortalConfig {
     pub base_enemy_speed: f32,
     pub base_enemy_lifetime: f32,
     pub base_enemy_reward: f32,
+    // Growth
+    pub enemy_health_growth_factor: f32,
+    pub enemy_reward_growth_factor: f32,
 }
 
 #[derive(Deserialize, Asset, Clone, Debug, Resource, Reflect)]

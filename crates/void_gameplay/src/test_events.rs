@@ -1,9 +1,11 @@
 use {
     crate::{
-        portal::{despawn_dead_bodies, handle_dying_enemies, Dead, Enemy, Health, Reward},
+        portal::{despawn_dead_bodies, handle_dying_enemies},
     },
     bevy::{prelude::*, time::TimePlugin},
+    void_components::{Dead, Reward},
     void_core::events::EnemyKilled,
+    crate::portal::{Enemy, Health}, // Import these components from portal.rs as they are still there
 };
 
 #[test]
@@ -70,7 +72,7 @@ fn test_enemy_death_lifecycle() {
         1,
         "Should emit exactly one EnemyKilled event"
     );
-    assert_eq!(captured.0[0].reward, reward_amount);
+    assert_eq!(captured.0[0].entity, enemy_entity);
 
     // 2. Verify Entity still exists
     assert!(app.world().get_entity(enemy_entity).is_ok());
