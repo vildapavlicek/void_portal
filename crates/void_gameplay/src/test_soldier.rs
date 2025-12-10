@@ -43,6 +43,8 @@ mod tests {
             base_enemy_speed: 150.0,
             base_enemy_lifetime: 10.0,
             base_enemy_reward: 10.0,
+            enemy_health_growth_factor: 1.0,
+            enemy_reward_growth_factor: 1.0,
         });
 
         // Spawn Portal (spawn_portal system needs PortalConfig, but here we spawn manually sometimes?

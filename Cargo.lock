@@ -4661,6 +4661,7 @@ dependencies = [
  "serde",
  "void_assets",
  "void_core",
+ "void_wallet",
 ]
 
 [[package]]

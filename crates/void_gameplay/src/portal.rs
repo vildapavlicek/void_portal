@@ -2,12 +2,16 @@ use {
     crate::configs::{EnemyConfig, PortalConfig},
     bevy::{prelude::*, window::PrimaryWindow},
     rand::Rng,
-    void_core::events::EnemyKilled,
+    void_core::events::{EnemyKilled, UpgradePortal},
+    void_wallet::Wallet,
 };
 
 // Components
 #[derive(Component)]
 pub struct Portal;
+
+#[derive(Component)]
+pub struct Level(pub u32);
 
 #[derive(Component)]
 pub struct VoidShardsReward(pub f32);
@@ -83,6 +87,7 @@ pub fn spawn_portal(
             },
             Transform::from_xyz(0.0, portal_y, 0.0),
             Portal,
+            Level(1),
             VoidShardsReward(portal_config.base_void_shards_reward),
             UpgradePrice(portal_config.base_upgrade_price),
             UpgradeCoef(portal_config.upgrade_price_increase_coef),
@@ -98,7 +103,7 @@ pub fn spawn_enemies(
     portal_config: Res<PortalConfig>,
     available_enemies: Res<AvailableEnemies>,
     enemy_query: Query<Entity, With<Enemy>>,
-    portal_query: Query<&Transform, With<Portal>>,
+    portal_query: Query<(&Transform, &Level), With<Portal>>,
     mut spawn_tracker: ResMut<PortalSpawnTracker>,
     window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
@@ -119,7 +124,7 @@ pub fn spawn_enemies(
             return;
         }
 
-        let Some(portal_transform) = portal_query.iter().next() else {
+        let Some((portal_transform, portal_level)) = portal_query.iter().next() else {
             warn!("No portal found to spawn enemies from");
             return;
         };
@@ -131,11 +136,17 @@ pub fn spawn_enemies(
         let half_width = window.width() / 2.0;
         let half_height = window.height() / 2.0;
 
-        // Calculate stats
-        let max_health = portal_config.base_enemy_health * enemy_config.health_coef;
+        // Calculate stats with growth
+        let level_exponent = (portal_level.0 as f32) - 1.0;
+        let health_multiplier = portal_config.enemy_health_growth_factor.powf(level_exponent);
+        let reward_multiplier = portal_config.enemy_reward_growth_factor.powf(level_exponent);
+
+        let max_health =
+            (portal_config.base_enemy_health * enemy_config.health_coef) * health_multiplier;
         let speed = portal_config.base_enemy_speed * enemy_config.speed_coef;
         let lifetime = portal_config.base_enemy_lifetime * enemy_config.lifetime_coef;
-        let reward = portal_config.base_enemy_reward * enemy_config.reward_coef;
+        let reward =
+            (portal_config.base_enemy_reward * enemy_config.reward_coef) * reward_multiplier;
 
         // Random target position within window
         let mut rng = rand::rng();
@@ -177,6 +188,29 @@ pub fn spawn_enemies(
 
         spawn_tracker.0 = spawn_tracker.0.wrapping_add(1);
         info!("Enemy spawned! Target: {:?}", target_position);
+    }
+}
+
+pub fn handle_portal_upgrade(
+    mut events: MessageReader<UpgradePortal>,
+    mut portal_query: Query<(&mut Level, &mut UpgradePrice, &UpgradeCoef), With<Portal>>,
+    mut wallet: ResMut<Wallet>,
+) {
+    for _event in events.read() {
+        if let Ok((mut level, mut upgrade_price, upgrade_coef)) = portal_query.single_mut() {
+            if wallet.void_shards >= upgrade_price.0 {
+                wallet.void_shards -= upgrade_price.0;
+                level.0 += 1;
+                upgrade_price.0 *= upgrade_coef.0;
+
+                info!(
+                    "Portal upgraded to Level {}. New Price: {}",
+                    level.0, upgrade_price.0
+                );
+            } else {
+                warn!("Not enough shards to upgrade portal!");
+            }
+        }
     }
 }
 
