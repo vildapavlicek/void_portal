@@ -1,0 +1,14 @@
+[package]
+name = "game_core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy = { workspace = true }
+common = { path = "../common" }
+assets = { path = "../assets" }
+wallet = { path = "../wallet" }
+ui = { path = "../ui" }
+portal = { path = "../portal" }
+soldier = { path = "../soldier" }
+enemy = { path = "../enemy" }
