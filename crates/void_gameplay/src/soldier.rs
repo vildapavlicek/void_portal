@@ -87,11 +87,18 @@ pub fn soldier_decision_logic(
             }
         }
 
+        let old_target = soldier.target;
+
         if !target_valid {
             soldier.target = enemy_query
                 .iter()
                 .max_by_key(|(_, _, index)| current_spawn_count.wrapping_sub(index.0))
                 .map(|(e, _, _)| e);
+        }
+
+        if soldier.target.is_some() && soldier.target != old_target {
+            let duration = soldier.attack_timer.duration();
+            soldier.attack_timer.set_elapsed(duration);
         }
 
         // 2. Decide Action
