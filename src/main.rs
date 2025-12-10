@@ -1,7 +1,4 @@
-use {
-    bevy::prelude::*, void_assets::VoidAssetsPlugin, void_core::VoidCorePlugin,
-    void_gameplay::VoidGameplayPlugin, void_ui::VoidUiPlugin,
-};
+use {bevy::prelude::*, game_core::VoidPortalPlugin};
 
 fn main() {
     App::new()
@@ -12,9 +9,6 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins(VoidCorePlugin)
-        .add_plugins(VoidAssetsPlugin)
-        .add_plugins(VoidUiPlugin)
-        .add_plugins(VoidGameplayPlugin)
+        .add_plugins(VoidPortalPlugin)
         .run();
 }

@@ -221,6 +221,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "assets"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "async-broadcast"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1782,6 +1789,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "concurrent-queue"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2190,6 +2204,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "enemy"
+version = "0.1.0"
+dependencies = [
+ "assets",
+ "bevy",
+ "bevy_common_assets",
+ "common",
+ "serde",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2392,6 +2417,20 @@ dependencies = [
  "futures-io",
  "parking",
  "pin-project-lite",
+]
+
+[[package]]
+name = "game_core"
+version = "0.1.0"
+dependencies = [
+ "assets",
+ "bevy",
+ "common",
+ "enemy",
+ "portal",
+ "soldier",
+ "ui",
+ "wallet",
 ]
 
 [[package]]
@@ -3659,6 +3698,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "portal"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_common_assets",
+ "common",
+ "enemy",
+ "rand",
+ "serde",
+ "wallet",
+]
+
+[[package]]
 name = "pp-rs"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4180,6 +4232,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "soldier"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_common_assets",
+ "common",
+ "enemy",
+ "portal",
+ "serde",
+]
+
+[[package]]
 name = "spin"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4536,6 +4600,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8c1ae7cc0fdb8b842d65d127cb981574b0d2b249b74d1c7a2986863dc134f71"
 
 [[package]]
+name = "ui"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "common",
+ "portal",
+ "wallet",
+]
+
+[[package]]
 name = "unicode-bidi"
 version = "0.3.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4637,71 +4711,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
-name = "void_assets"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "void_core",
-]
-
-[[package]]
-name = "void_components"
-version = "0.1.0"
-dependencies = [
- "bevy",
-]
-
-[[package]]
-name = "void_core"
-version = "0.1.0"
-dependencies = [
- "bevy",
-]
-
-[[package]]
-name = "void_gameplay"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bevy_common_assets",
- "rand",
- "serde",
- "void_assets",
- "void_components",
- "void_core",
- "void_wallet",
-]
-
-[[package]]
 name = "void_portal"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "void_assets",
- "void_components",
- "void_core",
- "void_gameplay",
- "void_ui",
- "void_wallet",
-]
-
-[[package]]
-name = "void_ui"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "void_core",
- "void_gameplay",
- "void_wallet",
-]
-
-[[package]]
-name = "void_wallet"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "void_components",
- "void_core",
+ "game_core",
 ]
 
 [[package]]
@@ -4712,6 +4726,14 @@ checksum = "29790946404f91d9c5d06f9874efddea1dc06c5efe94541a7d6863108e3a5e4b"
 dependencies = [
  "same-file",
  "winapi-util",
+]
+
+[[package]]
+name = "wallet"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "common",
 ]
 
 [[package]]
