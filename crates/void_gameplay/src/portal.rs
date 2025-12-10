@@ -2,6 +2,7 @@ use {
     crate::configs::{EnemyConfig, PortalConfig},
     bevy::{prelude::*, window::PrimaryWindow},
     rand::Rng,
+    void_components::{Dead, Reward},
     void_core::events::EnemyKilled,
 };
 
@@ -38,15 +39,7 @@ pub struct Lifetime {
 pub struct SpawnIndex(pub u32);
 
 #[derive(Component)]
-pub struct Reward(pub f32);
-
-#[derive(Component)]
 pub struct Speed(pub f32);
-
-#[derive(Component)]
-pub struct Dead {
-    pub despawn_timer: Timer,
-}
 
 // Resources
 #[derive(Resource, Default)]
@@ -182,10 +175,10 @@ pub fn spawn_enemies(
 
 pub fn handle_dying_enemies(
     mut commands: Commands,
-    query: Query<(Entity, &Health, &Reward), (With<Enemy>, Without<Dead>)>,
+    query: Query<(Entity, &Health), (With<Enemy>, Without<Dead>)>,
     mut events: MessageWriter<EnemyKilled>,
 ) {
-    for (entity, health, reward) in query.iter() {
+    for (entity, health) in query.iter() {
         if health.current <= 0.0 {
             commands
                 .entity(entity)
@@ -195,7 +188,7 @@ pub fn handle_dying_enemies(
                 })
                 .insert(Visibility::Hidden);
 
-            events.write(EnemyKilled { reward: reward.0 });
+            events.write(EnemyKilled { entity });
             info!("Enemy died, hidden and scheduled for despawn");
         }
     }

@@ -10,6 +10,7 @@ void_assets = { path = "crates/void_assets" }
 void_ui = { path = "crates/void_ui" }
 void_gameplay = { path = "crates/void_gameplay" }
 void_wallet = { path = "crates/void_wallet" }
+void_components = { path = "crates/void_components" }
 
 # Enable dynamic linking for faster compile times in development
 [features]
@@ -21,3 +22,4 @@ resolver = "2"
 
 [workspace.dependencies]
 bevy = "0.17"
+void_components = { path = "crates/void_components" }
