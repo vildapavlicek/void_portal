@@ -43,6 +43,11 @@ pub struct Reward(pub f32);
 #[derive(Component)]
 pub struct Speed(pub f32);
 
+#[derive(Component)]
+pub struct Dead {
+    pub despawn_timer: Timer,
+}
+
 // Resources
 #[derive(Resource, Default)]
 pub struct PortalSpawnTracker(pub u32);
@@ -175,16 +180,37 @@ pub fn spawn_enemies(
     }
 }
 
-pub fn despawn_dead_enemies(
+pub fn handle_dying_enemies(
     mut commands: Commands,
-    query: Query<(Entity, &Health, &Reward), With<Enemy>>,
+    query: Query<(Entity, &Health, &Reward), (With<Enemy>, Without<Dead>)>,
     mut events: MessageWriter<EnemyKilled>,
 ) {
     for (entity, health, reward) in query.iter() {
         if health.current <= 0.0 {
-            commands.entity(entity).despawn();
+            commands
+                .entity(entity)
+                .remove::<Enemy>()
+                .insert(Dead {
+                    despawn_timer: Timer::from_seconds(1.0, TimerMode::Once),
+                })
+                .insert(Visibility::Hidden);
+
             events.write(EnemyKilled { reward: reward.0 });
-            info!("Enemy despawned due to being killed");
+            info!("Enemy died, hidden and scheduled for despawn");
+        }
+    }
+}
+
+pub fn despawn_dead_bodies(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut Dead)>,
+) {
+    for (entity, mut dead) in query.iter_mut() {
+        dead.despawn_timer.tick(time.delta());
+        if dead.despawn_timer.is_finished() {
+            commands.entity(entity).despawn();
+            info!("Dead enemy body despawned");
         }
     }
 }

@@ -4,14 +4,13 @@ mod tests {
         crate::{
             configs::PortalConfig, // Added import
             portal::{
-                despawn_dead_enemies, enemy_lifetime, spawn_enemies, spawn_portal,
-                update_enemy_health_ui, Enemy, EnemySpawnTimer, Health, Portal, PortalSpawnTracker,
-                SpawnIndex, Speed,
+                despawn_dead_bodies, handle_dying_enemies, Enemy, EnemySpawnTimer, Health, Portal,
+                PortalSpawnTracker, SpawnIndex, Speed,
             },
             soldier::{
                 move_projectiles, projectile_collision, soldier_attack_logic,
-                soldier_decision_logic, soldier_movement_logic, spawn_soldier, AttackRange,
-                Attacking, Moving, Projectile, Soldier,
+                soldier_decision_logic, soldier_movement_logic, spawn_soldier, Attacking, Moving,
+                Projectile, Soldier,
             },
         },
         bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow},
@@ -80,7 +79,8 @@ mod tests {
                 soldier_attack_logic.after(soldier_decision_logic),
                 move_projectiles,
                 projectile_collision.after(move_projectiles),
-                despawn_dead_enemies.after(projectile_collision),
+                handle_dying_enemies.after(projectile_collision),
+                despawn_dead_bodies,
             ),
         );
         app
