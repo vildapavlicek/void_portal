@@ -4691,6 +4691,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "void_core",
+ "void_gameplay",
  "void_wallet",
 ]
 

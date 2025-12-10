@@ -9,8 +9,8 @@ use {
     void_wallet::VoidWalletPlugin,
 };
 
-mod configs;
-mod portal;
+pub mod configs;
+pub mod portal;
 mod soldier;
 
 use {

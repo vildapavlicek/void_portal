@@ -1,8 +1,11 @@
 use {
     bevy::prelude::*,
+    portal_panel::PortalPanelPlugin,
     void_core::{GameState, VoidCorePlugin},
     void_wallet::Wallet,
 };
+
+mod portal_panel;
 
 pub struct VoidUiPlugin;
 
@@ -11,6 +14,8 @@ impl Plugin for VoidUiPlugin {
         if !app.is_plugin_added::<VoidCorePlugin>() {
             app.add_plugins(VoidCorePlugin);
         }
+
+        app.add_plugins(PortalPanelPlugin);
 
         app.add_systems(OnEnter(GameState::Playing), spawn_wallet_ui)
             .add_systems(
