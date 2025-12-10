@@ -10,8 +10,7 @@ impl Plugin for PortalPanelPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (attach_portal_observer, close_portal_ui_actions)
-                .run_if(in_state(GameState::Playing)),
+            (attach_portal_observer, close_portal_ui_actions).run_if(in_state(GameState::Playing)),
         );
     }
 }
@@ -44,13 +43,9 @@ fn attach_portal_observer(
 
 // Event handler for Portal click
 fn on_portal_click(
-    trigger: Trigger<Pointer<Click>>,
+    trigger: On<Pointer<Click>>,
     mut commands: Commands,
-    query: Query<(
-        &VoidShardsReward,
-        &UpgradePrice,
-        &UpgradeCoef,
-    )>,
+    query: Query<(&VoidShardsReward, &UpgradePrice, &UpgradeCoef)>,
     ui_query: Query<Entity, With<PortalUiRoot>>,
 ) {
     // If UI is already open, don't spawn another one
@@ -155,7 +150,7 @@ fn spawn_portal_ui(commands: &mut Commands, reward: f32, price: f32, coef: f32) 
 
 // Close when clicking the Scrim (root)
 fn on_scrim_click(
-    trigger: Trigger<Pointer<Click>>,
+    trigger: On<Pointer<Click>>,
     mut commands: Commands,
     query: Query<Entity, With<PortalUiRoot>>,
 ) {
@@ -165,7 +160,7 @@ fn on_scrim_click(
 }
 
 // Block clicks from propagating
-fn block_click(mut trigger: Trigger<Pointer<Click>>) {
+fn block_click(mut trigger: On<Pointer<Click>>) {
     trigger.propagate(false);
 }
 
@@ -208,16 +203,14 @@ fn close_portal_ui_actions(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use bevy::state::app::StatesPlugin;
-    use void_gameplay::configs::PortalConfig;
+    use {super::*, bevy::state::app::StatesPlugin, void_gameplay::configs::PortalConfig};
 
     #[test]
     fn test_portal_ui_lifecycle() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-           .add_plugins(StatesPlugin)
-           .add_plugins(AssetPlugin::default());
+            .add_plugins(StatesPlugin)
+            .add_plugins(AssetPlugin::default());
 
         app.init_resource::<ButtonInput<KeyCode>>(); // Manually init input
 
@@ -233,6 +226,8 @@ mod tests {
             base_enemy_speed: 10.0,
             base_enemy_lifetime: 10.0,
             base_enemy_reward: 1.0,
+            enemy_health_growth_factor: 0.5,
+            enemy_reward_growth_factor: 1.0,
         });
 
         // Add Plugin
@@ -255,7 +250,10 @@ mod tests {
         app.update();
 
         // Check if observer attached
-        assert!(app.world().get::<PortalClickObserverAttached>(portal).is_some());
+        assert!(app
+            .world()
+            .get::<PortalClickObserverAttached>(portal)
+            .is_some());
 
         // Simulate Click by spawning UI directly
         spawn_portal_ui(&mut app.world_mut().commands(), 10.0, 100.0, 1.5);
@@ -271,10 +269,12 @@ mod tests {
 
         // Simulate Esc
         // Manually update input before running update
-        app.world_mut().resource_mut::<ButtonInput<KeyCode>>().press(KeyCode::Escape);
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::Escape);
         app.update(); // Process system
 
-         // Check if UI Despawned
+        // Check if UI Despawned
         let ui_root = app
             .world_mut()
             .query_filtered::<Entity, With<PortalUiRoot>>()
