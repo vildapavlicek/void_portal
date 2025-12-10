@@ -4,14 +4,12 @@ mod tests {
         crate::{
             configs::{PortalConfig, SoldierConfig},
             portal::{
-                Enemy, EnemySpawnTimer, Health, Portal, PortalSpawnTracker, Reward, SpawnIndex,
-                Speed,
+                Enemy, EnemySpawnTimer, Health, Portal, PortalSpawnTracker, SpawnIndex, Speed,
             },
-            soldier::{
-                soldier_attack_logic, soldier_decision_logic, spawn_soldier, Projectile, Soldier,
-            },
+            soldier::{soldier_attack_logic, soldier_decision_logic, spawn_soldier, Soldier},
         },
         bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow},
+        void_components::Reward,
         void_core::events::EnemyKilled,
     };
 

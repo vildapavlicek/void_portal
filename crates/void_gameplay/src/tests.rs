@@ -100,9 +100,7 @@ mod tests {
         app.update();
 
         // Check if Portal spawned
-        let mut portal_query = app
-            .world_mut()
-            .query::<&crate::portal::Portal>();
+        let mut portal_query = app.world_mut().query::<&crate::portal::Portal>();
         assert_eq!(portal_query.iter(app.world()).count(), 1);
     }
 
@@ -143,7 +141,7 @@ mod tests {
                     current: 100.0,
                     max: 100.0,
                 },
-                crate::portal::Reward(10.0),
+                void_components::Reward(10.0),
                 crate::portal::Speed(100.0), // 100 units/sec
             ))
             .id();

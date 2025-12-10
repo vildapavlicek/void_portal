@@ -3,10 +3,11 @@ use {
         configs::{EnemyConfig, PortalConfig},
         portal::{
             handle_portal_upgrade, spawn_enemies, spawn_portal, AvailableEnemies, Enemy,
-            EnemySpawnTimer, Health, Level, Portal, PortalSpawnTracker, Reward, UpgradePrice,
+            EnemySpawnTimer, Health, Level, Portal, PortalSpawnTracker, UpgradePrice,
         },
     },
     bevy::{prelude::*, time::TimePlugin},
+    void_components::Reward,
     void_core::events::UpgradePortal,
     void_wallet::Wallet,
 };
@@ -56,7 +57,9 @@ fn setup_app() -> App {
     // Time resource already inserted above
 
     app.insert_resource(EnemySpawnTimer(Timer::from_seconds(1.0, TimerMode::Once)));
-    app.insert_resource(Wallet { void_shards: 1000.0 }); // Rich wallet
+    app.insert_resource(Wallet {
+        void_shards: 1000.0,
+    }); // Rich wallet
 
     // Add Systems
     app.add_systems(Update, (spawn_portal, spawn_enemies, handle_portal_upgrade));
