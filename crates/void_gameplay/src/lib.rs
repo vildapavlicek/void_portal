@@ -12,8 +12,8 @@ mod soldier;
 use {
     configs::{EnemyConfig, PortalConfig, SoldierConfig},
     portal::{
-        despawn_dead_enemies, enemy_lifetime, move_enemies, spawn_enemies, spawn_portal,
-        update_enemy_health_ui, AvailableEnemies, EnemySpawnTimer, PortalSpawnTracker,
+        despawn_dead_bodies, enemy_lifetime, handle_dying_enemies, move_enemies, spawn_enemies,
+        spawn_portal, update_enemy_health_ui, AvailableEnemies, EnemySpawnTimer, PortalSpawnTracker,
     },
     soldier::{
         move_projectiles, projectile_collision, soldier_attack_logic, soldier_decision_logic,
@@ -73,7 +73,8 @@ impl Plugin for VoidGameplayPlugin {
                 spawn_enemies,
                 move_enemies,
                 enemy_lifetime,
-                despawn_dead_enemies,
+                handle_dying_enemies,
+                despawn_dead_bodies,
                 update_enemy_health_ui,
                 soldier_decision_logic,
                 soldier_movement_logic,

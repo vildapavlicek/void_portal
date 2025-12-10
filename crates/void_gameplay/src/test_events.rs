@@ -1,57 +1,20 @@
 use {
     crate::{
-        configs::{EnemyConfig, PortalConfig, SoldierConfig},
-        portal::{despawn_dead_enemies, Enemy, Health, Reward},
+        portal::{despawn_dead_bodies, handle_dying_enemies, Dead, Enemy, Health, Reward},
     },
-    bevy::prelude::*,
+    bevy::{prelude::*, time::TimePlugin},
     void_core::events::EnemyKilled,
 };
 
 #[test]
-fn test_enemy_killed_event() {
+fn test_enemy_death_lifecycle() {
     let mut app = App::new();
 
-    // Add minimal plugins and core events
-    app.add_plugins(MinimalPlugins);
-    app.add_message::<EnemyKilled>(); // Bevy 0.17+ uses messages
+    app.add_plugins(MinimalPlugins.build().disable::<TimePlugin>());
+    app.insert_resource(Time::<()>::default());
+    app.add_message::<EnemyKilled>();
 
-    // Add the system we want to test
-    app.add_systems(Update, despawn_dead_enemies);
-
-    // Spawn an enemy that is already "dead" (0 health) and has a reward
-    let reward_amount = 10.0;
-    let enemy_entity = app
-        .world_mut()
-        .spawn((
-            Enemy {
-                target_position: Vec2::ZERO,
-            },
-            Health {
-                current: 0.0, // Dead
-                max: 100.0,
-            },
-            Reward(reward_amount),
-        ))
-        .id();
-
-    // Run the app one update cycle
-    app.update();
-
-    // Verify the enemy is despawned
-    assert!(
-        app.world().get_entity(enemy_entity).is_err(),
-        "Enemy should be despawned"
-    );
-
-    // Verify the event was emitted
-    // In Bevy 0.17+ we can use MessageCursor to read messages manually,
-    // but here we use a helper system for simplicity.
-
-    // We need to construct a cursor manually or use a system to read it.
-    // Easier way in tests is often to run a system that reads events and asserts.
-    // But let's try to access it via world resources directly if possible.
-
-    // Since direct access seems tricky with just 'events.reader()', let's use a small helper system to capture events.
+    // Helper to capture events
     #[derive(Resource, Default)]
     struct CapturedEvents(Vec<EnemyKilled>);
 
@@ -66,11 +29,39 @@ fn test_enemy_killed_event() {
         },
     );
 
-    // Run update again to let the reader system pick up the events
-    // Note: Messages sent in one frame are usually available in the next frame or same frame depending on ordering.
-    // despawn_dead_enemies runs in Update. The reader also runs in Update.
-    // If reader runs after despawn, it catches it.
-    // Let's ensure order or just run again.
+    // Add death systems
+    // handle_dying_enemies runs, emits event, modifies entity.
+    // event reader runs (order undefined unless explicit, but next frame definitely catches it).
+    // despawn_dead_bodies runs.
+    app.add_systems(Update, (handle_dying_enemies, despawn_dead_bodies));
+
+    // Spawn an enemy with 0 health
+    let reward_amount = 10.0;
+    let enemy_entity = app
+        .world_mut()
+        .spawn((
+            Enemy {
+                target_position: Vec2::ZERO,
+            },
+            Health {
+                current: 0.0,
+                max: 100.0,
+            },
+            Reward(reward_amount),
+            // Ensure Visibility is present to test Hidden
+            Visibility::Visible,
+            InheritedVisibility::default(),
+            ViewVisibility::default(),
+        ))
+        .id();
+
+    // Run 1 frame
+    app.update();
+
+    // 1. Verify Event emitted
+    // We might need another update if reader runs before handler.
+    // Or we can check if it's in the resource.
+    // If undefined order, it might take 2 ticks for reader to see it.
     app.update();
 
     let captured = app.world().resource::<CapturedEvents>();
@@ -79,8 +70,54 @@ fn test_enemy_killed_event() {
         1,
         "Should emit exactly one EnemyKilled event"
     );
+    assert_eq!(captured.0[0].reward, reward_amount);
+
+    // 2. Verify Entity still exists
+    assert!(app.world().get_entity(enemy_entity).is_ok());
+
+    // 3. Verify Enemy component removed
+    assert!(
+        app.world().get::<Enemy>(enemy_entity).is_none(),
+        "Enemy component should be removed"
+    );
+
+    // 4. Verify Dead component added
+    assert!(
+        app.world().get::<Dead>(enemy_entity).is_some(),
+        "Dead component should be added"
+    );
+
+    // 5. Verify Hidden
+    let visibility = app.world().get::<Visibility>(enemy_entity).unwrap();
     assert_eq!(
-        captured.0[0].reward, reward_amount,
-        "Reward amount should match"
+        *visibility,
+        Visibility::Hidden,
+        "Visibility should be Hidden"
+    );
+
+    // 6. Advance time 0.9s (Timer is 1.0s)
+    {
+        let mut time = app.world_mut().resource_mut::<Time>();
+        time.advance_by(std::time::Duration::from_secs_f32(0.9));
+    }
+    app.update();
+
+    // Verify still exists
+    assert!(
+        app.world().get_entity(enemy_entity).is_ok(),
+        "Entity should still exist after 0.9s"
+    );
+
+    // 7. Advance time 0.2s (Total 1.1s)
+    {
+        let mut time = app.world_mut().resource_mut::<Time>();
+        time.advance_by(std::time::Duration::from_secs_f32(0.2));
+    }
+    app.update();
+
+    // Verify Despawned
+    assert!(
+        app.world().get_entity(enemy_entity).is_err(),
+        "Entity should be despawned after 1.1s"
     );
 }
