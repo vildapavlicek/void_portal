@@ -1,14 +1,12 @@
 use {
     crate::{
         handle_portal_capacity_upgrade, handle_portal_upgrade, spawn_enemies, spawn_portal,
-        EnemySpawnTimer, Portal, PortalBonusLifetime, PortalCapacity, PortalConfig,
+        EnemySpawnTimer, IndependentStatConfig, IndependentlyLeveledStats, LevelScaledStat,
+        LevelScaledStats, LevelUpConfig, Portal, PortalBonusLifetime, PortalCapacity, PortalConfig,
         PortalSpawnTracker,
     },
     bevy::{prelude::*, time::TimePlugin},
-    common::{
-        GrowthStrategy, IndependentStatConfig, IndependentlyLeveledStats, LevelScaledStat,
-        LevelScaledStats, LevelUpConfig, Reward, UpgradePortal, UpgradePortalCapacity,
-    },
+    common::{GrowthStrategy, Reward, UpgradePortal, UpgradePortalCapacity},
     enemy::{AvailableEnemies, Enemy, EnemyConfig, Health, Lifetime},
     wallet::Wallet,
 };
@@ -142,9 +140,7 @@ fn test_enemy_stats_at_level_1() {
     }
     app.update(); // Spawns enemy (timer finished)
 
-    let mut enemy_query = app
-        .world_mut()
-        .query::<(&Enemy, &Health, &Reward, &Lifetime)>();
+    let mut enemy_query = app.world_mut().query::<(&Enemy, &Health, &Reward, &Lifetime)>();
     let enemy = enemy_query.iter(app.world()).next();
 
     assert!(enemy.is_some(), "Enemy should be spawned at level 1");
@@ -223,9 +219,7 @@ fn test_enemy_stats_at_level_2() {
 
     app.update(); // Spawn enemy at Level 2
 
-    let mut enemy_query = app
-        .world_mut()
-        .query::<(&Enemy, &Health, &Reward, &Lifetime)>();
+    let mut enemy_query = app.world_mut().query::<(&Enemy, &Health, &Reward, &Lifetime)>();
     let enemy = enemy_query.iter(app.world()).next();
 
     assert!(enemy.is_some(), "Enemy should be spawned at level 2");
@@ -273,10 +267,13 @@ fn test_capacity_upgrade() {
 
     // Initial check
     {
-        let (_, capacity) = app
+        let Ok((_, capacity)) = app
             .world_mut()
             .query::<(&Portal, &PortalCapacity)>()
-            .single(app.world());
+            .get_single(app.world())
+        else {
+            panic!("Could not find portal capacity");
+        };
         assert_eq!(capacity.0.value, 5.0); // Base capacity
         assert_eq!(capacity.0.price, 200.0); // Base capacity price
     }
@@ -294,10 +291,13 @@ fn test_capacity_upgrade() {
         // 1000 - 200 = 800
         assert_eq!(wallet.void_shards, 800.0);
 
-        let (_, capacity) = app
+        let Ok((_, capacity)) = app
             .world_mut()
             .query::<(&Portal, &PortalCapacity)>()
-            .single(app.world());
+            .get_single(app.world())
+        else {
+            panic!("Could not find portal capacity");
+        };
 
         // Capacity value growth: Linear, factor 1.0. 5 + 1 = 6.
         assert_eq!(capacity.0.value, 6.0);
