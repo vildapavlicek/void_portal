@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use {bevy::prelude::*, game_core::VoidPortalPlugin};
 
 fn main() {

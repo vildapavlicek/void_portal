@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use {
     bevy::{prelude::*, window::PrimaryWindow},
     bevy_common_assets::ron::RonAssetPlugin,
