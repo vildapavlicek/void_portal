@@ -1,5 +1,8 @@
 use {
-    crate::{soldier_attack_logic, soldier_decision_logic, spawn_soldier, Soldier, SoldierConfig},
+    crate::{
+        player_npc_attack_logic, player_npc_decision_logic, spawn_player_npc, Soldier,
+        SoldierConfig,
+    },
     bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow},
     common::{EnemyKilled, Reward},
     enemy::{Enemy, Health, SpawnIndex, Speed},
@@ -53,9 +56,9 @@ fn setup_app() -> App {
     app.add_systems(
         Update,
         (
-            spawn_soldier,
-            soldier_decision_logic,
-            soldier_attack_logic.after(soldier_decision_logic),
+            spawn_player_npc,
+            player_npc_decision_logic,
+            player_npc_attack_logic.after(player_npc_decision_logic),
         ),
     );
 
@@ -110,7 +113,7 @@ fn test_soldier_attack_timer_reset_on_retarget() {
     // Let's despawn A to force retarget.
     app.world_mut().entity_mut(enemy_a).despawn();
 
-    let enemy_b = app
+    let _enemy_b = app
         .world_mut()
         .spawn((
             Transform::default(),

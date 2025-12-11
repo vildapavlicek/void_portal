@@ -273,6 +273,8 @@ pub fn handle_portal_upgrade(
                 wallet.void_shards -= upgrade_price.0;
                 level.0 += 1;
                 upgrade_price.0 *= upgrade_coef.0;
+                // TODO: Update VoidShardsReward scaling here if needed.
+                // Currently it's static (base value) and doesn't match enemy reward logic.
 
                 info!(
                     "Portal upgraded to Level {}. New Price: {}",

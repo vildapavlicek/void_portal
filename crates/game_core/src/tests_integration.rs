@@ -5,12 +5,12 @@ use {
         despawn_dead_bodies, enemy_lifetime, handle_dying_enemies, move_enemies,
         update_enemy_health_ui, AvailableEnemies, Enemy, EnemyConfig,
     },
+    player_npcs::{
+        move_projectiles, player_npc_attack_logic, player_npc_decision_logic,
+        player_npc_movement_logic, projectile_collision, spawn_player_npc, SoldierConfig,
+    },
     portal::{
         spawn_enemies, spawn_portal, EnemySpawnTimer, Portal, PortalConfig, PortalSpawnTracker,
-    },
-    soldier::{
-        move_projectiles, projectile_collision, soldier_attack_logic, soldier_decision_logic,
-        soldier_movement_logic, spawn_soldier, SoldierConfig,
     },
 };
 
@@ -79,10 +79,10 @@ fn setup_app() -> App {
             handle_dying_enemies,
             despawn_dead_bodies,
             update_enemy_health_ui,
-            spawn_soldier,
-            soldier_decision_logic,
-            soldier_movement_logic,
-            soldier_attack_logic,
+            spawn_player_npc,
+            player_npc_decision_logic,
+            player_npc_movement_logic,
+            player_npc_attack_logic,
             move_projectiles,
             projectile_collision,
         ),
