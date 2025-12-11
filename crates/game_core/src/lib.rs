@@ -1,7 +1,7 @@
 use {
     assets::VoidAssetsPlugin,
     bevy::{asset::LoadedFolder, prelude::*},
-    common::GameState,
+    common::{EnemyKilled, GameState, UpgradePortal},
     enemy::{AvailableEnemies, EnemyConfig, EnemyPlugin},
     portal::{PortalConfig, PortalPlugin},
     soldier::{SoldierConfig, SoldierPlugin},
@@ -21,6 +21,8 @@ struct GameConfigHandles {
 impl Plugin for VoidPortalPlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<GameState>();
+        app.add_message::<EnemyKilled>();
+        app.add_message::<UpgradePortal>();
 
         app.add_plugins((
             VoidAssetsPlugin,
