@@ -6,8 +6,8 @@ use {
     bevy::{asset::LoadedFolder, prelude::*},
     common::{EnemyKilled, GameState, UpgradePortal},
     enemy::{AvailableEnemies, EnemyConfig, EnemyPlugin},
+    player_npcs::{PlayerNpcsPlugin, SoldierConfig},
     portal::{PortalConfig, PortalPlugin},
-    soldier::{SoldierConfig, SoldierPlugin},
     ui::VoidUiPlugin,
     wallet::VoidWalletPlugin,
 };
@@ -32,7 +32,7 @@ impl Plugin for VoidPortalPlugin {
             VoidWalletPlugin,
             EnemyPlugin,
             PortalPlugin,
-            SoldierPlugin,
+            PlayerNpcsPlugin,
             VoidUiPlugin,
         ));
 
@@ -60,7 +60,7 @@ fn start_loading(
 ) {
     handles.portal = asset_server.load("configs/main.portal.ron");
     handles.enemies_folder = asset_server.load_folder("configs/enemies");
-    handles.soldier = asset_server.load("configs/main.soldier.ron");
+    handles.soldier = asset_server.load("configs/player_npcs/main.soldier.ron");
 
     commands.spawn((
         Text2d::new("Loading..."),

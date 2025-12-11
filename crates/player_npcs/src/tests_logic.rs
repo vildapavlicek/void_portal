@@ -1,7 +1,8 @@
 use {
     crate::{
-        move_projectiles, projectile_collision, soldier_attack_logic, soldier_decision_logic,
-        soldier_movement_logic, AttackRange, Attacking, Moving, Projectile, Soldier, SoldierConfig,
+        move_projectiles, player_npc_attack_logic, player_npc_decision_logic,
+        player_npc_movement_logic, projectile_collision, AttackRange, Attacking, Moving,
+        Projectile, Soldier, SoldierConfig,
     },
     bevy::{
         prelude::*,
@@ -50,7 +51,7 @@ fn test_soldier_acquires_target() {
     spawn_portal_and_tracker(&mut app);
     insert_soldier_config(&mut app);
 
-    app.add_systems(Update, soldier_decision_logic);
+    app.add_systems(Update, player_npc_decision_logic);
 
     // Spawn Soldier
     let soldier = app
@@ -100,7 +101,7 @@ fn test_soldier_moves_to_target() {
 
     app.add_systems(
         Update,
-        (soldier_decision_logic, soldier_movement_logic).chain(),
+        (player_npc_decision_logic, player_npc_movement_logic).chain(),
     );
 
     // Spawn Soldier at (0,0)
@@ -161,8 +162,8 @@ fn test_soldier_attacks_target() {
     app.add_systems(
         Update,
         (
-            soldier_decision_logic,
-            soldier_attack_logic,
+            player_npc_decision_logic,
+            player_npc_attack_logic,
             move_projectiles,
             projectile_collision,
         )
@@ -248,7 +249,7 @@ fn test_soldier_switching_targets() {
     spawn_portal_and_tracker(&mut app);
     insert_soldier_config(&mut app);
 
-    app.add_systems(Update, soldier_decision_logic);
+    app.add_systems(Update, player_npc_decision_logic);
 
     // Spawn Soldier
     let soldier = app
@@ -308,7 +309,7 @@ fn test_soldier_switching_targets() {
     app.world_mut().despawn(enemy1);
 
     // Need attack logic to detect invalid target and remove Attacking
-    app.add_systems(Update, soldier_attack_logic);
+    app.add_systems(Update, player_npc_attack_logic);
 
     app.update(); // Detects invalid target, removes Attacking.
 
@@ -326,7 +327,7 @@ fn test_soldier_spawn_index_wrapping() {
     let mut app = create_app_with_minimal_plugins();
     spawn_portal_and_tracker(&mut app);
     insert_soldier_config(&mut app);
-    app.add_systems(Update, soldier_decision_logic);
+    app.add_systems(Update, player_npc_decision_logic);
 
     let soldier = app
         .world_mut()
@@ -390,8 +391,8 @@ fn test_soldier_retargets_on_death() {
     app.add_systems(
         Update,
         (
-            soldier_decision_logic,
-            soldier_attack_logic,
+            player_npc_decision_logic,
+            player_npc_attack_logic,
             move_projectiles,
             projectile_collision,
             handle_dying_enemies,
@@ -482,7 +483,7 @@ fn test_soldier_attack_reset_on_switch() {
     let mut app = create_app_with_minimal_plugins();
     spawn_portal_and_tracker(&mut app);
     insert_soldier_config(&mut app);
-    app.add_systems(Update, soldier_decision_logic);
+    app.add_systems(Update, player_npc_decision_logic);
 
     let soldier = app
         .world_mut()

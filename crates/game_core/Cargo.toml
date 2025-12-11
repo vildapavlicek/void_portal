@@ -10,5 +10,5 @@ assets = { path = "../assets" }
 wallet = { path = "../wallet" }
 ui = { path = "../ui" }
 portal = { path = "../portal" }
-soldier = { path = "../soldier" }
+player_npcs = { path = "../player_npcs" }
 enemy = { path = "../enemy" }
