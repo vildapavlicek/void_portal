@@ -182,8 +182,7 @@ pub fn spawn_enemies(
             return;
         }
 
-        let Some((portal_transform, portal_level, portal_capacity)) =
-            portal_query.iter().next()
+        let Some((portal_transform, portal_level, portal_capacity)) = portal_query.iter().next()
         else {
             warn!("No portal found to spawn enemies from");
             return;
@@ -270,9 +269,7 @@ pub fn handle_portal_upgrade(
     mut wallet: ResMut<Wallet>,
 ) {
     for _event in events.read() {
-        if let Some((mut level, mut upgrade_price, upgrade_coef)) =
-            portal_query.iter_mut().next()
-        {
+        if let Some((mut level, mut upgrade_price, upgrade_coef)) = portal_query.iter_mut().next() {
             if wallet.void_shards >= upgrade_price.0 {
                 wallet.void_shards -= upgrade_price.0;
                 level.0 += 1;
