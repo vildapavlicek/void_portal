@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use {bevy::prelude::*, common::GameState, portal_panel::PortalPanelPlugin, wallet::Wallet};
 
 mod portal_panel;

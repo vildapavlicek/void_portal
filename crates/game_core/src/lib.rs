@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use {
     assets::VoidAssetsPlugin,
     bevy::{asset::LoadedFolder, prelude::*},
@@ -74,6 +76,8 @@ fn start_loading(
 #[derive(Component)]
 struct LoadingText;
 
+// Bevy system with many parameters
+#[allow(clippy::too_many_arguments)]
 fn check_assets_ready(
     mut commands: Commands,
     handles: Res<GameConfigHandles>,

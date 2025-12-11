@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use {
     bevy::{prelude::*, window::PrimaryWindow},
     bevy_common_assets::ron::RonAssetPlugin,
@@ -124,6 +126,8 @@ pub fn spawn_portal(
     }
 }
 
+// Bevy system with many parameters
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_enemies(
     mut commands: Commands,
     time: Res<Time>,
