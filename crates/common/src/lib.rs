@@ -5,6 +5,9 @@ use bevy::prelude::*;
 pub mod events;
 pub use events::*;
 
+pub mod stats;
+pub use stats::*;
+
 #[derive(Component, Debug, Clone, Reflect)]
 pub struct Reward(pub f32);
 
