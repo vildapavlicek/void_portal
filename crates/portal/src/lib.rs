@@ -1,4 +1,5 @@
 #![allow(clippy::type_complexity)]
+#![allow(clippy::too_many_arguments)]
 
 use {
     bevy::{prelude::*, window::PrimaryWindow},
@@ -126,8 +127,6 @@ pub fn spawn_portal(
     }
 }
 
-// Bevy system with many parameters
-#[allow(clippy::too_many_arguments)]
 pub fn spawn_enemies(
     mut commands: Commands,
     time: Res<Time>,
