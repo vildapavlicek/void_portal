@@ -22,7 +22,7 @@ pub struct Wallet {
 fn update_wallet_from_enemy_killed(
     mut events: MessageReader<EnemyKilled>,
     mut wallet: ResMut<Wallet>,
-    reward_query: Query<&Reward, With<Dead>>,
+    reward_query: Query<&Reward>,
 ) {
     for event in events.read() {
         if let Ok(reward) = reward_query.get(event.entity) {
