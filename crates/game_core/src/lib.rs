@@ -4,7 +4,7 @@
 use {
     assets::VoidAssetsPlugin,
     bevy::{asset::LoadedFolder, prelude::*},
-    common::{EnemyKilled, GameState, UpgradePortal},
+    common::{EnemyKilled, GameState, UpgradePortal, UpgradePortalCapacity},
     enemy::{AvailableEnemies, EnemyConfig, EnemyPlugin},
     player_npcs::{PlayerNpcsPlugin, SoldierConfig},
     portal::{PortalConfig, PortalPlugin},
@@ -26,6 +26,7 @@ impl Plugin for VoidPortalPlugin {
         app.init_state::<GameState>();
         app.add_message::<EnemyKilled>();
         app.add_message::<UpgradePortal>();
+        app.add_message::<UpgradePortalCapacity>();
 
         app.add_plugins((
             VoidAssetsPlugin,
