@@ -1,18 +1,67 @@
 (
-    spawn_timer: 2.0,
-    base_void_shards_reward: 10.0,
-    base_upgrade_price: 500.0,
-    upgrade_price_increase_coef: 1.5,
+    // defines portal's level
+    level: 1,
+    // Price to pay to increase level
+    // it should use void shards as currenty
+    level_up_price: (
+        value: 500,
+        growth_factor: 1.5,
+        growth_strategy: Linear,
+    ),
+    // this is internal and used only for spawning portal
+    // we offset it to not collide with UI
     portal_top_offset: 100.0,
-    base_enemy_health: 5.0,
-    base_enemy_speed: 150.0,
-    base_enemy_lifetime: 10.0,
-    base_enemy_reward: 10.0,
-    enemy_health_growth_factor: 1.5,
-    enemy_reward_growth_factor: 0.75,
-    spawn_time_growth_factor: 1.1,
-    enemy_lifetime_growth_factor: 1.1,
-    base_capacity: 5,
-    capacity_upgrade_base_price: 200.0,
-    capacity_upgrade_coef: 1.5,
+    // these stats scale with portal's level
+    // if level increases, these stats should as well
+    level_scaled_stats: (
+        // base reward per enemy killed, should be further
+        // modified by enemy's coefficient for rewards
+        void_shards_reward: (
+            value: 10.0,
+            growth_factor: 0.75,
+            growth_strategy: Linear,
+        ),
+        // How often portal can spawn enemy
+        spawn_timer: (
+            value: 2.0,
+            growth_factor: 1.1,
+            growth_strategy: Linear,
+        ),
+        // base enemy's health
+        // should be furthe adjusted by enemys coefficient
+        enemy_health: (
+            value: 5.0,
+            growth_factor: 1.5,
+            growth_strategy: Linear,
+        ),
+        // enemy speed, this should stay constant for now
+        base_enemy_speed: (
+            value: 150.0,
+            growth_factor: 0,
+            growth_strategy: Linear,
+        ),
+        // how long the enemy will be kept spawn
+        // after timer runs out, we despawn the enemy
+        base_enemy_lifetime: (
+            value: 10.0,
+            growth_factor: 1.1,
+            growth_strategy: Linear,
+        ),
+    ),
+    independently_leveled_stats: (
+        capacity: (
+            value: 5,
+            price: 200,
+            growth_factor: 1.5,
+            price_growth_factor: 2,
+            growth_strategy: Linear,
+        ),
+        lifetime: (
+                value: 1,
+                price: 500,
+                growth_factor: 0.75,
+                price_growth_factor: 2,
+            ygrowth_strategs: Linear
+        )
+    ),
 )
