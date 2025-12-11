@@ -223,7 +223,8 @@ pub fn player_npc_attack_logic(
             } else {
                 soldier.attack_timer.tick(time.delta());
                 if soldier.attack_timer.just_finished() {
-                    let direction = (target_transform.translation - player_npc_transform.translation)
+                    let direction = (target_transform.translation
+                        - player_npc_transform.translation)
                         .normalize_or_zero();
                     let speed = soldier_config.projectile_speed;
 
