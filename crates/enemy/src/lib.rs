@@ -43,7 +43,6 @@ pub struct EnemyConfig {
     pub lifetime_coef: f32,
     pub speed_coef: f32,
     pub reward_coef: f32,
-    pub spawn_time_coef: f32,
 }
 
 #[derive(Resource, Default)]

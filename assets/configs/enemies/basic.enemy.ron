@@ -3,5 +3,4 @@
     lifetime_coef: 1.0,
     speed_coef: 1.0,
     reward_coef: 1.0,
-    spawn_time_coef: 1.0,
 )
