@@ -9,9 +9,9 @@ use {
     serde::Deserialize,
 };
 
-pub struct SoldierPlugin;
+pub struct PlayerNpcsPlugin;
 
-impl Plugin for SoldierPlugin {
+impl Plugin for PlayerNpcsPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(RonAssetPlugin::<SoldierConfig>::new(&["soldier.ron"]));
 
@@ -22,14 +22,14 @@ impl Plugin for SoldierPlugin {
             .register_type::<Projectile>()
             .register_type::<SoldierConfig>();
 
-        app.add_systems(OnEnter(GameState::Playing), spawn_soldier);
+        app.add_systems(OnEnter(GameState::Playing), spawn_player_npc);
 
         app.add_systems(
             Update,
             (
-                soldier_movement_logic,
-                soldier_decision_logic,
-                soldier_attack_logic,
+                player_npc_movement_logic,
+                player_npc_decision_logic,
+                player_npc_attack_logic,
                 move_projectiles,
                 projectile_collision,
             )
@@ -79,19 +79,19 @@ pub struct Projectile {
 }
 
 // Systems
-pub fn spawn_soldier(
+pub fn spawn_player_npc(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
     soldier_config: Res<SoldierConfig>,
-    soldier_query: Query<Entity, With<Soldier>>,
+    player_npc_query: Query<Entity, With<Soldier>>, // TODO: Make this generic for all PlayerNpc types, currently coupled to Soldier component
 ) {
-    if !soldier_query.is_empty() {
+    if !player_npc_query.is_empty() {
         return;
     }
 
     if let Some(window) = window_query.iter().next() {
         let half_height = window.height() / 2.0;
-        let soldier_y = -half_height + (window.height() * 0.125);
+        let player_npc_y = -half_height + (window.height() * 0.125);
 
         commands.spawn((
             Sprite {
@@ -99,7 +99,7 @@ pub fn spawn_soldier(
                 custom_size: Some(Vec2::new(32.0, 32.0)),
                 ..default()
             },
-            Transform::from_xyz(0.0, soldier_y, 0.0),
+            Transform::from_xyz(0.0, player_npc_y, 0.0),
             Soldier {
                 attack_timer: Timer::from_seconds(
                     soldier_config.attack_timer,
@@ -109,22 +109,22 @@ pub fn spawn_soldier(
             },
             AttackRange(soldier_config.attack_range),
         ));
-        info!("Soldier spawned at y={}", soldier_y);
+        info!("Player NPC spawned at y={}", player_npc_y);
     }
 }
 
-pub fn soldier_decision_logic(
+pub fn player_npc_decision_logic(
     mut commands: Commands,
-    mut soldier_query: Query<
+    mut player_npc_query: Query<
         (Entity, &Transform, &mut Soldier, &AttackRange),
         (Without<Moving>, Without<Attacking>),
-    >,
+    >, // TODO: Make this generic for all PlayerNpc types, currently coupled to Soldier component
     enemy_query: Query<(Entity, &Transform, &SpawnIndex), With<Enemy>>,
     portal_tracker: Res<PortalSpawnTracker>,
 ) {
     let current_spawn_count = portal_tracker.0;
 
-    for (entity, transform, mut soldier, attack_range) in soldier_query.iter_mut() {
+    for (entity, transform, mut soldier, attack_range) in player_npc_query.iter_mut() {
         let mut target_valid = false;
         if let Some(target) = soldier.target {
             if enemy_query.get(target).is_ok() {
@@ -159,31 +159,31 @@ pub fn soldier_decision_logic(
     }
 }
 
-pub fn soldier_movement_logic(
+pub fn player_npc_movement_logic(
     mut commands: Commands,
     time: Res<Time>,
     soldier_config: Res<SoldierConfig>,
-    mut soldier_query: Query<
+    mut player_npc_query: Query<
         (Entity, &mut Transform, &Moving, &AttackRange),
         (Without<Attacking>, Without<Enemy>),
-    >,
+    >, // TODO: Make this generic for all PlayerNpc types, currently coupled to Soldier component
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
-    for (entity, mut soldier_transform, moving, attack_range) in soldier_query.iter_mut() {
+    for (entity, mut player_npc_transform, moving, attack_range) in player_npc_query.iter_mut() {
         let target = moving.0;
 
         if let Ok(target_transform) = enemy_query.get(target) {
-            let distance = soldier_transform
+            let distance = player_npc_transform
                 .translation
                 .distance(target_transform.translation);
 
             if distance > attack_range.0 {
-                let direction = (target_transform.translation - soldier_transform.translation)
+                let direction = (target_transform.translation - player_npc_transform.translation)
                     .normalize_or_zero();
-                soldier_transform.translation +=
+                player_npc_transform.translation +=
                     direction * soldier_config.move_speed * time.delta_secs();
 
-                let new_distance = soldier_transform
+                let new_distance = player_npc_transform
                     .translation
                     .distance(target_transform.translation);
                 if new_distance <= attack_range.0 {
@@ -198,23 +198,23 @@ pub fn soldier_movement_logic(
     }
 }
 
-pub fn soldier_attack_logic(
+pub fn player_npc_attack_logic(
     mut commands: Commands,
     time: Res<Time>,
     soldier_config: Res<SoldierConfig>,
-    mut soldier_query: Query<
+    mut player_npc_query: Query<
         (Entity, &Transform, &mut Soldier, &Attacking, &AttackRange),
         Without<Moving>,
-    >,
+    >, // TODO: Make this generic for all PlayerNpc types, currently coupled to Soldier component
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
-    for (entity, soldier_transform, mut soldier, attacking, attack_range) in
-        soldier_query.iter_mut()
+    for (entity, player_npc_transform, mut soldier, attacking, attack_range) in
+        player_npc_query.iter_mut()
     {
         let target = attacking.0;
 
         if let Ok(target_transform) = enemy_query.get(target) {
-            let distance = soldier_transform
+            let distance = player_npc_transform
                 .translation
                 .distance(target_transform.translation);
 
@@ -223,7 +223,7 @@ pub fn soldier_attack_logic(
             } else {
                 soldier.attack_timer.tick(time.delta());
                 if soldier.attack_timer.just_finished() {
-                    let direction = (target_transform.translation - soldier_transform.translation)
+                    let direction = (target_transform.translation - player_npc_transform.translation)
                         .normalize_or_zero();
                     let speed = soldier_config.projectile_speed;
 
@@ -233,7 +233,7 @@ pub fn soldier_attack_logic(
                             custom_size: Some(Vec2::new(8.0, 8.0)),
                             ..default()
                         },
-                        Transform::from_translation(soldier_transform.translation),
+                        Transform::from_translation(player_npc_transform.translation),
                         Projectile {
                             velocity: direction * speed,
                             damage: soldier_config.projectile_damage,
