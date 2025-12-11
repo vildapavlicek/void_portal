@@ -1,5 +1,5 @@
 (
-    spawn_timer: 5.0,
+    spawn_timer: 2.0,
     base_void_shards_reward: 10.0,
     base_upgrade_price: 500.0,
     upgrade_price_increase_coef: 1.5,
@@ -10,4 +10,9 @@
     base_enemy_reward: 10.0,
     enemy_health_growth_factor: 1.5,
     enemy_reward_growth_factor: 0.75,
+    spawn_time_growth_factor: 1.1,
+    enemy_lifetime_growth_factor: 1.1,
+    base_capacity: 5,
+    capacity_upgrade_base_price: 200.0,
+    capacity_upgrade_coef: 1.5,
 )

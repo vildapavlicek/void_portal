@@ -2,6 +2,6 @@
     health_coef: 1.0,
     lifetime_coef: 1.0,
     speed_coef: 1.0,
-    spawn_limit: 5,
     reward_coef: 1.0,
+    spawn_time_coef: 1.0,
 )

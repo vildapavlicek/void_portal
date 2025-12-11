@@ -7,3 +7,6 @@ pub struct EnemyKilled {
 
 #[derive(Message, Debug, Clone)]
 pub struct UpgradePortal;
+
+#[derive(Message, Debug, Clone)]
+pub struct UpgradePortalCapacity;
