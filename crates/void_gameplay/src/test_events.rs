@@ -1,11 +1,9 @@
 use {
-    crate::{
-        portal::{despawn_dead_bodies, handle_dying_enemies},
-    },
+    crate::portal::{despawn_dead_bodies, handle_dying_enemies},
+    crate::portal::{Enemy, Health}, // Import these components from portal.rs as they are still there
     bevy::{prelude::*, time::TimePlugin},
     void_components::{Dead, Reward},
     void_core::events::EnemyKilled,
-    crate::portal::{Enemy, Health}, // Import these components from portal.rs as they are still there
 };
 
 #[test]

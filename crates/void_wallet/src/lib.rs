@@ -31,7 +31,10 @@ fn update_wallet_from_enemy_killed(
                 reward.0, wallet.void_shards
             );
         } else {
-            warn!("EnemyKilled event received for entity {:?} but no Reward/Dead component found", event.entity);
+            warn!(
+                "EnemyKilled event received for entity {:?} but no Reward/Dead component found",
+                event.entity
+            );
         }
     }
 }

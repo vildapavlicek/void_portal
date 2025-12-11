@@ -92,6 +92,8 @@ pub fn spawn_portal(
     }
 }
 
+// Allow too many arguments for Bevy system
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_enemies(
     mut commands: Commands,
     time: Res<Time>,
@@ -214,6 +216,8 @@ pub fn handle_portal_upgrade(
     }
 }
 
+// Allow complex types for Bevy queries
+#[allow(clippy::type_complexity)]
 pub fn handle_dying_enemies(
     mut commands: Commands,
     query: Query<(Entity, &Health), (With<Enemy>, Without<Dead>)>,
@@ -249,6 +253,8 @@ pub fn despawn_dead_bodies(
     }
 }
 
+// Allow complex types for Bevy queries
+#[allow(clippy::type_complexity)]
 pub fn update_enemy_health_ui(
     enemy_query: Query<(&Health, &Children), (With<Enemy>, Changed<Health>)>,
     mut text_query: Query<&mut Text2d>,

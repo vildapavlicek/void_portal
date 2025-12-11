@@ -85,7 +85,9 @@ fn test_soldier_acquires_target() {
         .id();
 
     // Update Tracker to reflect spawned enemies
-    app.world_mut().resource_mut::<crate::portal::PortalSpawnTracker>().0 = 2;
+    app.world_mut()
+        .resource_mut::<crate::portal::PortalSpawnTracker>()
+        .0 = 2;
 
     app.update();
 
@@ -218,15 +220,11 @@ fn test_soldier_attacks_target() {
 
     // Check if projectile exists
     let world = app.world_mut();
-    let projectile_exists = world
-        .query::<&Projectile>()
-        .iter(world)
-        .count()
-        > 0;
+    let projectile_exists = world.query::<&Projectile>().iter(world).count() > 0;
 
     // If no projectile, maybe timer wasn't ready. Advance 1.0s
     if !projectile_exists {
-         {
+        {
             let mut time = app.world_mut().resource_mut::<Time>();
             time.advance_by(std::time::Duration::from_secs_f32(1.05));
         }
@@ -303,7 +301,9 @@ fn test_soldier_switching_targets() {
         .id();
 
     // Update Tracker to reflect spawned enemies
-    app.world_mut().resource_mut::<crate::portal::PortalSpawnTracker>().0 = 2;
+    app.world_mut()
+        .resource_mut::<crate::portal::PortalSpawnTracker>()
+        .0 = 2;
 
     app.update();
 
@@ -453,7 +453,9 @@ fn test_soldier_retargets_on_death() {
         .id();
 
     // Update Tracker to reflect spawned enemies
-    app.world_mut().resource_mut::<crate::portal::PortalSpawnTracker>().0 = 2;
+    app.world_mut()
+        .resource_mut::<crate::portal::PortalSpawnTracker>()
+        .0 = 2;
 
     // 1. Target Enemy 1
     app.update();
@@ -467,7 +469,7 @@ fn test_soldier_retargets_on_death() {
     }
     app.update();
     // Projectile flight
-     {
+    {
         let mut time = app.world_mut().resource_mut::<Time>();
         time.advance_by(std::time::Duration::from_secs_f32(0.2));
     }

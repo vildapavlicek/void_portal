@@ -164,6 +164,8 @@ fn block_click(mut trigger: On<Pointer<Click>>) {
     trigger.propagate(false);
 }
 
+// Allow complex types for Bevy queries
+#[allow(clippy::type_complexity)]
 fn close_portal_ui_actions(
     mut commands: Commands,
     // Close button interaction

@@ -2,10 +2,7 @@ use {
     bevy::{asset::LoadedFolder, prelude::*},
     bevy_common_assets::ron::RonAssetPlugin,
     void_assets::VoidAssetsPlugin,
-    void_core::{
-        events::UpgradePortal,
-        GameState, VoidCorePlugin,
-    },
+    void_core::{events::UpgradePortal, GameState, VoidCorePlugin},
     void_wallet::VoidWalletPlugin,
 };
 
@@ -127,6 +124,8 @@ fn start_loading(
 #[derive(Component)]
 struct LoadingText;
 
+// Allow too many arguments for Bevy system
+#[allow(clippy::too_many_arguments)]
 fn check_assets_ready(
     mut commands: Commands,
     handles: Res<GameConfigHandles>,

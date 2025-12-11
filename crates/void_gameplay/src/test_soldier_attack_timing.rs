@@ -117,7 +117,7 @@ mod tests {
         // Let's despawn A to force retarget.
         app.world_mut().entity_mut(enemy_a).despawn();
 
-        let enemy_b = app
+        let _enemy_b = app
             .world_mut()
             .spawn((
                 Transform::default(),

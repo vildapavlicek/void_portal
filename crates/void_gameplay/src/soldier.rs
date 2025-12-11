@@ -67,6 +67,8 @@ pub fn spawn_soldier(
     }
 }
 
+// Allow complex types for Bevy queries
+#[allow(clippy::type_complexity)]
 pub fn soldier_decision_logic(
     mut commands: Commands,
     mut soldier_query: Query<
@@ -115,6 +117,8 @@ pub fn soldier_decision_logic(
     }
 }
 
+// Allow complex types for Bevy queries
+#[allow(clippy::type_complexity)]
 pub fn soldier_movement_logic(
     mut commands: Commands,
     time: Res<Time>,
