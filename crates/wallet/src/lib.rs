@@ -2,7 +2,7 @@
 
 use {
     bevy::prelude::*,
-    common::{Dead, EnemyKilled, Reward},
+    common::{EnemyKilled, Reward},
 };
 
 pub struct VoidWalletPlugin;
