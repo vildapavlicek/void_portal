@@ -12,3 +12,4 @@ ui = { path = "../ui" }
 portal = { path = "../portal" }
 player_npcs = { path = "../player_npcs" }
 enemy = { path = "../enemy" }
+items = { path = "../items" }

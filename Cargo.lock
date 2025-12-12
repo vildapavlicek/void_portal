@@ -2428,6 +2428,7 @@ dependencies = [
  "bevy",
  "common",
  "enemy",
+ "items",
  "player_npcs",
  "portal",
  "ui",
@@ -2788,6 +2789,13 @@ checksum = "617ee6cf8e3f66f3b4ea67a4058564628cde41901316e19f559e14c7c72c5e7b"
 dependencies = [
  "core-foundation-sys",
  "mach2",
+]
+
+[[package]]
+name = "items"
+version = "0.1.0"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]
@@ -3664,6 +3672,7 @@ dependencies = [
  "bevy_common_assets",
  "common",
  "enemy",
+ "items",
  "portal",
  "serde",
 ]
