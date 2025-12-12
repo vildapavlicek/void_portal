@@ -1,6 +1,6 @@
 (
   entities: {
-    0: (
+    1: (
       components: {
         "items::Item": ( name: "Iron Sword" ),
         "items::Melee": (),
@@ -10,5 +10,6 @@
         "items::AreaOfEffect": ( radius: 20.0, angle: 1.57 ),
       },
     ),
-  }
+  },
+  resources: {},
 )

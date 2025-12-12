@@ -1,6 +1,6 @@
 (
   entities: {
-    0: (
+    1: (
       components: {
         "items::Item": ( name: "Elven Bow" ),
         "items::Ranged": (),
@@ -10,5 +10,6 @@
         "items::ProjectileStats": ( speed: 300.0, lifetime: 1.0 ),
       },
     ),
-  }
+  },
+  resources: {},
 )
