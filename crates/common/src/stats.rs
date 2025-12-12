@@ -1,5 +1,4 @@
-use bevy::prelude::*;
-use serde::Deserialize;
+use {bevy::prelude::*, serde::Deserialize};
 
 #[derive(Debug, Clone, Copy, Reflect, Deserialize, PartialEq, Default)]
 pub enum GrowthStrategy {
@@ -121,9 +120,12 @@ mod tests {
     fn test_linear_growth() {
         // Base: 10, Factor: 2 => L0=10, L1=12, L2=14
         let mut stat = UpgradeableStat::new(
-            10.0, 100.0,
-            2.0, GrowthStrategy::Linear,
-            0.0, GrowthStrategy::Linear,
+            10.0,
+            100.0,
+            2.0,
+            GrowthStrategy::Linear,
+            0.0,
+            GrowthStrategy::Linear,
         );
 
         assert_eq!(stat.value, 10.0);
@@ -141,9 +143,12 @@ mod tests {
     fn test_exponential_growth() {
         // Base: 10, Factor: 2 => L0=10, L1=20, L2=40
         let mut stat = UpgradeableStat::new(
-            10.0, 100.0,
-            2.0, GrowthStrategy::Exponential,
-            0.0, GrowthStrategy::Linear,
+            10.0,
+            100.0,
+            2.0,
+            GrowthStrategy::Exponential,
+            0.0,
+            GrowthStrategy::Linear,
         );
 
         assert_eq!(stat.value, 10.0); // 10 * 2^0
@@ -161,9 +166,12 @@ mod tests {
     fn test_mixed_growth() {
         // Value: Linear (+10), Price: Exponential (x1.1)
         let mut stat = UpgradeableStat::new(
-            100.0, 10.0,
-            10.0, GrowthStrategy::Linear,
-            1.1, GrowthStrategy::Exponential,
+            100.0,
+            10.0,
+            10.0,
+            GrowthStrategy::Linear,
+            1.1,
+            GrowthStrategy::Exponential,
         );
 
         stat.set_level(5.0);
@@ -177,10 +185,13 @@ mod tests {
 
     #[test]
     fn test_f32_level_scaling() {
-         let mut stat = UpgradeableStat::new(
-            10.0, 100.0,
-            2.0, GrowthStrategy::Linear,
-            0.0, GrowthStrategy::Linear,
+        let mut stat = UpgradeableStat::new(
+            10.0,
+            100.0,
+            2.0,
+            GrowthStrategy::Linear,
+            0.0,
+            GrowthStrategy::Linear,
         );
 
         stat.set_level(0.5);
