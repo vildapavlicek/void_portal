@@ -276,21 +276,15 @@ pub fn handle_portal_upgrade(
 pub fn handle_portal_bonus_lifetime_upgrade(
     mut events: MessageReader<UpgradePortalBonusLifetime>,
     mut portal_query: Query<&mut PortalBonusLifetime>,
-    mut wallet: ResMut<Wallet>,
 ) {
-    for _event in events.read() {
-        if let Some(mut lifetime) = portal_query.iter_mut().next() {
-            if wallet.void_shards >= lifetime.0.price {
-                wallet.void_shards -= lifetime.0.price;
-                lifetime.0.upgrade();
+    for event in events.read() {
+        if let Ok(mut lifetime) = portal_query.get_mut(event.entity) {
+            lifetime.0.upgrade();
 
-                info!(
-                    "Portal bonus lifetime upgraded to {}. New Price: {}",
-                    lifetime.0.value, lifetime.0.price
-                );
-            } else {
-                warn!("Not enough shards to upgrade portal bonus lifetime!");
-            }
+            info!(
+                "Portal bonus lifetime upgraded to {}. New Price: {}",
+                lifetime.0.value, lifetime.0.price
+            );
         }
     }
 }

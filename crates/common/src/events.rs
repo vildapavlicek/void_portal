@@ -14,4 +14,6 @@ pub struct UpgradePortalCapacity {
 }
 
 #[derive(Message, Debug, Clone)]
-pub struct UpgradePortalBonusLifetime;
+pub struct UpgradePortalBonusLifetime {
+    pub entity: Entity,
+}

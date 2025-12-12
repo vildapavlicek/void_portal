@@ -351,7 +351,8 @@ fn on_upgrade_click(
                 }
                 PortalUpgradeTarget::Lifetime => {
                     if wallet.void_shards >= lifetime.0.price {
-                        msg_lifetime.write(UpgradePortalBonusLifetime);
+                        wallet.void_shards -= lifetime.0.price;
+                        msg_lifetime.write(UpgradePortalBonusLifetime { entity: link.0 });
                     }
                 }
             }
