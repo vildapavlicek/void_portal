@@ -9,7 +9,9 @@ pub struct EnemyKilled {
 pub struct UpgradePortal;
 
 #[derive(Message, Debug, Clone)]
-pub struct UpgradePortalCapacity;
+pub struct UpgradePortalCapacity {
+    pub entity: Entity,
+}
 
 #[derive(Message, Debug, Clone)]
 pub struct UpgradePortalBonusLifetime;

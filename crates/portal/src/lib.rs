@@ -49,7 +49,7 @@ impl Plugin for PortalPlugin {
 }
 
 // Components
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Reflect, Default, Clone)]
 #[reflect(Component)]
 pub struct Portal {
     pub level: u32,
@@ -58,11 +58,11 @@ pub struct Portal {
     pub price_growth_strategy: GrowthStrategy,
 }
 
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Reflect, Default, Clone)]
 #[reflect(Component)]
 pub struct PortalCapacity(pub UpgradeableStat);
 
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Reflect, Default, Clone)]
 #[reflect(Component)]
 pub struct PortalBonusLifetime(pub UpgradeableStat);
 
@@ -298,21 +298,15 @@ pub fn handle_portal_bonus_lifetime_upgrade(
 pub fn handle_portal_capacity_upgrade(
     mut events: MessageReader<UpgradePortalCapacity>,
     mut portal_query: Query<&mut PortalCapacity>,
-    mut wallet: ResMut<Wallet>,
 ) {
-    for _event in events.read() {
-        if let Some(mut capacity) = portal_query.iter_mut().next() {
-            if wallet.void_shards >= capacity.0.price {
-                wallet.void_shards -= capacity.0.price;
-                capacity.0.upgrade();
+    for event in events.read() {
+        if let Ok(mut capacity) = portal_query.get_mut(event.entity) {
+            capacity.0.upgrade();
 
-                info!(
-                    "Portal capacity upgraded to {}. New Price: {}",
-                    capacity.0.value, capacity.0.price
-                );
-            } else {
-                warn!("Not enough shards to upgrade portal capacity!");
-            }
+            info!(
+                "Portal capacity upgraded to {}. New Price: {}",
+                capacity.0.value, capacity.0.price
+            );
         }
     }
 }

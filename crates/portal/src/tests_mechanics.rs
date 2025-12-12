@@ -289,6 +289,12 @@ fn test_capacity_upgrade() {
     let mut app = setup_app();
     app.update(); // Spawn portal
 
+    let portal_entity = app
+        .world_mut()
+        .query_filtered::<Entity, With<Portal>>()
+        .single(app.world())
+        .expect("Portal should exist");
+
     // Initial check
     {
         let Ok((_, capacity)) = app
@@ -303,9 +309,13 @@ fn test_capacity_upgrade() {
     }
 
     // Trigger capacity upgrade
+    // Manually subtract funds to simulate UI logic, since game system no longer does it
+    app.world_mut().resource_mut::<Wallet>().void_shards -= 200.0;
     app.world_mut()
         .resource_mut::<Messages<UpgradePortalCapacity>>()
-        .write(UpgradePortalCapacity);
+        .write(UpgradePortalCapacity {
+            entity: portal_entity,
+        });
 
     app.update();
 
@@ -327,9 +337,6 @@ fn test_capacity_upgrade() {
         assert_eq!(capacity.0.value, 6.0);
 
         // Price growth: Exponential, factor 1.5. 200 * 1.5^1 = 300.
-        // Wait, price_growth_factor in setup is 1.5.
-        // logic is `calculate_value` -> base * factor^level.
-        // Level becomes 1. Base 200. 200 * 1.5^1 = 300.
         assert_eq!(capacity.0.price, 300.0);
     }
 }

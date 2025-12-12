@@ -331,7 +331,7 @@ fn on_upgrade_click(
     mut msg_lifetime: MessageWriter<UpgradePortalBonusLifetime>,
     button_query: Query<(&PortalUiLink, &PortalUiUpgradeButton)>,
     portal_query: Query<(&Portal, &PortalCapacity, &PortalBonusLifetime)>,
-    wallet: Res<Wallet>,
+    mut wallet: ResMut<Wallet>,
 ) {
     let button_entity = trigger.entity;
 
@@ -345,7 +345,8 @@ fn on_upgrade_click(
                 }
                 PortalUpgradeTarget::Capacity => {
                     if wallet.void_shards >= capacity.0.price {
-                        msg_capacity.write(UpgradePortalCapacity);
+                        wallet.void_shards -= capacity.0.price;
+                        msg_capacity.write(UpgradePortalCapacity { entity: link.0 });
                     }
                 }
                 PortalUpgradeTarget::Lifetime => {
@@ -581,21 +582,34 @@ mod tests {
             .get::<PortalClickObserverAttached>(portal_ent)
             .is_some());
 
-        // FIXME: mutable and immutable access at the same time
+        // Helper scope to avoid borrow checker issues
+        let (portal, capacity, lifetime) = {
+            let world = app.world();
+            (
+                world.get::<Portal>(portal_ent).unwrap().clone(),
+                world.get::<PortalCapacity>(portal_ent).unwrap().clone(),
+                world.get::<PortalBonusLifetime>(portal_ent).unwrap().clone(),
+            )
+        };
+
         let mut commands = app.world_mut().commands();
-        let portal = app.world().get::<Portal>(portal_ent).unwrap();
-        let capacity = app.world().get::<PortalCapacity>(portal_ent).unwrap();
-        let lifetime = app.world().get::<PortalBonusLifetime>(portal_ent).unwrap();
-        // Simulate Click by spawning UI directly
-        // Pass wallet funds manually or query from resource in test context
         spawn_portal_ui(
             &mut commands,
-            portal,
-            capacity,
-            lifetime,
+            &portal,
+            &capacity,
+            &lifetime,
             portal_ent,
             &config,
         );
+
+        // Apply commands immediately to ensure UI is spawned before update (or rely on update to apply them)
+        // commands drop should apply them? Bevy 0.17 commands might behave differently.
+        // Actually app.update() runs schedules, which apply commands at the end.
+        // But `app.world_mut().commands()` creates a CommandQueue that might need manual flushing
+        // if not created via system param.
+        // However, let's try just letting it drop before update.
+        drop(commands);
+
         app.update();
 
         // Check if UI Spawned
