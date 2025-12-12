@@ -331,7 +331,7 @@ fn on_upgrade_click(
     mut msg_lifetime: MessageWriter<UpgradePortalBonusLifetime>,
     button_query: Query<(&PortalUiLink, &PortalUiUpgradeButton)>,
     portal_query: Query<(&Portal, &PortalCapacity, &PortalBonusLifetime)>,
-    wallet: Res<Wallet>,
+    mut wallet: ResMut<Wallet>,
 ) {
     let button_entity = trigger.entity;
 
@@ -350,7 +350,8 @@ fn on_upgrade_click(
                 }
                 PortalUpgradeTarget::Lifetime => {
                     if wallet.void_shards >= lifetime.0.price {
-                        msg_lifetime.write(UpgradePortalBonusLifetime);
+                        wallet.void_shards -= lifetime.0.price;
+                        msg_lifetime.write(UpgradePortalBonusLifetime { entity: link.0 });
                     }
                 }
             }
@@ -582,17 +583,52 @@ mod tests {
             .is_some());
 
         // FIXME: mutable and immutable access at the same time
-        let mut commands = app.world_mut().commands();
         let portal = app.world().get::<Portal>(portal_ent).unwrap();
         let capacity = app.world().get::<PortalCapacity>(portal_ent).unwrap();
         let lifetime = app.world().get::<PortalBonusLifetime>(portal_ent).unwrap();
-        // Simulate Click by spawning UI directly
-        // Pass wallet funds manually or query from resource in test context
+
+        // We can't easily clone components if they don't derive Clone, but UpgradeableStat does.
+        // However, PortalCapacity and PortalBonusLifetime derive Reflect but maybe not Clone?
+        // Let's check definitions. Yes, they don't derive Clone. But UpgradeableStat does?
+        // Let's manually construct copies since we just need data for spawn_portal_ui function which takes references.
+
+        // Wait, the issue is `commands` holds a mutable borrow of `app.world()`.
+        // We can't keep references to components while commands is alive if commands is from `app.world_mut()`.
+
+        // Since this is a test, we can just fetch the data, then create commands.
+        // But `spawn_portal_ui` takes references.
+
+        // We can use `app.world_mut().resource_scope` or similar tricks?
+        // Or just clone the data needed.
+
+        // `spawn_portal_ui` takes references to components.
+        // If we clone the components (or the data inside them), we can pass references to the clones.
+
+        // But PortalCapacity(UpgradeableStat) -> UpgradeableStat is Clone? Let's assume common::UpgradeableStat is Clone.
+        // Let's try to clone the inner data.
+        let capacity_inner = capacity.0.clone();
+        let lifetime_inner = lifetime.0.clone();
+
+        // Portal struct does not derive Clone? Let's check portal/lib.rs.
+        // #[derive(Component, Reflect, Default)] ... no Clone.
+        // So we need to manually copy fields.
+
+        let portal_copy = Portal {
+            level: portal.level,
+            upgrade_price: portal.upgrade_price,
+            price_growth_factor: portal.price_growth_factor,
+            price_growth_strategy: portal.price_growth_strategy,
+        };
+
+        let capacity_copy = PortalCapacity(capacity_inner);
+        let lifetime_copy = PortalBonusLifetime(lifetime_inner);
+
+        let mut commands = app.world_mut().commands();
         spawn_portal_ui(
             &mut commands,
-            portal,
-            capacity,
-            lifetime,
+            &portal_copy,
+            &capacity_copy,
+            &lifetime_copy,
             portal_ent,
             &config,
         );

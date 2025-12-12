@@ -339,23 +339,34 @@ fn test_bonus_lifetime_upgrade() {
     let mut app = setup_app();
     app.update(); // Spawn portal
 
-    // Initial check
-    {
-        let Ok((_, _, lifetime)) = app
+    // Initial check and get Entity
+    let portal_entity = {
+        let Ok((entity, _, _, lifetime)) = app
             .world_mut()
-            .query::<(&Portal, &PortalCapacity, &PortalBonusLifetime)>()
-            .single(app.world())
+            .query::<(Entity, &Portal, &PortalCapacity, &PortalBonusLifetime)>()
+            .iter(app.world())
+            .next()
+            .ok_or(())
         else {
             panic!("Could not find portal bonus lifetime");
         };
         assert_eq!(lifetime.0.value, 0.0); // Base lifetime
         assert_eq!(lifetime.0.price, 100.0); // Base lifetime price
-    }
+        entity
+    };
 
-    // Trigger bonus lifetime upgrade
-    app.world_mut()
-        .resource_mut::<Messages<UpgradePortalBonusLifetime>>()
-        .write(UpgradePortalBonusLifetime);
+    // Simulate UI Action: Check funds, Subtract Funds, Send Message
+    {
+        let mut wallet = app.world_mut().resource_mut::<Wallet>();
+        if wallet.void_shards >= 100.0 {
+            wallet.void_shards -= 100.0;
+            app.world_mut()
+                .resource_mut::<Messages<UpgradePortalBonusLifetime>>()
+                .write(UpgradePortalBonusLifetime {
+                    entity: portal_entity,
+                });
+        }
+    }
 
     app.update();
 
