@@ -1,0 +1,14 @@
+(
+  entities: {
+    0: (
+      components: {
+        "items::Item": ( name: "Elven Bow" ),
+        "items::Ranged": (),
+        "items::BaseDamage": (10.0),
+        "items::AttackRange": (200.0),
+        "items::AttackSpeed": (0.8),
+        "items::ProjectileStats": ( speed: 300.0, lifetime: 1.0 ),
+      },
+    ),
+  }
+)

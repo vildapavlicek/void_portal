@@ -1,15 +1,18 @@
 #![allow(clippy::type_complexity)]
 
 use {
-    bevy::{prelude::*, window::PrimaryWindow},
+    bevy::{prelude::*, scene::SceneSpawner, window::PrimaryWindow},
     bevy_common_assets::ron::RonAssetPlugin,
     common::GameState,
     enemy::{Enemy, Health, SpawnIndex},
-    items::{Armor, Weapon},
+    items::{
+        Armor, AttackRange as ItemAttackRange, AttackSpeed, BaseDamage, Item, Melee,
+        ProjectileStats as ItemProjectileStats, Ranged,
+    },
     portal::PortalSpawnTracker,
     serde::Deserialize,
+    std::time::Duration,
 };
-use std::time::Duration;
 
 pub struct PlayerNpcsPlugin;
 
@@ -31,10 +34,13 @@ impl Plugin for PlayerNpcsPlugin {
         app.add_systems(
             Update,
             (
+                handle_loading_weapons,
+                link_weapon_stats,
                 recalculate_stats,
                 player_npc_movement_logic,
                 player_npc_decision_logic,
-                player_npc_attack_logic,
+                melee_attack_logic,
+                ranged_attack_logic,
                 move_projectiles,
                 projectile_collision,
             )
@@ -97,31 +103,78 @@ pub struct CombatStats {
     pub attack_range: f32,
     pub attack_cooldown: f32,
     pub projectile_speed: f32,
+    pub projectile_lifetime: f32,
     pub move_speed: f32,
 }
 
 // Systems
 pub fn recalculate_stats(
-    mut query: Query<(&mut CombatStats, &Equipment, &mut Soldier, &mut AttackRange), Changed<Equipment>>,
-    weapon_query: Query<&Weapon>,
+    mut commands: Commands,
+    mut query: Query<
+        (
+            Entity,
+            &mut CombatStats,
+            &Equipment,
+            &mut Soldier,
+            &mut AttackRange,
+        ),
+        Changed<Equipment>,
+    >,
+    item_query: Query<
+        (
+            Option<&BaseDamage>,
+            Option<&ItemAttackRange>,
+            Option<&AttackSpeed>,
+            Option<&ItemProjectileStats>,
+            Option<&Melee>,
+            Option<&Ranged>,
+        ),
+        With<Item>,
+    >,
     armor_query: Query<&Armor>,
     config: Res<SoldierConfig>,
 ) {
-    for (mut stats, equip, mut soldier, mut attack_range) in query.iter_mut() {
+    for (entity, mut stats, equip, mut soldier, mut attack_range) in query.iter_mut() {
         // 1. Reset to Base
         stats.damage = config.projectile_damage;
         stats.attack_range = config.attack_range;
         stats.attack_cooldown = config.attack_timer;
         stats.projectile_speed = config.projectile_speed;
+        stats.projectile_lifetime = config.projectile_lifetime;
         stats.move_speed = config.move_speed;
+
+        // Cleanup markers
+        commands.entity(entity).remove::<Melee>();
+        commands.entity(entity).remove::<Ranged>();
+
+        let mut is_melee = false;
+        let mut is_ranged = false;
 
         // 2. Apply Weapon
         if let Some(e) = equip.main_hand {
-            if let Ok(w) = weapon_query.get(e) {
-                stats.damage += w.damage;
-                stats.attack_range += w.range;
-                stats.attack_cooldown *= w.attack_speed_modifier;
-                stats.projectile_speed += w.projectile_speed;
+            if let Ok((damage, range, speed, proj_stats, melee, ranged)) = item_query.get(e) {
+                if let Some(d) = damage {
+                    stats.damage = d.0; // Override or Add? Assuming Override/Set Base for now as per clean RPG stats usually
+                }
+                if let Some(r) = range {
+                    stats.attack_range = r.0;
+                }
+                if let Some(s) = speed {
+                    stats.attack_cooldown = s.0;
+                }
+                if let Some(p) = proj_stats {
+                    stats.projectile_speed = p.speed;
+                    stats.projectile_lifetime = p.lifetime;
+                }
+
+                if melee.is_some() {
+                    commands.entity(entity).insert(Melee);
+                    is_melee = true;
+                }
+                if ranged.is_some() {
+                    commands.entity(entity).insert(Ranged);
+                    is_ranged = true;
+                }
             }
         }
 
@@ -132,8 +185,16 @@ pub fn recalculate_stats(
             }
         }
 
+        // Default behavior if no specific marker set (e.g. no weapon or unassigned)
+        if !is_melee && !is_ranged {
+            // Default to Ranged as per original Soldier design
+            commands.entity(entity).insert(Ranged);
+        }
+
         // 4. Update Dependent Components
-        soldier.attack_timer.set_duration(Duration::from_secs_f32(stats.attack_cooldown));
+        soldier
+            .attack_timer
+            .set_duration(Duration::from_secs_f32(stats.attack_cooldown));
         attack_range.0 = stats.attack_range;
     }
 }
@@ -142,7 +203,8 @@ pub fn spawn_player_npc(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
     soldier_config: Res<SoldierConfig>,
-    player_npc_query: Query<Entity, With<Soldier>>, // TODO: Make this generic for all PlayerNpc types, currently coupled to Soldier component
+    player_npc_query: Query<Entity, With<Soldier>>,
+    asset_server: Res<AssetServer>,
 ) {
     if !player_npc_query.is_empty() {
         return;
@@ -152,31 +214,125 @@ pub fn spawn_player_npc(
         let half_height = window.height() / 2.0;
         let player_npc_y = -half_height + (window.height() * 0.125);
 
-        commands.spawn((
-            Sprite {
-                color: Color::srgb(0.0, 1.0, 0.0), // Terminal Green
-                custom_size: Some(Vec2::new(32.0, 32.0)),
-                ..default()
-            },
-            Transform::from_xyz(0.0, player_npc_y, 0.0),
-            Soldier {
-                attack_timer: Timer::from_seconds(
-                    soldier_config.attack_timer,
-                    TimerMode::Repeating,
-                ),
-                target: None,
-            },
-            AttackRange(soldier_config.attack_range),
-            Equipment::default(),
-            CombatStats {
-                damage: soldier_config.projectile_damage,
-                attack_range: soldier_config.attack_range,
-                attack_cooldown: soldier_config.attack_timer,
-                projectile_speed: soldier_config.projectile_speed,
-                move_speed: soldier_config.move_speed,
-            },
-        ));
-        info!("Player NPC spawned at y={}", player_npc_y);
+        // Spawn weapon (Async load)
+        let weapon_handle: Handle<DynamicScene> =
+            asset_server.load("prefabs/items/iron_sword.scn.ron");
+
+        // Create a marker entity for loading
+        let loading_weapon = commands
+            .spawn(LoadingWeapon {
+                handle: weapon_handle.clone(),
+                owner: None, // Will set owner after spawning soldier
+            })
+            .id();
+
+        let soldier = commands
+            .spawn((
+                Sprite {
+                    color: Color::srgb(0.0, 1.0, 0.0), // Terminal Green
+                    custom_size: Some(Vec2::new(32.0, 32.0)),
+                    ..default()
+                },
+                Transform::from_xyz(0.0, player_npc_y, 0.0),
+                Soldier {
+                    attack_timer: Timer::from_seconds(
+                        soldier_config.attack_timer,
+                        TimerMode::Repeating,
+                    ),
+                    target: None,
+                },
+                AttackRange(soldier_config.attack_range),
+                Equipment::default(), // Will be updated by system
+                CombatStats {
+                    damage: soldier_config.projectile_damage,
+                    attack_range: soldier_config.attack_range,
+                    attack_cooldown: soldier_config.attack_timer,
+                    projectile_speed: soldier_config.projectile_speed,
+                    projectile_lifetime: soldier_config.projectile_lifetime,
+                    move_speed: soldier_config.move_speed,
+                },
+            ))
+            .id();
+
+        // Link owner
+        commands.entity(loading_weapon).insert(LoadingWeapon {
+            handle: weapon_handle,
+            owner: Some(soldier),
+        });
+
+        info!(
+            "Player NPC spawned at y={}. Loading weapon...",
+            player_npc_y
+        );
+    }
+}
+
+// Marker for async weapon loading
+#[derive(Component)]
+pub struct LoadingWeapon {
+    pub handle: Handle<DynamicScene>,
+    pub owner: Option<Entity>,
+}
+
+// System to process LoadingWeapon
+pub fn handle_loading_weapons(
+    mut commands: Commands,
+    query: Query<(Entity, &LoadingWeapon)>,
+    scenes: Res<Assets<DynamicScene>>,
+    mut scene_spawner: ResMut<SceneSpawner>,
+) {
+    for (entity, loading) in query.iter() {
+        if scenes.contains(&loading.handle) {
+            // Scene is loaded, spawn it
+            if let Some(owner) = loading.owner {
+                // We spawn the scene. We need to track the spawned entities to attach to owner.
+                // SceneSpawner::spawn_dynamic returns an InstanceId.
+                let instance_id = scene_spawner.spawn_dynamic(loading.handle.clone());
+
+                // We need to link this instance to the owner.
+                // Create a component to track this instance
+                commands.spawn(WeaponInstance { instance_id, owner });
+            }
+            // Cleanup loader
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct WeaponInstance {
+    pub instance_id: be_vy_scene::InstanceId,
+    pub owner: Entity,
+}
+use bevy::scene as be_vy_scene; // Alias to avoid conflict if needed
+
+// System to link spawned weapon to soldier
+pub fn link_weapon_stats(
+    mut commands: Commands,
+    query: Query<(Entity, &WeaponInstance)>,
+    scene_spawner: Res<SceneSpawner>,
+    item_query: Query<Entity, With<Item>>,
+    mut equipment_query: Query<&mut Equipment>,
+) {
+    for (tracker_entity, instance) in query.iter() {
+        if scene_spawner.instance_is_ready(instance.instance_id) {
+            // Get entities in this instance
+            for entity in scene_spawner.iter_instance_entities(instance.instance_id) {
+                if item_query.contains(entity) {
+                    // Found the item!
+                    if let Ok(mut equipment) = equipment_query.get_mut(instance.owner) {
+                        equipment.main_hand = Some(entity);
+                        info!(
+                            "Equipped weapon {:?} to soldier {:?}",
+                            entity, instance.owner
+                        );
+                    }
+                    // Despawn tracker
+                    commands.entity(tracker_entity).despawn();
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -185,7 +341,7 @@ pub fn player_npc_decision_logic(
     mut player_npc_query: Query<
         (Entity, &Transform, &mut Soldier, &AttackRange),
         (Without<Moving>, Without<Attacking>),
-    >, // TODO: Make this generic for all PlayerNpc types, currently coupled to Soldier component
+    >,
     enemy_query: Query<(Entity, &Transform, &SpawnIndex), With<Enemy>>,
     portal_tracker: Res<PortalSpawnTracker>,
 ) {
@@ -229,14 +385,15 @@ pub fn player_npc_decision_logic(
 pub fn player_npc_movement_logic(
     mut commands: Commands,
     time: Res<Time>,
-    _soldier_config: Res<SoldierConfig>, // Keep using Res<SoldierConfig> or move to CombatStats
     mut player_npc_query: Query<
         (Entity, &mut Transform, &Moving, &AttackRange, &CombatStats),
         (Without<Attacking>, Without<Enemy>),
-    >, // TODO: Make this generic for all PlayerNpc types, currently coupled to Soldier component
+    >,
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
-    for (entity, mut player_npc_transform, moving, attack_range, combat_stats) in player_npc_query.iter_mut() {
+    for (entity, mut player_npc_transform, moving, attack_range, combat_stats) in
+        player_npc_query.iter_mut()
+    {
         let target = moving.0;
 
         if let Ok(target_transform) = enemy_query.get(target) {
@@ -265,17 +422,51 @@ pub fn player_npc_movement_logic(
     }
 }
 
-pub fn player_npc_attack_logic(
+pub fn melee_attack_logic(
     mut commands: Commands,
     time: Res<Time>,
-    _soldier_config: Res<SoldierConfig>,
     mut player_npc_query: Query<
-        (Entity, &Transform, &mut Soldier, &Attacking, &AttackRange, &CombatStats),
-        Without<Moving>,
-    >, // TODO: Make this generic for all PlayerNpc types, currently coupled to Soldier component
+        (Entity, &Transform, &mut Soldier, &Attacking, &CombatStats),
+        (With<Melee>, Without<Moving>),
+    >,
+    mut enemy_query: Query<(&Transform, &mut Health), With<Enemy>>,
+) {
+    for (entity, player_transform, mut soldier, attacking, stats) in player_npc_query.iter_mut() {
+        let target = attacking.0;
+
+        if let Ok((target_transform, mut health)) = enemy_query.get_mut(target) {
+            // Check range again just in case (optional but good for strictness)
+            let distance = player_transform
+                .translation
+                .distance(target_transform.translation);
+            if distance > stats.attack_range {
+                commands.entity(entity).remove::<Attacking>();
+                continue;
+            }
+
+            soldier.attack_timer.tick(time.delta());
+            if soldier.attack_timer.just_finished() {
+                // Instant Hit
+                health.current -= stats.damage;
+                // Visual effect? (Optional)
+                info!("Melee hit for {} damage!", stats.damage);
+            }
+        } else {
+            commands.entity(entity).remove::<Attacking>();
+        }
+    }
+}
+
+pub fn ranged_attack_logic(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut player_npc_query: Query<
+        (Entity, &Transform, &mut Soldier, &Attacking, &CombatStats),
+        (With<Ranged>, Without<Moving>),
+    >,
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
-    for (entity, player_npc_transform, mut soldier, attacking, attack_range, combat_stats) in
+    for (entity, player_npc_transform, mut soldier, attacking, combat_stats) in
         player_npc_query.iter_mut()
     {
         let target = attacking.0;
@@ -285,7 +476,7 @@ pub fn player_npc_attack_logic(
                 .translation
                 .distance(target_transform.translation);
 
-            if distance > attack_range.0 {
+            if distance > combat_stats.attack_range {
                 commands.entity(entity).remove::<Attacking>();
             } else {
                 soldier.attack_timer.tick(time.delta());
@@ -295,8 +486,14 @@ pub fn player_npc_attack_logic(
                         .normalize_or_zero();
 
                     let speed = combat_stats.projectile_speed;
-                    let range = combat_stats.attack_range;
-                    let lifetime_secs = if speed > 0.0 { range / speed } else { 0.0 };
+                    // Use configured lifetime or fallback
+                    let lifetime_secs = if combat_stats.projectile_lifetime > 0.0 {
+                        combat_stats.projectile_lifetime
+                    } else if speed > 0.0 {
+                        combat_stats.attack_range / speed
+                    } else {
+                        0.0
+                    };
 
                     commands.spawn((
                         Sprite {
@@ -308,10 +505,7 @@ pub fn player_npc_attack_logic(
                         Projectile {
                             velocity: direction * speed,
                             damage: combat_stats.damage,
-                            lifetime: Timer::from_seconds(
-                                lifetime_secs,
-                                TimerMode::Once,
-                            ),
+                            lifetime: Timer::from_seconds(lifetime_secs, TimerMode::Once),
                         },
                     ));
                 }
@@ -321,6 +515,8 @@ pub fn player_npc_attack_logic(
         }
     }
 }
+
+// Deprecated generic attack logic removed/replaced by specific ones.
 
 pub fn move_projectiles(
     mut commands: Commands,
@@ -363,9 +559,5 @@ pub fn projectile_collision(
     }
 }
 
-// #[cfg(test)]
-// mod tests_logic;
-// #[cfg(test)]
-// mod tests_timing;
 #[cfg(test)]
 mod tests_items;
