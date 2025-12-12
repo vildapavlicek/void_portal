@@ -105,7 +105,9 @@ fn test_enemy_stats_at_level_1() {
     }
     app.update(); // Spawns enemy (timer finished)
 
-    let mut enemy_query = app.world_mut().query::<(&Enemy, &Health, &Reward, &Lifetime)>();
+    let mut enemy_query = app
+        .world_mut()
+        .query::<(&Enemy, &Health, &Reward, &Lifetime)>();
     let enemy = enemy_query.iter(app.world()).next();
 
     assert!(enemy.is_some(), "Enemy should be spawned at level 1");
@@ -191,7 +193,9 @@ fn test_enemy_stats_at_level_2() {
 
     app.update(); // Spawn enemy at Level 2
 
-    let mut enemy_query = app.world_mut().query::<(&Enemy, &Health, &Reward, &Lifetime)>();
+    let mut enemy_query = app
+        .world_mut()
+        .query::<(&Enemy, &Health, &Reward, &Lifetime)>();
     let enemy = enemy_query.iter(app.world()).next();
 
     assert!(enemy.is_some(), "Enemy should be spawned at level 2");
