@@ -1,69 +1,36 @@
 (
-    // defines portal's level
-    level: 1,
-    // Price to pay to increase level
-    // it should use void shards as currenty
-    level_up_price: (
-        value: 500,
-        growth_factor: 1.5,
-        growth_strategy: Linear,
+    level: 0,
+    // Price strategy for Portal Level
+    level_up_price: Linear(
+        base: 500.0,
+        coefficient: 250.0,
     ),
-    // this is internal and used only for spawning portal
-    // we offset it to not collide with UI
     portal_top_offset: 100.0,
-    // these stats scale with portal's level
-    // if level increases, these stats should as well
+
     level_scaled_stats: (
-        // base reward per enemy killed, should be further
-        // modified by enemy's coefficient for rewards
-        void_shards_reward: (
-            value: 10.0,
-            growth_factor: 0.75,
-            growth_strategy: Linear,
+        void_shards_reward: Linear(
+            base: 10.0,
+            coefficient: 7.5,
         ),
-        // How often portal can spawn enemy
-        spawn_timer: (
-            value: 2.0,
-            growth_factor: 1.1,
-            growth_strategy: Linear,
+        spawn_timer: Static(2.0),
+        enemy_health: Exponential(
+            base: 5.0,
+            factor: 1.5,
         ),
-        // base enemy's health
-        // should be furthe adjusted by enemys coefficient
-        enemy_health: (
-            value: 5.0,
-            growth_factor: 1.5,
-            growth_strategy: Linear,
-        ),
-        // enemy speed, this should stay constant for now
-        base_enemy_speed: (
-            value: 150.0,
-            growth_factor: 0,
-            growth_strategy: Linear,
-        ),
-        // how long the enemy will be kept spawn
-        // after timer runs out, we despawn the enemy
-        base_enemy_lifetime: (
-            value: 10.0,
-            growth_factor: 1.1,
-            growth_strategy: Linear,
+        base_enemy_speed: Static(150.0),
+        base_enemy_lifetime: Incremental(
+            base: 10.0,
+            step: 1.1,
         ),
     ),
     upgrades: {
         "Capacity": (
-            value: 5,
-            price: 200,
-            growth_factor: 1.5,
-            price_growth_factor: 2,
-            growth_strategy: Linear,
-            price_growth_strategy: Linear,
+            value: Incremental(base: 5.0, step: 1.0),
+            price: Exponential(base: 200.0, factor: 2.0),
         ),
         "Lifetime": (
-                value: 1,
-                price: 500,
-                growth_factor: 0.75,
-                price_growth_factor: 2,
-                growth_strategy: Linear,
-            price_growth_strategy: Linear,
+            value: Linear(base: 1.0, coefficient: 1.0),
+            price: Linear(base: 500.0, coefficient: 500.0),
         )
     },
 )

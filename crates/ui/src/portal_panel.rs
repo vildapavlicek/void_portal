@@ -104,7 +104,7 @@ fn spawn_portal_ui(
     let current_reward = config
         .level_scaled_stats
         .void_shards_reward
-        .calculate(portal.level);
+        .calculate(portal.level as f32);
 
     commands
         .spawn((
@@ -394,7 +394,7 @@ fn update_portal_ui_stats(
                     let current_reward = portal_config
                         .level_scaled_stats
                         .void_shards_reward
-                        .calculate(portal.level);
+                        .calculate(portal.level as f32);
                     **text = format!("Reward: {:.2}", current_reward);
                 }
             }
@@ -448,6 +448,7 @@ fn close_portal_ui_actions(
 mod tests {
     use {
         super::*, bevy::state::app::StatesPlugin, portal::PortalConfig, std::collections::HashMap,
+        common::GrowthStrategy,
     };
 
     #[test]
@@ -465,38 +466,14 @@ mod tests {
         // Create a dummy config
         let config = PortalConfig {
             level: 1,
-            level_up_price: portal::LevelUpConfig {
-                value: 100.0,
-                growth_factor: 1.5,
-                growth_strategy: common::GrowthStrategy::Linear,
-            },
+            level_up_price: GrowthStrategy::Linear { base: 100.0, coefficient: 1.5 },
             portal_top_offset: 50.0,
             level_scaled_stats: portal::LevelScaledStats {
-                void_shards_reward: portal::LevelScaledStat {
-                    value: 10.0,
-                    growth_factor: 1.0,
-                    growth_strategy: common::GrowthStrategy::Linear,
-                },
-                spawn_timer: portal::LevelScaledStat {
-                    value: 1.0,
-                    growth_factor: 0.1,
-                    growth_strategy: common::GrowthStrategy::Linear,
-                },
-                enemy_health: portal::LevelScaledStat {
-                    value: 10.0,
-                    growth_factor: 1.0,
-                    growth_strategy: common::GrowthStrategy::Linear,
-                },
-                base_enemy_speed: portal::LevelScaledStat {
-                    value: 10.0,
-                    growth_factor: 1.0,
-                    growth_strategy: common::GrowthStrategy::Linear,
-                },
-                base_enemy_lifetime: portal::LevelScaledStat {
-                    value: 10.0,
-                    growth_factor: 1.0,
-                    growth_strategy: common::GrowthStrategy::Linear,
-                },
+                void_shards_reward: GrowthStrategy::Linear { base: 10.0, coefficient: 1.0 },
+                spawn_timer: GrowthStrategy::Linear { base: 1.0, coefficient: 0.1 },
+                enemy_health: GrowthStrategy::Linear { base: 10.0, coefficient: 1.0 },
+                base_enemy_speed: GrowthStrategy::Linear { base: 10.0, coefficient: 1.0 },
+                base_enemy_lifetime: GrowthStrategy::Linear { base: 10.0, coefficient: 1.0 },
             },
             upgrades: HashMap::new(),
         };

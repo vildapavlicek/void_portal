@@ -50,8 +50,7 @@ impl Plugin for PortalPlugin {
 pub struct Portal {
     pub level: u32,
     pub upgrade_price: f32,
-    pub price_growth_factor: f32,
-    pub price_growth_strategy: GrowthStrategy,
+    pub price_strategy: GrowthStrategy,
 }
 
 #[derive(Component, Reflect, Default, Clone)]
@@ -93,6 +92,17 @@ pub fn spawn_portal(
         let half_height = window.height() / 2.0;
         let portal_y = half_height - portal_config.portal_top_offset;
 
+        // Calculate initial price (using level from config, likely 0)
+        let initial_price = portal_config
+            .level_up_price
+            .calculate(portal_config.level as f32);
+
+        // Calculate initial spawn time
+        let initial_spawn_time = portal_config
+            .level_scaled_stats
+            .spawn_timer
+            .calculate(portal_config.level as f32);
+
         let portal_entity = commands
             .spawn((
                 Sprite {
@@ -103,15 +113,14 @@ pub fn spawn_portal(
                 Transform::from_xyz(0.0, portal_y, 0.0),
                 Portal {
                     level: portal_config.level,
-                    upgrade_price: portal_config.level_up_price.value,
-                    price_growth_factor: portal_config.level_up_price.growth_factor,
-                    price_growth_strategy: portal_config.level_up_price.growth_strategy,
+                    upgrade_price: initial_price,
+                    price_strategy: portal_config.level_up_price.clone(),
                 },
                 PortalStats {
                     stats: portal_config.level_scaled_stats.clone(),
                 },
                 SpawnTimer(Timer::from_seconds(
-                    portal_config.level_scaled_stats.spawn_timer.value,
+                    initial_spawn_time,
                     TimerMode::Repeating,
                 )),
                 Pickable::default(),
@@ -122,13 +131,10 @@ pub fn spawn_portal(
         let mut upgrades = HashMap::new();
         commands.entity(portal_entity).with_children(|parent| {
             for (name, config) in &portal_config.upgrades {
+                // New logic: UpgradeableStat handles calculation
                 let stat = UpgradeableStat::new(
-                    config.value,
-                    config.price,
-                    config.growth_factor,
-                    config.growth_strategy,
-                    config.price_growth_factor,
-                    config.price_growth_strategy,
+                    config.value.clone(),
+                    config.price.clone(),
                 );
 
                 let id = parent
@@ -211,17 +217,17 @@ pub fn spawn_enemies(
             let half_width = window.width() / 2.0;
             let half_height = window.height() / 2.0;
 
-            // Dynamic stats calculation using PortalStats component
-            let health_multiplier = portal_stats.stats.enemy_health.calculate(portal.level);
+            // Dynamic stats calculation using PortalStats component and GrowthStrategy
+            let health_multiplier = portal_stats.stats.enemy_health.calculate(portal.level as f32);
             let reward_multiplier = portal_stats
                 .stats
                 .void_shards_reward
-                .calculate(portal.level);
+                .calculate(portal.level as f32);
             let lifetime_multiplier = portal_stats
                 .stats
                 .base_enemy_lifetime
-                .calculate(portal.level);
-            let base_speed = portal_stats.stats.base_enemy_speed.calculate(portal.level);
+                .calculate(portal.level as f32);
+            let base_speed = portal_stats.stats.base_enemy_speed.calculate(portal.level as f32);
 
             let max_health = health_multiplier * enemy_config.health_coef;
             let speed = base_speed * enemy_config.speed_coef;
@@ -279,39 +285,17 @@ pub fn handle_portal_upgrade(
     mut wallet: ResMut<Wallet>,
 ) {
     for _event in events.read() {
-        // Iterate all portals? Or should UpgradePortal event contain target entity?
-        // Previously it just iterated the first/all portals.
-        // Assuming global upgrade event applies to "selected" or "all" portals.
-        // Existing logic iterated `portal_query.iter_mut().next()`.
-        // The event `UpgradePortal` (defined in common) does NOT have an entity field currently.
-        // So it likely targets the single portal.
-        // If we have multiple portals, UpgradePortal message needs to carry the entity ID.
-        // BUT, the task is only about "spawn_enemies in portal currently uses Res...".
-        // The prompt says "The portal config should be mapped to Portal component".
-        // It does NOT explicitly say "fix the UpgradePortal event to support multiple portals".
-        // However, if I change `portal_query` to return multiple, `iter_mut().next()` still works for single portal.
-        // I will stick to `.next()` to preserve existing behavior for now, or loop all.
-        // The previous code looped: `if let Some(mut portal) = portal_query.iter_mut().next()`.
-        // I will keep that behavior but using components.
-
         if let Some((mut portal, stats, mut spawn_timer)) = portal_query.iter_mut().next() {
             if wallet.void_shards >= portal.upgrade_price {
                 wallet.void_shards -= portal.upgrade_price;
 
                 portal.level += 1;
 
-                // Update Price
-                match portal.price_growth_strategy {
-                    GrowthStrategy::Linear => {
-                        portal.upgrade_price += portal.price_growth_factor;
-                    }
-                    GrowthStrategy::Exponential => {
-                        portal.upgrade_price *= portal.price_growth_factor;
-                    }
-                }
+                // Update Price using Strategy
+                portal.upgrade_price = portal.price_strategy.calculate(portal.level as f32);
 
-                // Update Spawn Timer (as it scales with level)
-                let new_spawn_time = stats.stats.spawn_timer.calculate(portal.level);
+                // Update Spawn Timer
+                let new_spawn_time = stats.stats.spawn_timer.calculate(portal.level as f32);
                 spawn_timer
                     .0
                     .set_duration(std::time::Duration::from_secs_f32(new_spawn_time));
