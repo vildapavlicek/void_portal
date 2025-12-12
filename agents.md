@@ -32,13 +32,17 @@
 ## 4. Project Structure
 
 The project is organized as a Cargo workspace with the following crates:
-* **`void_core`**: Contains shared types, states (`GameState`), messages, and core plugins that are used across the entire project.
-* **`void_gameplay`**: Implements the core game logic, systems, and gameplay-specific resources.
-* **`void_ui`**: Dedicated crate for User Interface systems and components.
-* **`void_assets`**: Handles asset loading and management.
-* **`src/` (Root)**: Contains the main binary entry point and high-level application setup.
+* **`common`**: Contains shared types, states (`GameState`), and messages used across the entire project.
+* **`game_core`**: Acts as the main glue crate, aggregating other crates and handling global setup.
+* **`enemy`**: Handles enemy logic, systems, and configurations.
+* **`player_npcs`**: Manages player allies (Soldiers, Heroes, etc.) and their logic.
+* **`portal`**: Implements the core portal mechanics, upgrades, and stats.
+* **`ui`**: Dedicated crate for User Interface systems.
+* **`wallet`**: Manages player resources/currency (Void Shards).
+* **`assets`**: Handles asset loading, configurations, and management.
+* **`src/` (Root)**: Contains the main binary entry point.
 
 # Pre-commit
 Always run `cargo +nightly fmt` before pushing any changes to ensure code is well formatted.
-Always run `cargo c` and check for lints.
+Always run `cargo check` and check for lints.
 Always run `cargo clippy` to check for lints.
