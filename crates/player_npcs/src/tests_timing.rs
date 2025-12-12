@@ -1,7 +1,7 @@
 use {
     crate::{
-        player_npc_attack_logic, player_npc_decision_logic, spawn_player_npc, Soldier,
-        SoldierConfig,
+        player_npc_attack_logic, player_npc_decision_logic, Soldier,
+        SoldierConfig, AttackRange, CombatStats, Equipment,
     },
     bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow},
     common::{EnemyKilled, Reward},
@@ -44,19 +44,19 @@ fn setup_app() -> App {
     app.insert_resource(EnemySpawnTimer(Timer::from_seconds(1.0, TimerMode::Once)));
 
     // Soldier Config: Attack Timer 1.0s
-    app.insert_resource(SoldierConfig {
+    let soldier_config = SoldierConfig {
         attack_timer: 1.0,
         projectile_speed: 400.0,
         projectile_damage: 20.0,
         projectile_lifetime: 2.0,
         attack_range: 150.0,
         move_speed: 100.0,
-    });
+    };
+    app.insert_resource(soldier_config.clone());
 
     app.add_systems(
         Update,
         (
-            spawn_player_npc,
             player_npc_decision_logic,
             player_npc_attack_logic.after(player_npc_decision_logic),
         ),
@@ -68,13 +68,29 @@ fn setup_app() -> App {
 #[test]
 fn test_soldier_attack_timer_reset_on_retarget() {
     let mut app = setup_app();
-    app.update(); // Spawn soldier
 
-    let soldier_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Soldier>>()
-        .single(app.world())
-        .unwrap();
+    // Manually spawn soldier instead of relying on spawn_player_npc (which uses asset loader)
+    let soldier_config = app.world().resource::<SoldierConfig>().clone();
+    let soldier_entity = app.world_mut().spawn((
+        Soldier {
+            attack_timer: Timer::from_seconds(
+                soldier_config.attack_timer,
+                TimerMode::Repeating,
+            ),
+            target: None,
+        },
+        AttackRange(soldier_config.attack_range),
+        Equipment::default(),
+        CombatStats {
+            damage: soldier_config.projectile_damage,
+            attack_range: soldier_config.attack_range,
+            attack_cooldown: soldier_config.attack_timer,
+            projectile_speed: soldier_config.projectile_speed,
+            projectile_lifetime: soldier_config.projectile_lifetime,
+            move_speed: soldier_config.move_speed,
+        },
+        Transform::default(),
+    )).id();
 
     // 1. Spawn Enemy A
     let enemy_a = app
