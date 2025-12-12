@@ -17,7 +17,7 @@ pub struct LevelUpConfig {
     pub growth_strategy: GrowthStrategy,
 }
 
-#[derive(Deserialize, Clone, Debug, Reflect)]
+#[derive(Deserialize, Clone, Debug, Reflect, Default)]
 pub struct LevelScaledStats {
     pub void_shards_reward: LevelScaledStat,
     pub spawn_timer: LevelScaledStat,
@@ -26,7 +26,7 @@ pub struct LevelScaledStats {
     pub base_enemy_lifetime: LevelScaledStat,
 }
 
-#[derive(Deserialize, Clone, Debug, Reflect)]
+#[derive(Deserialize, Clone, Debug, Reflect, Default)]
 pub struct LevelScaledStat {
     pub value: f32,
     pub growth_factor: f32,

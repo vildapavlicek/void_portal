@@ -1,8 +1,8 @@
 use {
     crate::{
         handle_generic_upgrades, handle_portal_upgrade, spawn_enemies, spawn_portal,
-        EnemySpawnTimer, IndependentStatConfig, LevelScaledStat, LevelScaledStats, LevelUpConfig,
-        Portal, PortalConfig, PortalSpawnTracker, UpgradeSlot,
+        IndependentStatConfig, LevelScaledStat, LevelScaledStats, LevelUpConfig, Portal,
+        PortalConfig, PortalSpawnTracker, UpgradeSlot,
     },
     bevy::{prelude::*, time::TimePlugin},
     common::{GrowthStrategy, RequestUpgrade, Reward, UpgradePortal, UpgradeableStat},
@@ -103,7 +103,6 @@ fn setup_app() -> App {
     app.init_resource::<PortalSpawnTracker>();
     // Time resource already inserted above
 
-    app.insert_resource(EnemySpawnTimer(Timer::from_seconds(1.0, TimerMode::Once)));
     app.insert_resource(Wallet {
         void_shards: 1000.0,
     }); // Rich wallet

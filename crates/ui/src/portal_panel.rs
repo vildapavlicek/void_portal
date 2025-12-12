@@ -390,6 +390,7 @@ fn update_portal_ui_stats(
             }
             PortalUiStat::Reward => {
                 if let Ok(portal) = portal_query.get(link.0) {
+                    // TODO: Read stats from PortalStats component on the portal entity instead of global config
                     let current_reward = portal_config
                         .level_scaled_stats
                         .void_shards_reward
