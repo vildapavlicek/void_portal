@@ -4,12 +4,14 @@
 use {
     bevy::{prelude::*, window::PrimaryWindow},
     bevy_common_assets::ron::RonAssetPlugin,
-    common::{GameState, Reward, UpgradePortal, UpgradePortalCapacity},
+    common::{GameState, GrowthStrategy, Reward, UpgradePortal, UpgradePortalCapacity, UpgradeableStat},
     enemy::{AvailableEnemies, Enemy, Health, Lifetime, SpawnIndex, Speed},
     rand::Rng,
-    serde::Deserialize,
     wallet::Wallet,
 };
+
+mod config;
+pub use config::*;
 
 pub struct PortalPlugin;
 
@@ -18,12 +20,8 @@ impl Plugin for PortalPlugin {
         app.add_plugins(RonAssetPlugin::<PortalConfig>::new(&["portal.ron"]));
 
         app.register_type::<Portal>()
-            .register_type::<Level>()
-            .register_type::<Capacity>()
-            .register_type::<CapacityUpgradePrice>()
-            .register_type::<VoidShardsReward>()
-            .register_type::<UpgradePrice>()
-            .register_type::<UpgradeCoef>()
+            .register_type::<PortalCapacity>()
+            .register_type::<PortalBonusLifetime>()
             .register_type::<PortalConfig>();
 
         app.init_resource::<PortalSpawnTracker>()
@@ -46,71 +44,23 @@ impl Plugin for PortalPlugin {
     }
 }
 
-// Configs
-#[derive(Deserialize, Asset, Clone, Debug, Resource, Reflect)]
-pub struct PortalConfig {
-    /// When the portal spawns new enemy, if not over [`Capacity`]
-    pub spawn_timer: f32,
-    /// Number of shards rewarded per kill, scaled by enemy as well
-    pub base_void_shards_reward: f32,
-    /// How much it costs to level [`Portal`]
-    pub base_upgrade_price: f32,
-    /// Value to tweak price increase
-    pub upgrade_price_increase_coef: f32,
-    /// We want to offset the portal from the top of the screen
-    /// to not clash with UI elements
-    pub portal_top_offset: f32,
-    // Base enemy stats
-    /// Base health of all enemies, further scaled per enemy
-    pub base_enemy_health: f32,
-    /// Movement speed of enemies. This will probably be constant
-    pub base_enemy_speed: f32,
-    /// How long enemies will last before being despawned
-    pub base_enemy_lifetime: f32,
-
-    // Growth
-    pub enemy_health_growth_factor: f32,
-    pub enemy_reward_growth_factor: f32,
-
-    // New growth factors
-    pub spawn_time_growth_factor: f32,
-    pub enemy_lifetime_growth_factor: f32,
-
-    /// Dictates how many enemies can be present at one time
-    /// per portal
-    pub base_capacity: u32,
-    pub capacity_upgrade_base_price: f32,
-    pub capacity_upgrade_coef: f32,
-}
-
 // Components
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
-pub struct Portal;
+pub struct Portal {
+    pub level: u32,
+    pub upgrade_price: f32,
+    pub price_growth_factor: f32,
+    pub price_growth_strategy: GrowthStrategy,
+}
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
-pub struct Level(pub u32);
+pub struct PortalCapacity(pub UpgradeableStat);
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
-pub struct Capacity(pub u32);
-
-#[derive(Component, Reflect, Default)]
-#[reflect(Component)]
-pub struct CapacityUpgradePrice(pub f32);
-
-#[derive(Component, Reflect, Default)]
-#[reflect(Component)]
-pub struct VoidShardsReward(pub f32);
-
-#[derive(Component, Reflect, Default)]
-#[reflect(Component)]
-pub struct UpgradePrice(pub f32);
-
-#[derive(Component, Reflect, Default)]
-#[reflect(Component)]
-pub struct UpgradeCoef(pub f32);
+pub struct PortalBonusLifetime(pub UpgradeableStat);
 
 // Resources
 #[derive(Resource, Default)]
@@ -122,7 +72,7 @@ pub struct EnemySpawnTimer(pub Timer);
 // Systems
 fn init_enemy_spawn_timer(mut commands: Commands, portal_config: Res<PortalConfig>) {
     commands.insert_resource(EnemySpawnTimer(Timer::from_seconds(
-        portal_config.spawn_timer,
+        portal_config.level_scaled_stats.spawn_timer.value,
         TimerMode::Repeating,
     )));
 }
@@ -141,6 +91,24 @@ pub fn spawn_portal(
         let half_height = window.height() / 2.0;
         let portal_y = half_height - portal_config.portal_top_offset;
 
+        let capacity = UpgradeableStat::new(
+            portal_config.independently_leveled_stats.capacity.value,
+            portal_config.independently_leveled_stats.capacity.price,
+            portal_config.independently_leveled_stats.capacity.growth_factor,
+            portal_config.independently_leveled_stats.capacity.growth_strategy,
+            portal_config.independently_leveled_stats.capacity.price_growth_factor,
+            portal_config.independently_leveled_stats.capacity.price_growth_strategy,
+        );
+
+        let lifetime = UpgradeableStat::new(
+            portal_config.independently_leveled_stats.lifetime.value,
+            portal_config.independently_leveled_stats.lifetime.price,
+            portal_config.independently_leveled_stats.lifetime.growth_factor,
+            portal_config.independently_leveled_stats.lifetime.growth_strategy,
+            portal_config.independently_leveled_stats.lifetime.price_growth_factor,
+            portal_config.independently_leveled_stats.lifetime.price_growth_strategy,
+        );
+
         let entity = commands
             .spawn((
                 Sprite {
@@ -149,13 +117,14 @@ pub fn spawn_portal(
                     ..default()
                 },
                 Transform::from_xyz(0.0, portal_y, 0.0),
-                Portal,
-                Level(1),
-                Capacity(portal_config.base_capacity),
-                CapacityUpgradePrice(portal_config.capacity_upgrade_base_price),
-                VoidShardsReward(portal_config.base_void_shards_reward),
-                UpgradePrice(portal_config.base_upgrade_price),
-                UpgradeCoef(portal_config.upgrade_price_increase_coef),
+                Portal {
+                    level: portal_config.level,
+                    upgrade_price: portal_config.level_up_price.value,
+                    price_growth_factor: portal_config.level_up_price.growth_factor,
+                    price_growth_strategy: portal_config.level_up_price.growth_strategy,
+                },
+                PortalCapacity(capacity),
+                PortalBonusLifetime(lifetime),
                 Pickable::default(),
             ))
             .id();
@@ -170,7 +139,7 @@ pub fn spawn_enemies(
     portal_config: Res<PortalConfig>,
     available_enemies: Res<AvailableEnemies>,
     enemy_query: Query<Entity, With<Enemy>>,
-    portal_query: Query<(&Transform, &Level, &Capacity), With<Portal>>,
+    portal_query: Query<(&Transform, &Portal, &PortalCapacity, &PortalBonusLifetime)>,
     mut spawn_tracker: ResMut<PortalSpawnTracker>,
     window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
@@ -182,7 +151,7 @@ pub fn spawn_enemies(
             return;
         }
 
-        let Some((portal_transform, portal_level, portal_capacity)) = portal_query.iter().next()
+        let Some((portal_transform, portal, portal_capacity, portal_lifetime)) = portal_query.iter().next()
         else {
             warn!("No portal found to spawn enemies from");
             return;
@@ -190,7 +159,7 @@ pub fn spawn_enemies(
 
         let enemy_config = &available_enemies.0[0];
 
-        if enemy_query.iter().count() >= portal_capacity.0 as usize {
+        if enemy_query.iter().count() >= portal_capacity.0.value as usize {
             info!("Max enemies reached, skipping spawn");
             return;
         }
@@ -202,24 +171,22 @@ pub fn spawn_enemies(
         let half_width = window.width() / 2.0;
         let half_height = window.height() / 2.0;
 
-        let level_exponent = (portal_level.0 as f32) - 1.0;
-        let health_multiplier = portal_config
-            .enemy_health_growth_factor
-            .powf(level_exponent);
-        let reward_multiplier = portal_config
-            .enemy_reward_growth_factor
-            .powf(level_exponent);
-        let lifetime_multiplier = portal_config
-            .enemy_lifetime_growth_factor
-            .powf(level_exponent);
+        // Dynamic stats calculation based on Portal Level
+        let health_multiplier = portal_config.level_scaled_stats.enemy_health.calculate(portal.level);
+        let reward_multiplier = portal_config.level_scaled_stats.void_shards_reward.calculate(portal.level);
+        let lifetime_multiplier = portal_config.level_scaled_stats.base_enemy_lifetime.calculate(portal.level);
 
-        let max_health =
-            (portal_config.base_enemy_health * enemy_config.health_coef) * health_multiplier;
-        let speed = portal_config.base_enemy_speed * enemy_config.speed_coef;
-        let lifetime =
-            (portal_config.base_enemy_lifetime * enemy_config.lifetime_coef) * lifetime_multiplier;
-        let reward =
-            (portal_config.base_void_shards_reward * enemy_config.reward_coef) * reward_multiplier;
+        let base_health_at_level = health_multiplier;
+        let base_reward_at_level = reward_multiplier;
+        let base_lifetime_at_level = lifetime_multiplier;
+        let base_speed = portal_config.level_scaled_stats.base_enemy_speed.calculate(portal.level);
+
+        let max_health = base_health_at_level * enemy_config.health_coef;
+        let speed = base_speed * enemy_config.speed_coef;
+        let reward = base_reward_at_level * enemy_config.reward_coef;
+
+        // Lifetime = (Base Scaled * Coef) + Bonus Independent
+        let lifetime_val = (base_lifetime_at_level * enemy_config.lifetime_coef) + portal_lifetime.0.value;
 
         let mut rng = rand::rng();
         let target_x = rng.random_range(-half_width..half_width);
@@ -241,7 +208,7 @@ pub fn spawn_enemies(
                     max: max_health,
                 },
                 Lifetime {
-                    timer: Timer::from_seconds(lifetime, TimerMode::Once),
+                    timer: Timer::from_seconds(lifetime_val, TimerMode::Once),
                 },
                 Reward(reward),
                 Speed(speed),
@@ -265,21 +232,35 @@ pub fn spawn_enemies(
 
 pub fn handle_portal_upgrade(
     mut events: MessageReader<UpgradePortal>,
-    mut portal_query: Query<(&mut Level, &mut UpgradePrice, &UpgradeCoef), With<Portal>>,
+    mut portal_query: Query<&mut Portal>,
     mut wallet: ResMut<Wallet>,
+    portal_config: Res<PortalConfig>,
+    mut spawn_timer: ResMut<EnemySpawnTimer>,
 ) {
     for _event in events.read() {
-        if let Some((mut level, mut upgrade_price, upgrade_coef)) = portal_query.iter_mut().next() {
-            if wallet.void_shards >= upgrade_price.0 {
-                wallet.void_shards -= upgrade_price.0;
-                level.0 += 1;
-                upgrade_price.0 *= upgrade_coef.0;
-                // TODO: Update VoidShardsReward scaling here if needed.
-                // Currently it's static (base value) and doesn't match enemy reward logic.
+        if let Some(mut portal) = portal_query.iter_mut().next() {
+            if wallet.void_shards >= portal.upgrade_price {
+                wallet.void_shards -= portal.upgrade_price;
+
+                portal.level += 1;
+
+                // Update Price
+                match portal.price_growth_strategy {
+                    GrowthStrategy::Linear => {
+                        portal.upgrade_price += portal.price_growth_factor;
+                    }
+                    GrowthStrategy::Exponential => {
+                        portal.upgrade_price *= portal.price_growth_factor;
+                    }
+                }
+
+                // Update Spawn Timer (as it scales with level)
+                let new_spawn_time = portal_config.level_scaled_stats.spawn_timer.calculate(portal.level);
+                spawn_timer.0.set_duration(std::time::Duration::from_secs_f32(new_spawn_time));
 
                 info!(
                     "Portal upgraded to Level {}. New Price: {}",
-                    level.0, upgrade_price.0
+                    portal.level, portal.upgrade_price
                 );
             } else {
                 warn!("Not enough shards to upgrade portal!");
@@ -290,20 +271,18 @@ pub fn handle_portal_upgrade(
 
 pub fn handle_portal_capacity_upgrade(
     mut events: MessageReader<UpgradePortalCapacity>,
-    mut portal_query: Query<(&mut Capacity, &mut CapacityUpgradePrice), With<Portal>>,
-    portal_config: Res<PortalConfig>,
+    mut portal_query: Query<&mut PortalCapacity>,
     mut wallet: ResMut<Wallet>,
 ) {
     for _event in events.read() {
-        if let Some((mut capacity, mut price)) = portal_query.iter_mut().next() {
-            if wallet.void_shards >= price.0 {
-                wallet.void_shards -= price.0;
-                capacity.0 += 1;
-                price.0 *= portal_config.capacity_upgrade_coef;
+        if let Some(mut capacity) = portal_query.iter_mut().next() {
+            if wallet.void_shards >= capacity.0.price {
+                wallet.void_shards -= capacity.0.price;
+                capacity.0.upgrade();
 
                 info!(
                     "Portal capacity upgraded to {}. New Price: {}",
-                    capacity.0, price.0
+                    capacity.0.value, capacity.0.price
                 );
             } else {
                 warn!("Not enough shards to upgrade portal capacity!");

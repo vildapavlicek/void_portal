@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Copy, Reflect, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Reflect, Deserialize, PartialEq, Default)]
 pub enum GrowthStrategy {
+    #[default]
     /// Value = Base + (Level * Factor)
     Linear,
     /// Value = Base * (Factor ^ Level)
@@ -33,6 +34,22 @@ pub struct UpgradeableStat {
     pub price_growth_factor: f32,
     /// Strategy used for price growth
     pub price_growth_type: GrowthStrategy,
+}
+
+impl Default for UpgradeableStat {
+    fn default() -> Self {
+        Self {
+            level: 0.0,
+            value: 0.0,
+            price: 0.0,
+            base_value: 0.0,
+            base_price: 0.0,
+            value_growth_factor: 0.0,
+            value_growth_type: GrowthStrategy::Linear,
+            price_growth_factor: 0.0,
+            price_growth_type: GrowthStrategy::Linear,
+        }
+    }
 }
 
 impl UpgradeableStat {
