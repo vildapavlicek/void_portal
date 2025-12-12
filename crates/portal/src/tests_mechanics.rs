@@ -34,15 +34,27 @@ fn setup_app() -> App {
     upgrades.insert(
         "Capacity".to_string(),
         IndependentStatConfig {
-            value: GrowthStrategy::Incremental { base: 5.0, step: 1.0 },
-            price: GrowthStrategy::Exponential { base: 200.0, factor: 1.5 },
+            value: GrowthStrategy::Incremental {
+                base: 5.0,
+                step: 1.0,
+            },
+            price: GrowthStrategy::Exponential {
+                base: 200.0,
+                factor: 1.5,
+            },
         },
     );
     upgrades.insert(
         "Lifetime".to_string(),
         IndependentStatConfig {
-            value: GrowthStrategy::Incremental { base: 0.0, step: 1.0 },
-            price: GrowthStrategy::Exponential { base: 100.0, factor: 1.5 },
+            value: GrowthStrategy::Incremental {
+                base: 0.0,
+                step: 1.0,
+            },
+            price: GrowthStrategy::Exponential {
+                base: 100.0,
+                factor: 1.5,
+            },
         },
     );
 
@@ -55,11 +67,23 @@ fn setup_app() -> App {
         },
         portal_top_offset: 100.0,
         level_scaled_stats: LevelScaledStats {
-            void_shards_reward: GrowthStrategy::Linear { base: 10.0, coefficient: 0.0 },
-            spawn_timer: GrowthStrategy::Linear { base: 1.0, coefficient: 0.1 },
-            enemy_health: GrowthStrategy::Linear { base: 50.0, coefficient: 10.0 },
+            void_shards_reward: GrowthStrategy::Linear {
+                base: 10.0,
+                coefficient: 0.0,
+            },
+            spawn_timer: GrowthStrategy::Linear {
+                base: 1.0,
+                coefficient: 0.1,
+            },
+            enemy_health: GrowthStrategy::Linear {
+                base: 50.0,
+                coefficient: 10.0,
+            },
             base_enemy_speed: GrowthStrategy::Static(20.0),
-            base_enemy_lifetime: GrowthStrategy::Linear { base: 5.0, coefficient: 0.5 },
+            base_enemy_lifetime: GrowthStrategy::Linear {
+                base: 5.0,
+                coefficient: 0.5,
+            },
         },
         upgrades,
     });

@@ -97,7 +97,10 @@ mod tests {
 
     #[test]
     fn test_linear_strategy() {
-        let strategy = GrowthStrategy::Linear { base: 10.0, coefficient: 2.0 };
+        let strategy = GrowthStrategy::Linear {
+            base: 10.0,
+            coefficient: 2.0,
+        };
         assert_eq!(strategy.calculate(0.0), 10.0);
         assert_eq!(strategy.calculate(1.0), 12.0);
         assert_eq!(strategy.calculate(2.0), 14.0);
@@ -105,7 +108,10 @@ mod tests {
 
     #[test]
     fn test_exponential_strategy() {
-        let strategy = GrowthStrategy::Exponential { base: 10.0, factor: 2.0 };
+        let strategy = GrowthStrategy::Exponential {
+            base: 10.0,
+            factor: 2.0,
+        };
         assert_eq!(strategy.calculate(0.0), 10.0);
         assert_eq!(strategy.calculate(1.0), 20.0);
         assert_eq!(strategy.calculate(2.0), 40.0);
@@ -113,7 +119,10 @@ mod tests {
 
     #[test]
     fn test_incremental_strategy() {
-        let strategy = GrowthStrategy::Incremental { base: 5.0, step: 1.0 };
+        let strategy = GrowthStrategy::Incremental {
+            base: 5.0,
+            step: 1.0,
+        };
         assert_eq!(strategy.calculate(0.0), 5.0);
         assert_eq!(strategy.calculate(1.0), 6.0);
         assert_eq!(strategy.calculate(2.0), 7.0);
@@ -122,8 +131,14 @@ mod tests {
     #[test]
     fn test_upgradeable_stat() {
         let mut stat = UpgradeableStat::new(
-            GrowthStrategy::Incremental { base: 10.0, step: 1.0 },
-            GrowthStrategy::Linear { base: 100.0, coefficient: 50.0 },
+            GrowthStrategy::Incremental {
+                base: 10.0,
+                step: 1.0,
+            },
+            GrowthStrategy::Linear {
+                base: 100.0,
+                coefficient: 50.0,
+            },
         );
 
         // Level 0

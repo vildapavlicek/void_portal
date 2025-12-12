@@ -1,7 +1,7 @@
 use {
     bevy::prelude::*,
     common::{GameState, RequestUpgrade, UpgradePortal, UpgradeableStat},
-    portal::{Portal, PortalConfig, UpgradeSlot},
+    portal::{Portal, PortalStats, UpgradeSlot},
     wallet::Wallet,
 };
 
@@ -71,10 +71,9 @@ fn attach_portal_observer(
 fn on_portal_click(
     trigger: On<Pointer<Click>>,
     mut commands: Commands,
-    portal_query: Query<(&Portal, &Children)>,
+    portal_query: Query<(&Portal, &PortalStats, &Children)>,
     upgrade_query: Query<(&UpgradeSlot, &UpgradeableStat)>,
     ui_query: Query<Entity, With<PortalUiRoot>>,
-    portal_config: Res<PortalConfig>,
 ) {
     // If UI is already open, don't spawn another one
     if !ui_query.is_empty() {
@@ -82,7 +81,7 @@ fn on_portal_click(
     }
 
     let entity = trigger.entity;
-    if let Ok((portal, children)) = portal_query.get(entity) {
+    if let Ok((portal, stats, children)) = portal_query.get(entity) {
         let mut upgrades = Vec::new();
         for &child in children {
             if let Ok((slot, stat)) = upgrade_query.get(child) {
@@ -90,19 +89,19 @@ fn on_portal_click(
             }
         }
 
-        spawn_portal_ui(&mut commands, portal, entity, upgrades, &portal_config);
+        spawn_portal_ui(&mut commands, portal, stats, entity, upgrades);
     }
 }
 
 fn spawn_portal_ui(
     commands: &mut Commands,
     portal: &Portal,
+    stats: &PortalStats,
     portal_entity: Entity,
     upgrades: Vec<(Entity, UpgradeSlot, UpgradeableStat)>,
-    config: &PortalConfig,
 ) {
-    let current_reward = config
-        .level_scaled_stats
+    let current_reward = stats
+        .stats
         .void_shards_reward
         .calculate(portal.level as f32);
 
@@ -377,22 +376,20 @@ fn update_upgrade_button_state(
 // Update Stat Texts
 fn update_portal_ui_stats(
     mut query: Query<(&PortalUiLink, &PortalUiStat, &mut Text)>,
-    portal_query: Query<&Portal>,
+    portal_query: Query<(&Portal, &PortalStats)>,
     upgrade_query: Query<(&UpgradeSlot, &UpgradeableStat)>,
-    portal_config: Res<PortalConfig>,
 ) {
     for (link, stat_type, mut text) in &mut query {
         match stat_type {
             PortalUiStat::Level => {
-                if let Ok(portal) = portal_query.get(link.0) {
+                if let Ok((portal, _)) = portal_query.get(link.0) {
                     **text = format!("Level {}", portal.level);
                 }
             }
             PortalUiStat::Reward => {
-                if let Ok(portal) = portal_query.get(link.0) {
-                    // TODO: Read stats from PortalStats component on the portal entity instead of global config
-                    let current_reward = portal_config
-                        .level_scaled_stats
+                if let Ok((portal, stats)) = portal_query.get(link.0) {
+                    let current_reward = stats
+                        .stats
                         .void_shards_reward
                         .calculate(portal.level as f32);
                     **text = format!("Reward: {:.2}", current_reward);
@@ -447,12 +444,13 @@ fn close_portal_ui_actions(
 #[cfg(test)]
 mod tests {
     use {
-        super::*, bevy::state::app::StatesPlugin, portal::PortalConfig, std::collections::HashMap,
-        common::GrowthStrategy,
+        super::*, bevy::state::app::StatesPlugin, common::GrowthStrategy, portal::PortalConfig,
+        std::collections::HashMap,
     };
 
     #[test]
     fn test_portal_ui_lifecycle() {
+        use portal::PortalStats;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_plugins(StatesPlugin)
@@ -466,14 +464,32 @@ mod tests {
         // Create a dummy config
         let config = PortalConfig {
             level: 1,
-            level_up_price: GrowthStrategy::Linear { base: 100.0, coefficient: 1.5 },
+            level_up_price: GrowthStrategy::Linear {
+                base: 100.0,
+                coefficient: 1.5,
+            },
             portal_top_offset: 50.0,
             level_scaled_stats: portal::LevelScaledStats {
-                void_shards_reward: GrowthStrategy::Linear { base: 10.0, coefficient: 1.0 },
-                spawn_timer: GrowthStrategy::Linear { base: 1.0, coefficient: 0.1 },
-                enemy_health: GrowthStrategy::Linear { base: 10.0, coefficient: 1.0 },
-                base_enemy_speed: GrowthStrategy::Linear { base: 10.0, coefficient: 1.0 },
-                base_enemy_lifetime: GrowthStrategy::Linear { base: 10.0, coefficient: 1.0 },
+                void_shards_reward: GrowthStrategy::Linear {
+                    base: 10.0,
+                    coefficient: 1.0,
+                },
+                spawn_timer: GrowthStrategy::Linear {
+                    base: 1.0,
+                    coefficient: 0.1,
+                },
+                enemy_health: GrowthStrategy::Linear {
+                    base: 10.0,
+                    coefficient: 1.0,
+                },
+                base_enemy_speed: GrowthStrategy::Linear {
+                    base: 10.0,
+                    coefficient: 1.0,
+                },
+                base_enemy_lifetime: GrowthStrategy::Linear {
+                    base: 10.0,
+                    coefficient: 1.0,
+                },
             },
             upgrades: HashMap::new(),
         };
@@ -495,11 +511,16 @@ mod tests {
         // Mock a Portal
         let portal_ent = app
             .world_mut()
-            .spawn((Portal {
-                level: 1,
-                upgrade_price: 100.0,
-                ..default()
-            },))
+            .spawn((
+                Portal {
+                    level: 1,
+                    upgrade_price: 100.0,
+                    ..default()
+                },
+                PortalStats {
+                    stats: config.level_scaled_stats.clone(),
+                },
+            ))
             .id();
 
         app.update();
