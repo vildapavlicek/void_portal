@@ -1,7 +1,7 @@
 use {
     bevy::prelude::*,
-    common::{GameState, UpgradePortal},
-    portal::{Portal, UpgradeCoef, UpgradePrice, VoidShardsReward},
+    common::{GameState, UpgradePortal, UpgradePortalBonusLifetime, UpgradePortalCapacity},
+    portal::{Portal, PortalBonusLifetime, PortalCapacity, PortalConfig},
     wallet::Wallet,
 };
 
@@ -32,8 +32,15 @@ struct PortalUiRoot;
 #[derive(Component)]
 struct PortalUiCloseButton;
 
+#[derive(Component, Clone, Copy, Debug, PartialEq)]
+enum PortalUpgradeTarget {
+    Level,
+    Capacity,
+    Lifetime,
+}
+
 #[derive(Component)]
-struct PortalUiUpgradeButton;
+struct PortalUiUpgradeButton(PortalUpgradeTarget);
 
 #[derive(Component)]
 struct PortalUiScrim;
@@ -43,9 +50,10 @@ struct PortalUiLink(Entity);
 
 #[derive(Component, Clone, Copy)]
 enum PortalUiStat {
+    Level,
     Reward,
-    Price,
-    Coef,
+    Capacity,
+    Lifetime,
 }
 
 // Attach observer to Portal entities
@@ -65,9 +73,9 @@ fn attach_portal_observer(
 fn on_portal_click(
     trigger: On<Pointer<Click>>,
     mut commands: Commands,
-    query: Query<(&VoidShardsReward, &UpgradePrice, &UpgradeCoef)>,
+    query: Query<(&Portal, &PortalCapacity, &PortalBonusLifetime)>,
     ui_query: Query<Entity, With<PortalUiRoot>>,
-    wallet: Res<Wallet>,
+    portal_config: Res<PortalConfig>,
 ) {
     // If UI is already open, don't spawn another one
     if !ui_query.is_empty() {
@@ -75,26 +83,31 @@ fn on_portal_click(
     }
 
     let entity = trigger.entity;
-    if let Ok((reward, price, coef)) = query.get(entity) {
+    if let Ok((portal, capacity, lifetime)) = query.get(entity) {
         spawn_portal_ui(
             &mut commands,
-            reward.0,
-            price.0,
-            coef.0,
+            portal,
+            capacity,
+            lifetime,
             entity,
-            wallet.void_shards,
+            &portal_config,
         );
     }
 }
 
 fn spawn_portal_ui(
     commands: &mut Commands,
-    reward: f32,
-    price: f32,
-    coef: f32,
+    portal: &Portal,
+    capacity: &PortalCapacity,
+    lifetime: &PortalBonusLifetime,
     portal_entity: Entity,
-    current_funds: f32,
+    config: &PortalConfig,
 ) {
+    let current_reward = config
+        .level_scaled_stats
+        .void_shards_reward
+        .calculate(portal.level);
+
     commands
         .spawn((
             Node {
@@ -117,8 +130,8 @@ fn spawn_portal_ui(
             parent
                 .spawn((
                     Node {
-                        width: Val::Px(300.0),
-                        height: Val::Px(240.0), // Increased height for new button
+                        width: Val::Px(400.0),
+                        height: Val::Px(350.0),
                         flex_direction: FlexDirection::Column,
                         justify_content: JustifyContent::SpaceEvenly,
                         align_items: AlignItems::Center,
@@ -140,57 +153,107 @@ fn spawn_portal_ui(
                         TextColor(Color::WHITE),
                     ));
 
-                    // Stats
+                    // --- Section 1: Portal Level ---
                     p.spawn((
-                        Text::new(format!("Void Shards Reward: {:.2}", reward)),
-                        TextFont::default(),
-                        TextColor(Color::WHITE),
-                        PortalUiStat::Reward,
-                        PortalUiLink(portal_entity),
-                    ));
-                    p.spawn((
-                        Text::new(format!("Upgrade Price: {:.2}", price)),
-                        TextFont::default(),
-                        TextColor(Color::WHITE),
-                        PortalUiStat::Price,
-                        PortalUiLink(portal_entity),
-                    ));
-                    p.spawn((
-                        Text::new(format!("Upgrade Coef: {:.2}", coef)),
-                        TextFont::default(),
-                        TextColor(Color::WHITE),
-                        PortalUiStat::Coef,
-                        PortalUiLink(portal_entity),
-                    ));
-
-                    // Upgrade Button
-                    p.spawn((
-                        Button,
                         Node {
-                            width: Val::Px(160.0),
-                            height: Val::Px(40.0),
-                            justify_content: JustifyContent::Center,
+                            width: Val::Percent(100.0),
+                            flex_direction: FlexDirection::Row,
+                            justify_content: JustifyContent::SpaceBetween,
                             align_items: AlignItems::Center,
-                            margin: UiRect::top(Val::Px(10.0)),
+                            margin: UiRect::bottom(Val::Px(10.0)),
                             ..default()
                         },
-                        // Initial color based on funds
-                        BackgroundColor(if current_funds >= price {
-                            Color::hsla(120.0, 0.6, 0.4, 1.0) // Green
-                        } else {
-                            Color::hsla(0.0, 0.0, 0.5, 1.0) // Grey
-                        }),
-                        BorderRadius::all(Val::Px(5.0)),
-                        PortalUiUpgradeButton,
-                        PortalUiLink(portal_entity),
                     ))
-                    .observe(on_upgrade_click)
-                    .with_children(|btn| {
-                        btn.spawn((
-                            Text::new(format!("Upgrade ({:.0})", price)),
+                    .with_children(|row| {
+                        row.spawn((
+                            Node {
+                                flex_direction: FlexDirection::Column,
+                                ..default()
+                            },
+                        ))
+                        .with_children(|col| {
+                             col.spawn((
+                                Text::new(format!("Level {}", portal.level)),
+                                TextFont::default(),
+                                TextColor(Color::WHITE),
+                                PortalUiStat::Level,
+                                PortalUiLink(portal_entity),
+                            ));
+                            col.spawn((
+                                Text::new(format!("Reward: {:.2}", current_reward)),
+                                TextFont {
+                                    font_size: 14.0,
+                                    ..default()
+                                },
+                                TextColor(Color::srgb(0.8, 0.8, 1.0)),
+                                PortalUiStat::Reward,
+                                PortalUiLink(portal_entity),
+                            ));
+                        });
+
+                        spawn_upgrade_button(
+                            row,
+                            PortalUpgradeTarget::Level,
+                            portal.upgrade_price,
+                            portal_entity,
+                        );
+                    });
+
+                    // --- Section 2: Capacity ---
+                     p.spawn((
+                        Node {
+                            width: Val::Percent(100.0),
+                            flex_direction: FlexDirection::Row,
+                            justify_content: JustifyContent::SpaceBetween,
+                            align_items: AlignItems::Center,
+                            margin: UiRect::bottom(Val::Px(10.0)),
+                            ..default()
+                        },
+                    ))
+                    .with_children(|row| {
+                        row.spawn((
+                            Text::new(format!("Max Enemies: {:.0}", capacity.0.value)),
                             TextFont::default(),
                             TextColor(Color::WHITE),
+                            PortalUiStat::Capacity,
+                            PortalUiLink(portal_entity),
                         ));
+
+                        spawn_upgrade_button(
+                            row,
+                            PortalUpgradeTarget::Capacity,
+                            capacity.0.price,
+                            portal_entity,
+                        );
+                    });
+
+
+                    // --- Section 3: Bonus Lifetime ---
+                     p.spawn((
+                        Node {
+                            width: Val::Percent(100.0),
+                            flex_direction: FlexDirection::Row,
+                            justify_content: JustifyContent::SpaceBetween,
+                            align_items: AlignItems::Center,
+                            margin: UiRect::bottom(Val::Px(10.0)),
+                            ..default()
+                        },
+                    ))
+                    .with_children(|row| {
+                        row.spawn((
+                            Text::new(format!("Bonus Lifetime: {:.2}s", lifetime.0.value)),
+                            TextFont::default(),
+                            TextColor(Color::WHITE),
+                            PortalUiStat::Lifetime,
+                            PortalUiLink(portal_entity),
+                        ));
+
+                        spawn_upgrade_button(
+                            row,
+                            PortalUpgradeTarget::Lifetime,
+                            lifetime.0.price,
+                            portal_entity,
+                        );
                     });
 
                     // Close Button
@@ -219,6 +282,40 @@ fn spawn_portal_ui(
         });
 }
 
+fn spawn_upgrade_button(
+    parent: &mut ChildBuilder<'_>,
+    target: PortalUpgradeTarget,
+    price: f32,
+    link: Entity,
+) {
+    parent.spawn((
+        Button,
+        Node {
+            width: Val::Px(140.0),
+            height: Val::Px(35.0),
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            ..default()
+        },
+        BackgroundColor(Color::hsla(0.0, 0.0, 0.5, 1.0)), // Initial Grey
+        BorderRadius::all(Val::Px(5.0)),
+        PortalUiUpgradeButton(target),
+        PortalUiLink(link),
+    ))
+    .observe(on_upgrade_click)
+    .with_children(|btn| {
+        btn.spawn((
+            Text::new(format!("Upgrade ({:.0})", price)),
+            TextFont {
+                 font_size: 14.0,
+                 ..default()
+            },
+            TextColor(Color::WHITE),
+        ));
+    });
+}
+
+
 // Close when clicking the Scrim (root)
 fn on_scrim_click(
     trigger: On<Pointer<Click>>,
@@ -238,17 +335,33 @@ fn block_click(mut trigger: On<Pointer<Click>>) {
 // Handle Upgrade Click
 fn on_upgrade_click(
     trigger: On<Pointer<Click>>,
-    mut messages: MessageWriter<UpgradePortal>,
-    button_query: Query<&PortalUiLink>,
-    portal_query: Query<&UpgradePrice, With<Portal>>,
+    mut msg_level: MessageWriter<UpgradePortal>,
+    mut msg_capacity: MessageWriter<UpgradePortalCapacity>,
+    mut msg_lifetime: MessageWriter<UpgradePortalBonusLifetime>,
+    button_query: Query<(&PortalUiLink, &PortalUiUpgradeButton)>,
+    portal_query: Query<(&Portal, &PortalCapacity, &PortalBonusLifetime)>,
     wallet: Res<Wallet>,
 ) {
     let button_entity = trigger.entity;
 
-    if let Ok(link) = button_query.get(button_entity) {
-        if let Ok(upgrade_price) = portal_query.get(link.0) {
-            if wallet.void_shards >= upgrade_price.0 {
-                messages.write(UpgradePortal);
+    if let Ok((link, button_type)) = button_query.get(button_entity) {
+        if let Ok((portal, capacity, lifetime)) = portal_query.get(link.0) {
+            match button_type.0 {
+                PortalUpgradeTarget::Level => {
+                    if wallet.void_shards >= portal.upgrade_price {
+                        msg_level.write(UpgradePortal);
+                    }
+                }
+                PortalUpgradeTarget::Capacity => {
+                    if wallet.void_shards >= capacity.0.price {
+                        msg_capacity.write(UpgradePortalCapacity);
+                    }
+                }
+                PortalUpgradeTarget::Lifetime => {
+                     if wallet.void_shards >= lifetime.0.price {
+                        msg_lifetime.write(UpgradePortalBonusLifetime);
+                    }
+                }
             }
         }
     }
@@ -257,16 +370,20 @@ fn on_upgrade_click(
 // Update Upgrade Button State (Color and Text)
 fn update_upgrade_button_state(
     mut button_query: Query<
-        (&PortalUiLink, &mut BackgroundColor, &Children),
-        With<PortalUiUpgradeButton>,
+        (&PortalUiLink, &PortalUiUpgradeButton, &mut BackgroundColor, &Children),
     >,
     mut text_query: Query<&mut Text>,
-    portal_query: Query<&UpgradePrice, With<Portal>>,
+    portal_query: Query<(&Portal, &PortalCapacity, &PortalBonusLifetime)>,
     wallet: Res<Wallet>,
 ) {
-    for (link, mut bg_color, children) in &mut button_query {
-        if let Ok(upgrade_price) = portal_query.get(link.0) {
-            let price = upgrade_price.0;
+    for (link, button_type, mut bg_color, children) in &mut button_query {
+        if let Ok((portal, capacity, lifetime)) = portal_query.get(link.0) {
+            let price = match button_type.0 {
+                PortalUpgradeTarget::Level => portal.upgrade_price,
+                PortalUpgradeTarget::Capacity => capacity.0.price,
+                PortalUpgradeTarget::Lifetime => lifetime.0.price,
+            };
+
             let affordable = wallet.void_shards >= price;
 
             // Update Color
@@ -279,6 +396,7 @@ fn update_upgrade_button_state(
             // Update Text
             for &child in children {
                 if let Ok(mut text) = text_query.get_mut(child) {
+                     // Check if it's the specific upgrade logic
                     **text = format!("Upgrade ({:.0})", price);
                 }
             }
@@ -289,14 +407,22 @@ fn update_upgrade_button_state(
 // Update Stat Texts
 fn update_portal_ui_stats(
     mut query: Query<(&PortalUiLink, &PortalUiStat, &mut Text)>,
-    portal_query: Query<(&VoidShardsReward, &UpgradePrice, &UpgradeCoef), With<Portal>>,
+    portal_query: Query<(&Portal, &PortalCapacity, &PortalBonusLifetime)>,
+    portal_config: Res<PortalConfig>,
 ) {
     for (link, stat_type, mut text) in &mut query {
-        if let Ok((reward, price, coef)) = portal_query.get(link.0) {
+        if let Ok((portal, capacity, lifetime)) = portal_query.get(link.0) {
             match stat_type {
-                PortalUiStat::Reward => **text = format!("Void Shards Reward: {:.2}", reward.0),
-                PortalUiStat::Price => **text = format!("Upgrade Price: {:.2}", price.0),
-                PortalUiStat::Coef => **text = format!("Upgrade Coef: {:.2}", coef.0),
+                PortalUiStat::Level => **text = format!("Level {}", portal.level),
+                PortalUiStat::Reward => {
+                    let current_reward = portal_config
+                        .level_scaled_stats
+                        .void_shards_reward
+                        .calculate(portal.level);
+                    **text = format!("Reward: {:.2}", current_reward);
+                },
+                PortalUiStat::Capacity => **text = format!("Max Enemies: {:.0}", capacity.0.value),
+                PortalUiStat::Lifetime => **text = format!("Bonus Lifetime: {:.2}s", lifetime.0.value),
             }
         }
     }
@@ -354,24 +480,37 @@ mod tests {
 
         // Setup States and Resources
         app.init_state::<GameState>();
-        app.insert_resource(PortalConfig {
-            spawn_timer: 1.0,
-            base_void_shards_reward: 10.0,
-            base_upgrade_price: 100.0,
-            upgrade_price_increase_coef: 1.5,
+
+        // Create a dummy config
+        let config = PortalConfig {
+            level: 1,
+            level_up_price: portal::LevelUpConfig {
+                 value: 100.0,
+                 growth_factor: 1.5,
+                 growth_strategy: common::GrowthStrategy::Linear,
+            },
             portal_top_offset: 50.0,
-            base_enemy_health: 10.0,
-            base_enemy_speed: 10.0,
-            base_enemy_lifetime: 10.0,
-            base_enemy_reward: 1.0,
-            enemy_health_growth_factor: 0.5,
-            enemy_reward_growth_factor: 1.0,
-        });
+            level_scaled_stats: portal::LevelScaledStats {
+                 void_shards_reward: portal::LevelScaledStat { value: 10.0, growth_factor: 1.0, growth_strategy: common::GrowthStrategy::Linear },
+                 spawn_timer: portal::LevelScaledStat { value: 1.0, growth_factor: 0.1, growth_strategy: common::GrowthStrategy::Linear },
+                 enemy_health: portal::LevelScaledStat { value: 10.0, growth_factor: 1.0, growth_strategy: common::GrowthStrategy::Linear },
+                 base_enemy_speed: portal::LevelScaledStat { value: 10.0, growth_factor: 1.0, growth_strategy: common::GrowthStrategy::Linear },
+                 base_enemy_lifetime: portal::LevelScaledStat { value: 10.0, growth_factor: 1.0, growth_strategy: common::GrowthStrategy::Linear },
+            },
+            independently_leveled_stats: portal::IndependentlyLeveledStats {
+                capacity: portal::IndependentStatConfig { value: 5.0, price: 50.0, growth_factor: 1.0, price_growth_factor: 1.5, growth_strategy: common::GrowthStrategy::Linear, price_growth_strategy: common::GrowthStrategy::Linear },
+                lifetime: portal::IndependentStatConfig { value: 0.0, price: 50.0, growth_factor: 1.0, price_growth_factor: 1.5, growth_strategy: common::GrowthStrategy::Linear, price_growth_strategy: common::GrowthStrategy::Linear },
+            },
+        };
+
+        app.insert_resource(config.clone());
 
         app.insert_resource(Wallet {
             void_shards: 1000.0,
         });
         app.add_message::<UpgradePortal>();
+        app.add_message::<UpgradePortalCapacity>();
+        app.add_message::<UpgradePortalBonusLifetime>();
 
         // Add Plugin
         app.add_plugins(PortalPanelPlugin);
@@ -380,13 +519,19 @@ mod tests {
         app.insert_state(GameState::Playing);
 
         // Mock a Portal
+        let capacity = common::UpgradeableStat { value: 5.0, price: 50.0, ..default() };
+        let lifetime = common::UpgradeableStat { value: 0.0, price: 50.0, ..default() };
+
         let portal = app
             .world_mut()
             .spawn((
-                Portal,
-                VoidShardsReward(10.0),
-                UpgradePrice(100.0),
-                UpgradeCoef(1.5),
+                Portal {
+                    level: 1,
+                    upgrade_price: 100.0,
+                    ..default()
+                },
+                PortalCapacity(capacity),
+                PortalBonusLifetime(lifetime),
             ))
             .id();
 
@@ -402,11 +547,11 @@ mod tests {
         // Pass wallet funds manually or query from resource in test context
         spawn_portal_ui(
             &mut app.world_mut().commands(),
-            10.0,
-            100.0,
-            1.5,
+            app.world().get::<Portal>(portal).unwrap(),
+            app.world().get::<PortalCapacity>(portal).unwrap(),
+            app.world().get::<PortalBonusLifetime>(portal).unwrap(),
             portal,
-            1000.0,
+            &config,
         );
         app.update();
 
