@@ -1,8 +1,4 @@
-use {
-    bevy::prelude::*,
-    common::GrowthStrategy,
-    serde::Deserialize,
-};
+use {bevy::prelude::*, common::GrowthStrategy, serde::Deserialize, std::collections::HashMap};
 
 // Configs
 #[derive(Deserialize, Asset, Clone, Debug, Resource, Reflect)]
@@ -11,7 +7,7 @@ pub struct PortalConfig {
     pub level_up_price: LevelUpConfig,
     pub portal_top_offset: f32,
     pub level_scaled_stats: LevelScaledStats,
-    pub independently_leveled_stats: IndependentlyLeveledStats,
+    pub upgrades: HashMap<String, IndependentStatConfig>,
 }
 
 #[derive(Deserialize, Clone, Debug, Reflect)]
@@ -48,12 +44,6 @@ impl LevelScaledStat {
             GrowthStrategy::Exponential => self.value * self.growth_factor.powf(effective_level),
         }
     }
-}
-
-#[derive(Deserialize, Clone, Debug, Reflect)]
-pub struct IndependentlyLeveledStats {
-    pub capacity: IndependentStatConfig,
-    pub lifetime: IndependentStatConfig,
 }
 
 #[derive(Deserialize, Clone, Debug, Reflect)]

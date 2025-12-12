@@ -48,8 +48,8 @@
             growth_strategy: Linear,
         ),
     ),
-    independently_leveled_stats: (
-        capacity: (
+    upgrades: {
+        "Capacity": (
             value: 5,
             price: 200,
             growth_factor: 1.5,
@@ -57,7 +57,7 @@
             growth_strategy: Linear,
             price_growth_strategy: Linear,
         ),
-        lifetime: (
+        "Lifetime": (
                 value: 1,
                 price: 500,
                 growth_factor: 0.75,
@@ -65,5 +65,5 @@
                 growth_strategy: Linear,
             price_growth_strategy: Linear,
         )
-    ),
+    },
 )
