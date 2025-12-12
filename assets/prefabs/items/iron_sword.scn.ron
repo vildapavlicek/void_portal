@@ -1,0 +1,14 @@
+(
+  entities: {
+    0: (
+      components: {
+        "items::Item": ( name: "Iron Sword" ),
+        "items::Melee": (),
+        "items::BaseDamage": (15.0),
+        "items::AttackRange": (30.0),
+        "items::AttackSpeed": (1.0),
+        "items::AreaOfEffect": ( radius: 20.0, angle: 1.57 ),
+      },
+    ),
+  }
+)
