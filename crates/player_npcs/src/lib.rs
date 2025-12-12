@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 
 use {
-    bevy::{prelude::*, scene::SceneSpawner, window::PrimaryWindow},
+    bevy::{prelude::*, scene::DynamicScene, window::PrimaryWindow},
     bevy_common_assets::ron::RonAssetPlugin,
     common::GameState,
     enemy::{Enemy, Health, SpawnIndex},
@@ -27,15 +27,15 @@ impl Plugin for PlayerNpcsPlugin {
             .register_type::<Projectile>()
             .register_type::<SoldierConfig>()
             .register_type::<Equipment>()
-            .register_type::<CombatStats>();
+            .register_type::<CombatStats>()
+            .register_type::<BaseCombatStats>();
 
         app.add_systems(OnEnter(GameState::Playing), spawn_player_npc);
 
         app.add_systems(
             Update,
             (
-                handle_loading_weapons,
-                link_weapon_stats,
+                // link_starting_equipment,
                 recalculate_stats,
                 player_npc_movement_logic,
                 player_npc_decision_logic,
@@ -107,7 +107,36 @@ pub struct CombatStats {
     pub move_speed: f32,
 }
 
+#[derive(Component, Reflect, Default, Debug)]
+#[reflect(Component)]
+pub struct BaseCombatStats {
+    pub damage: f32,
+    pub attack_range: f32,
+    pub attack_cooldown: f32,
+    pub projectile_speed: f32,
+    pub projectile_lifetime: f32,
+    pub move_speed: f32,
+}
+
 // Systems
+pub fn link_starting_equipment(
+    mut query: Query<(Entity, &Children, &mut Equipment), (With<Soldier>, Added<Soldier>)>,
+    item_query: Query<Entity, With<Item>>,
+) {
+    for (soldier, children, mut equip) in query.iter_mut() {
+        for child in children.iter() {
+            if item_query.contains(child) {
+                equip.main_hand = Some(child);
+                info!(
+                    "Auto-linked starting weapon {:?} to soldier {:?}",
+                    child, soldier
+                );
+                break;
+            }
+        }
+    }
+}
+
 pub fn recalculate_stats(
     mut commands: Commands,
     mut query: Query<
@@ -117,6 +146,7 @@ pub fn recalculate_stats(
             &Equipment,
             &mut Soldier,
             &mut AttackRange,
+            Option<&BaseCombatStats>,
         ),
         Changed<Equipment>,
     >,
@@ -134,14 +164,23 @@ pub fn recalculate_stats(
     armor_query: Query<&Armor>,
     config: Res<SoldierConfig>,
 ) {
-    for (entity, mut stats, equip, mut soldier, mut attack_range) in query.iter_mut() {
+    for (entity, mut stats, equip, mut soldier, mut attack_range, base_stats) in query.iter_mut() {
         // 1. Reset to Base
-        stats.damage = config.projectile_damage;
-        stats.attack_range = config.attack_range;
-        stats.attack_cooldown = config.attack_timer;
-        stats.projectile_speed = config.projectile_speed;
-        stats.projectile_lifetime = config.projectile_lifetime;
-        stats.move_speed = config.move_speed;
+        if let Some(base) = base_stats {
+            stats.damage = base.damage;
+            stats.attack_range = base.attack_range;
+            stats.attack_cooldown = base.attack_cooldown;
+            stats.projectile_speed = base.projectile_speed;
+            stats.projectile_lifetime = base.projectile_lifetime;
+            stats.move_speed = base.move_speed;
+        } else {
+            stats.damage = config.projectile_damage;
+            stats.attack_range = config.attack_range;
+            stats.attack_cooldown = config.attack_timer;
+            stats.projectile_speed = config.projectile_speed;
+            stats.projectile_lifetime = config.projectile_lifetime;
+            stats.move_speed = config.move_speed;
+        }
 
         // Cleanup markers
         commands.entity(entity).remove::<Melee>();
@@ -202,138 +241,24 @@ pub fn recalculate_stats(
 pub fn spawn_player_npc(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
-    soldier_config: Res<SoldierConfig>,
     player_npc_query: Query<Entity, With<Soldier>>,
     asset_server: Res<AssetServer>,
+    mut scene_spawner: ResMut<SceneSpawner>,
 ) {
     if !player_npc_query.is_empty() {
         return;
     }
 
-    if let Some(window) = window_query.iter().next() {
-        let half_height = window.height() / 2.0;
-        let player_npc_y = -half_height + (window.height() * 0.125);
+    // if let Some(window) = window_query.iter().next() {
+    //     let half_height = window.height() / 2.0;
+    //     let player_npc_y = -half_height + (window.height() * 0.125);
 
-        // Spawn weapon (Async load)
-        let weapon_handle: Handle<DynamicScene> =
-            asset_server.load("prefabs/items/iron_sword.scn.ron");
+    //     let soldier_handle =
+    //         asset_server.load::<DynamicScene>("prefabs/player_npcs/soldier.scn.ron");
+    // }
 
-        // Create a marker entity for loading
-        let loading_weapon = commands
-            .spawn(LoadingWeapon {
-                handle: weapon_handle.clone(),
-                owner: None, // Will set owner after spawning soldier
-            })
-            .id();
-
-        let soldier = commands
-            .spawn((
-                Sprite {
-                    color: Color::srgb(0.0, 1.0, 0.0), // Terminal Green
-                    custom_size: Some(Vec2::new(32.0, 32.0)),
-                    ..default()
-                },
-                Transform::from_xyz(0.0, player_npc_y, 0.0),
-                Soldier {
-                    attack_timer: Timer::from_seconds(
-                        soldier_config.attack_timer,
-                        TimerMode::Repeating,
-                    ),
-                    target: None,
-                },
-                AttackRange(soldier_config.attack_range),
-                Equipment::default(), // Will be updated by system
-                CombatStats {
-                    damage: soldier_config.projectile_damage,
-                    attack_range: soldier_config.attack_range,
-                    attack_cooldown: soldier_config.attack_timer,
-                    projectile_speed: soldier_config.projectile_speed,
-                    projectile_lifetime: soldier_config.projectile_lifetime,
-                    move_speed: soldier_config.move_speed,
-                },
-            ))
-            .id();
-
-        // Link owner
-        commands.entity(loading_weapon).insert(LoadingWeapon {
-            handle: weapon_handle,
-            owner: Some(soldier),
-        });
-
-        info!(
-            "Player NPC spawned at y={}. Loading weapon...",
-            player_npc_y
-        );
-    }
-}
-
-// Marker for async weapon loading
-#[derive(Component)]
-pub struct LoadingWeapon {
-    pub handle: Handle<DynamicScene>,
-    pub owner: Option<Entity>,
-}
-
-// System to process LoadingWeapon
-pub fn handle_loading_weapons(
-    mut commands: Commands,
-    query: Query<(Entity, &LoadingWeapon)>,
-    scenes: Res<Assets<DynamicScene>>,
-    mut scene_spawner: ResMut<SceneSpawner>,
-) {
-    for (entity, loading) in query.iter() {
-        if scenes.contains(&loading.handle) {
-            // Scene is loaded, spawn it
-            if let Some(owner) = loading.owner {
-                // We spawn the scene. We need to track the spawned entities to attach to owner.
-                // SceneSpawner::spawn_dynamic returns an InstanceId.
-                let instance_id = scene_spawner.spawn_dynamic(loading.handle.clone());
-
-                // We need to link this instance to the owner.
-                // Create a component to track this instance
-                commands.spawn(WeaponInstance { instance_id, owner });
-            }
-            // Cleanup loader
-            commands.entity(entity).despawn();
-        }
-    }
-}
-
-#[derive(Component)]
-pub struct WeaponInstance {
-    pub instance_id: be_vy_scene::InstanceId,
-    pub owner: Entity,
-}
-use bevy::scene as be_vy_scene; // Alias to avoid conflict if needed
-
-// System to link spawned weapon to soldier
-pub fn link_weapon_stats(
-    mut commands: Commands,
-    query: Query<(Entity, &WeaponInstance)>,
-    scene_spawner: Res<SceneSpawner>,
-    item_query: Query<Entity, With<Item>>,
-    mut equipment_query: Query<&mut Equipment>,
-) {
-    for (tracker_entity, instance) in query.iter() {
-        if scene_spawner.instance_is_ready(instance.instance_id) {
-            // Get entities in this instance
-            for entity in scene_spawner.iter_instance_entities(instance.instance_id) {
-                if item_query.contains(entity) {
-                    // Found the item!
-                    if let Ok(mut equipment) = equipment_query.get_mut(instance.owner) {
-                        equipment.main_hand = Some(entity);
-                        info!(
-                            "Equipped weapon {:?} to soldier {:?}",
-                            entity, instance.owner
-                        );
-                    }
-                    // Despawn tracker
-                    commands.entity(tracker_entity).despawn();
-                    break;
-                }
-            }
-        }
-    }
+    let soldier_handle = asset_server.load::<DynamicScene>("prefabs/player_npcs/soldier.scn.ron");
+    scene_spawner.spawn_dynamic(soldier_handle);
 }
 
 pub fn player_npc_decision_logic(
