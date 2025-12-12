@@ -55,13 +55,15 @@
             growth_factor: 1.5,
             price_growth_factor: 2,
             growth_strategy: Linear,
+            price_growth_strategy: Linear,
         ),
         lifetime: (
                 value: 1,
                 price: 500,
                 growth_factor: 0.75,
                 price_growth_factor: 2,
-            ygrowth_strategs: Linear
+                growth_strategy: Linear,
+            price_growth_strategy: Linear,
         )
     ),
 )
