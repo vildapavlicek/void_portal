@@ -1,19 +1,30 @@
 use {bevy::prelude::*, serde::Deserialize};
 
-#[derive(Debug, Clone, Copy, Reflect, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Reflect, Deserialize, PartialEq)]
 pub enum GrowthStrategy {
-    #[default]
-    /// Value = Base + (Level * Factor)
-    Linear,
-    /// Value = Base * (Factor ^ Level)
-    Exponential,
+    /// Returns the same value regardless of level.
+    Static(f32),
+    /// Calculation: base + (level * coefficient)
+    Linear { base: f32, coefficient: f32 },
+    /// Calculation: base * (factor ^ level)
+    Exponential { base: f32, factor: f32 },
+    /// Calculation: base + (level * step)
+    Incremental { base: f32, step: f32 },
+}
+
+impl Default for GrowthStrategy {
+    fn default() -> Self {
+        Self::Static(0.0)
+    }
 }
 
 impl GrowthStrategy {
-    pub fn calculate(self, base: f32, level: f32, factor: f32) -> f32 {
+    pub fn calculate(&self, level: f32) -> f32 {
         match self {
-            Self::Linear => base + (level * factor),
-            Self::Exponential => base * (factor.powf(level)),
+            Self::Static(val) => *val,
+            Self::Linear { base, coefficient } => base + (level * coefficient),
+            Self::Exponential { base, factor } => base * factor.powf(level),
+            Self::Incremental { base, step } => base + (level * step),
         }
     }
 }
@@ -21,28 +32,15 @@ impl GrowthStrategy {
 #[derive(Debug, Clone, Reflect, Deserialize, Component)]
 #[reflect(Component)]
 pub struct UpgradeableStat {
-    /// Current level of the stat
     pub level: f32,
 
-    /// Current calculated value
+    // Cached current state
     pub value: f32,
-    /// Current calculated price to upgrade
     pub price: f32,
 
-    /// Base value used for recalculation
-    pub base_value: f32,
-    /// Base price used for recalculation
-    pub base_price: f32,
-
-    /// Factor used for value growth
-    pub value_growth_factor: f32,
-    /// Strategy used for value growth
-    pub value_growth_type: GrowthStrategy,
-
-    /// Factor used for price growth
-    pub price_growth_factor: f32,
-    /// Strategy used for price growth
-    pub price_growth_type: GrowthStrategy,
+    // Logic containers
+    pub value_strategy: GrowthStrategy,
+    pub price_strategy: GrowthStrategy,
 }
 
 impl Default for UpgradeableStat {
@@ -51,74 +49,38 @@ impl Default for UpgradeableStat {
             level: 0.0,
             value: 0.0,
             price: 0.0,
-            base_value: 0.0,
-            base_price: 0.0,
-            value_growth_factor: 0.0,
-            value_growth_type: GrowthStrategy::Linear,
-            price_growth_factor: 0.0,
-            price_growth_type: GrowthStrategy::Linear,
+            value_strategy: GrowthStrategy::default(),
+            price_strategy: GrowthStrategy::default(),
         }
     }
 }
 
 impl UpgradeableStat {
-    pub fn new(
-        base_value: f32,
-        base_price: f32,
-        value_growth_factor: f32,
-        value_growth_type: GrowthStrategy,
-        price_growth_factor: f32,
-        price_growth_type: GrowthStrategy,
-    ) -> Self {
+    pub fn new(value_strategy: GrowthStrategy, price_strategy: GrowthStrategy) -> Self {
         let mut stat = Self {
             level: 0.0,
-            value: base_value,
-            price: base_price,
-            base_value,
-            base_price,
-            value_growth_factor,
-            value_growth_type,
-            price_growth_factor,
-            price_growth_type,
+            value: 0.0,
+            price: 0.0,
+            value_strategy,
+            price_strategy,
         };
         stat.recalculate();
         stat
     }
 
-    /// Increments the level by 1.0 and recalculates stats
     pub fn upgrade(&mut self) {
         self.level += 1.0;
         self.recalculate();
     }
 
-    /// Sets the level explicitly and recalculates stats
     pub fn set_level(&mut self, level: f32) {
         self.level = level;
         self.recalculate();
     }
 
-    fn calculate_value(base: f32, level: f32, factor: f32, strategy: GrowthStrategy) -> f32 {
-        match strategy {
-            GrowthStrategy::Linear => base + (level * factor),
-            GrowthStrategy::Exponential => base * factor.powf(level),
-        }
-    }
-
-    /// Recalculates value and price based on current level and base stats
     pub fn recalculate(&mut self) {
-        self.value = Self::calculate_value(
-            self.base_value,
-            self.level,
-            self.value_growth_factor,
-            self.value_growth_type,
-        );
-
-        self.price = Self::calculate_value(
-            self.base_price,
-            self.level,
-            self.price_growth_factor,
-            self.price_growth_type,
-        );
+        self.value = self.value_strategy.calculate(self.level);
+        self.price = self.price_strategy.calculate(self.level);
     }
 }
 
@@ -127,84 +89,52 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_linear_growth() {
-        // Base: 10, Factor: 2 => L0=10, L1=12, L2=14
+    fn test_static_strategy() {
+        let strategy = GrowthStrategy::Static(10.0);
+        assert_eq!(strategy.calculate(0.0), 10.0);
+        assert_eq!(strategy.calculate(100.0), 10.0);
+    }
+
+    #[test]
+    fn test_linear_strategy() {
+        let strategy = GrowthStrategy::Linear { base: 10.0, coefficient: 2.0 };
+        assert_eq!(strategy.calculate(0.0), 10.0);
+        assert_eq!(strategy.calculate(1.0), 12.0);
+        assert_eq!(strategy.calculate(2.0), 14.0);
+    }
+
+    #[test]
+    fn test_exponential_strategy() {
+        let strategy = GrowthStrategy::Exponential { base: 10.0, factor: 2.0 };
+        assert_eq!(strategy.calculate(0.0), 10.0);
+        assert_eq!(strategy.calculate(1.0), 20.0);
+        assert_eq!(strategy.calculate(2.0), 40.0);
+    }
+
+    #[test]
+    fn test_incremental_strategy() {
+        let strategy = GrowthStrategy::Incremental { base: 5.0, step: 1.0 };
+        assert_eq!(strategy.calculate(0.0), 5.0);
+        assert_eq!(strategy.calculate(1.0), 6.0);
+        assert_eq!(strategy.calculate(2.0), 7.0);
+    }
+
+    #[test]
+    fn test_upgradeable_stat() {
         let mut stat = UpgradeableStat::new(
-            10.0,
-            100.0,
-            2.0,
-            GrowthStrategy::Linear,
-            0.0,
-            GrowthStrategy::Linear,
+            GrowthStrategy::Incremental { base: 10.0, step: 1.0 },
+            GrowthStrategy::Linear { base: 100.0, coefficient: 50.0 },
         );
 
+        // Level 0
+        assert_eq!(stat.level, 0.0);
         assert_eq!(stat.value, 10.0);
+        assert_eq!(stat.price, 100.0);
 
+        // Upgrade to Level 1
         stat.upgrade();
         assert_eq!(stat.level, 1.0);
-        assert_eq!(stat.value, 12.0); // 10 + 1*2
-
-        stat.upgrade();
-        assert_eq!(stat.level, 2.0);
-        assert_eq!(stat.value, 14.0); // 10 + 2*2
-    }
-
-    #[test]
-    fn test_exponential_growth() {
-        // Base: 10, Factor: 2 => L0=10, L1=20, L2=40
-        let mut stat = UpgradeableStat::new(
-            10.0,
-            100.0,
-            2.0,
-            GrowthStrategy::Exponential,
-            0.0,
-            GrowthStrategy::Linear,
-        );
-
-        assert_eq!(stat.value, 10.0); // 10 * 2^0
-
-        stat.upgrade();
-        assert_eq!(stat.level, 1.0);
-        assert_eq!(stat.value, 20.0); // 10 * 2^1
-
-        stat.upgrade();
-        assert_eq!(stat.level, 2.0);
-        assert_eq!(stat.value, 40.0); // 10 * 2^2
-    }
-
-    #[test]
-    fn test_mixed_growth() {
-        // Value: Linear (+10), Price: Exponential (x1.1)
-        let mut stat = UpgradeableStat::new(
-            100.0,
-            10.0,
-            10.0,
-            GrowthStrategy::Linear,
-            1.1,
-            GrowthStrategy::Exponential,
-        );
-
-        stat.set_level(5.0);
-
-        // Value = 100 + 5 * 10 = 150
-        assert_eq!(stat.value, 150.0);
-
-        // Price = 10 * 1.1^5 = 10 * 1.61051 = 16.1051
-        assert!((stat.price - 16.1051).abs() < 0.001);
-    }
-
-    #[test]
-    fn test_f32_level_scaling() {
-        let mut stat = UpgradeableStat::new(
-            10.0,
-            100.0,
-            2.0,
-            GrowthStrategy::Linear,
-            0.0,
-            GrowthStrategy::Linear,
-        );
-
-        stat.set_level(0.5);
-        assert_eq!(stat.value, 11.0); // 10 + 0.5 * 2
+        assert_eq!(stat.value, 11.0);
+        assert_eq!(stat.price, 150.0);
     }
 }
