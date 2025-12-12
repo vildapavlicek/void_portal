@@ -3,6 +3,7 @@
 
 use {
     bevy::{prelude::*, window::PrimaryWindow},
+    std::collections::HashMap,
     bevy_common_assets::ron::RonAssetPlugin,
     common::{GameState, GrowthStrategy, RequestUpgrade, Reward, UpgradePortal, UpgradeableStat},
     enemy::{AvailableEnemies, Enemy, Health, Lifetime, SpawnIndex, Speed},
@@ -24,7 +25,8 @@ impl Plugin for PortalPlugin {
             .register_type::<UpgradeableStat>()
             .register_type::<PortalConfig>()
             .register_type::<PortalStats>()
-            .register_type::<SpawnTimer>();
+            .register_type::<SpawnTimer>()
+            .register_type::<PortalUpgrades>();
 
         app.init_resource::<PortalSpawnTracker>();
 
@@ -67,6 +69,10 @@ pub struct PortalStats {
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
 pub struct SpawnTimer(pub Timer);
+
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
+pub struct PortalUpgrades(pub HashMap<String, Entity>);
 
 // Resources
 #[derive(Resource, Default)]
@@ -113,6 +119,7 @@ pub fn spawn_portal(
             .id();
 
         // Spawn upgrades as children
+        let mut upgrades = HashMap::new();
         commands.entity(portal_entity).with_children(|parent| {
             for (name, config) in &portal_config.upgrades {
                 let stat = UpgradeableStat::new(
@@ -124,9 +131,16 @@ pub fn spawn_portal(
                     config.price_growth_strategy,
                 );
 
-                parent.spawn((UpgradeSlot { name: name.clone() }, stat));
+                let id = parent
+                    .spawn((UpgradeSlot { name: name.clone() }, stat))
+                    .id();
+                upgrades.insert(name.clone(), id);
             }
         });
+
+        commands
+            .entity(portal_entity)
+            .insert(PortalUpgrades(upgrades));
 
         info!(
             "Portal spawned at y={} | entity={portal_entity:?}",
@@ -143,7 +157,7 @@ pub fn spawn_enemies(
     mut portal_query: Query<(
         &Transform,
         &Portal,
-        &Children,
+        &PortalUpgrades,
         &PortalStats,
         &mut SpawnTimer,
     )>,
@@ -151,7 +165,7 @@ pub fn spawn_enemies(
     mut spawn_tracker: ResMut<PortalSpawnTracker>,
     window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
-    for (portal_transform, portal, children, portal_stats, mut spawn_timer) in
+    for (portal_transform, portal, upgrades, portal_stats, mut spawn_timer) in
         portal_query.iter_mut()
     {
         spawn_timer.0.tick(time.delta());
@@ -163,26 +177,24 @@ pub fn spawn_enemies(
             }
 
             // Find Capacity and Lifetime upgrades
-            let mut capacity_val = None;
-            let mut lifetime_bonus = None;
+            let capacity_entity = upgrades
+                .0
+                .get("Capacity")
+                .expect("Capacity upgrade not found in PortalUpgrades");
+            let lifetime_entity = upgrades
+                .0
+                .get("Lifetime")
+                .expect("Lifetime upgrade not found in PortalUpgrades");
 
-            for &child in children {
-                if let Ok((slot, stat)) = upgrade_query.get(child) {
-                    if slot.name == "Capacity" {
-                        capacity_val = Some(stat.value);
-                    } else if slot.name == "Lifetime" {
-                        lifetime_bonus = Some(stat.value);
-                    }
-                }
-            }
+            let (_, capacity_stat) = upgrade_query
+                .get(*capacity_entity)
+                .expect("Capacity upgrade entity not found in world");
+            let (_, lifetime_stat) = upgrade_query
+                .get(*lifetime_entity)
+                .expect("Lifetime upgrade entity not found in world");
 
-            // If capacity or lifetime upgrades are missing, we might skip spawning or panic.
-            // Using expect here as per existing logic, but maybe better to log warning and skip?
-            // "expect" is safer for catching config errors early during dev.
-            let capacity_val =
-                capacity_val.expect("Capacity upgrade not found on Portal children!");
-            let lifetime_bonus =
-                lifetime_bonus.expect("Lifetime upgrade not found on Portal children!");
+            let capacity_val = capacity_stat.value;
+            let lifetime_bonus = lifetime_stat.value;
 
             // Check Global Capacity (Current Logic: Global Count vs Local Capacity)
             if enemy_query.iter().count() >= capacity_val as usize {
