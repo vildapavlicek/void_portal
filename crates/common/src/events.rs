@@ -10,3 +10,6 @@ pub struct UpgradePortal;
 
 #[derive(Message, Debug, Clone)]
 pub struct UpgradePortalCapacity;
+
+#[derive(Message, Debug, Clone)]
+pub struct UpgradePortalBonusLifetime;

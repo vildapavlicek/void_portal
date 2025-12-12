@@ -4,7 +4,10 @@
 use {
     bevy::{prelude::*, window::PrimaryWindow},
     bevy_common_assets::ron::RonAssetPlugin,
-    common::{GameState, GrowthStrategy, Reward, UpgradePortal, UpgradePortalCapacity, UpgradeableStat},
+    common::{
+        GameState, GrowthStrategy, Reward, UpgradePortal, UpgradePortalBonusLifetime,
+        UpgradePortalCapacity, UpgradeableStat,
+    },
     enemy::{AvailableEnemies, Enemy, Health, Lifetime, SpawnIndex, Speed},
     rand::Rng,
     wallet::Wallet,
@@ -38,6 +41,7 @@ impl Plugin for PortalPlugin {
                 spawn_enemies,
                 handle_portal_upgrade,
                 handle_portal_capacity_upgrade,
+                handle_portal_bonus_lifetime_upgrade,
             )
                 .run_if(in_state(GameState::Playing)),
         );
@@ -266,6 +270,14 @@ pub fn handle_portal_upgrade(
                 warn!("Not enough shards to upgrade portal!");
             }
         }
+    }
+}
+
+pub fn handle_portal_bonus_lifetime_upgrade(
+    mut events: MessageReader<UpgradePortalBonusLifetime>,
+) {
+    for _event in events.read() {
+        warn!("TODO: Implement bonus lifetime upgrade logic");
     }
 }
 
