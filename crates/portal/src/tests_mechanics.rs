@@ -1,12 +1,14 @@
 use {
     crate::{
-        handle_portal_capacity_upgrade, handle_portal_upgrade, spawn_enemies, spawn_portal,
-        EnemySpawnTimer, IndependentStatConfig, IndependentlyLeveledStats, LevelScaledStat,
-        LevelScaledStats, LevelUpConfig, Portal, PortalBonusLifetime, PortalCapacity, PortalConfig,
-        PortalSpawnTracker,
+        handle_portal_bonus_lifetime_upgrade, handle_portal_capacity_upgrade,
+        handle_portal_upgrade, spawn_enemies, spawn_portal, EnemySpawnTimer, IndependentStatConfig,
+        IndependentlyLeveledStats, LevelScaledStat, LevelScaledStats, LevelUpConfig, Portal,
+        PortalBonusLifetime, PortalCapacity, PortalConfig, PortalSpawnTracker,
     },
     bevy::{prelude::*, time::TimePlugin},
-    common::{GrowthStrategy, Reward, UpgradePortal, UpgradePortalCapacity},
+    common::{
+        GrowthStrategy, Reward, UpgradePortal, UpgradePortalBonusLifetime, UpgradePortalCapacity,
+    },
     enemy::{AvailableEnemies, Enemy, EnemyConfig, Health, Lifetime},
     wallet::Wallet,
 };
@@ -20,6 +22,7 @@ fn setup_app() -> App {
 
     app.add_message::<UpgradePortal>();
     app.add_message::<UpgradePortalCapacity>();
+    app.add_message::<UpgradePortalBonusLifetime>();
 
     // Mock Window
     app.world_mut().spawn((
@@ -109,6 +112,7 @@ fn setup_app() -> App {
             spawn_enemies,
             handle_portal_upgrade,
             handle_portal_capacity_upgrade,
+            handle_portal_bonus_lifetime_upgrade,
         ),
     );
 
@@ -171,7 +175,11 @@ fn test_portal_upgrade() {
         let wallet = app.world().resource::<Wallet>();
         assert_eq!(wallet.void_shards, 1000.0);
 
-        let portal = app.world_mut().query::<&Portal>().single(app.world());
+        let portal = app
+            .world_mut()
+            .query::<&Portal>()
+            .single(app.world())
+            .unwrap();
         assert_eq!(portal.level, 1);
         assert_eq!(portal.upgrade_price, 100.0);
     }
@@ -184,7 +192,11 @@ fn test_portal_upgrade() {
         // 1000 - 100 = 900
         assert_eq!(wallet.void_shards, 900.0);
 
-        let portal = app.world_mut().query::<&Portal>().single(app.world());
+        let portal = app
+            .world_mut()
+            .query::<&Portal>()
+            .single(app.world())
+            .unwrap();
         // Level 2
         assert_eq!(portal.level, 2);
         // Price: Linear Growth Strategy in Test Setup: 100 + 1.5 = 101.5
@@ -209,7 +221,11 @@ fn test_enemy_stats_at_level_2() {
     app.update();
 
     // Verify Level 2
-    let portal = app.world_mut().query::<&Portal>().single(app.world());
+    let portal = app
+        .world_mut()
+        .query::<&Portal>()
+        .single(app.world())
+        .unwrap();
     assert_eq!(portal.level, 2);
 
     // Reset timer
@@ -260,7 +276,11 @@ fn test_upgrade_insufficient_funds() {
     let wallet = app.world().resource::<Wallet>();
     assert_eq!(wallet.void_shards, 50.0); // No change
 
-    let portal = app.world_mut().query::<&Portal>().single(app.world());
+    let portal = app
+        .world_mut()
+        .query::<&Portal>()
+        .single(app.world())
+        .unwrap();
     assert_eq!(portal.level, 1); // No level up
 }
 
@@ -274,7 +294,7 @@ fn test_capacity_upgrade() {
         let Ok((_, capacity)) = app
             .world_mut()
             .query::<(&Portal, &PortalCapacity)>()
-            .get_single(app.world())
+            .single(app.world())
         else {
             panic!("Could not find portal capacity");
         };
@@ -298,7 +318,7 @@ fn test_capacity_upgrade() {
         let Ok((_, capacity)) = app
             .world_mut()
             .query::<(&Portal, &PortalCapacity)>()
-            .get_single(app.world())
+            .single(app.world())
         else {
             panic!("Could not find portal capacity");
         };
@@ -311,5 +331,52 @@ fn test_capacity_upgrade() {
         // logic is `calculate_value` -> base * factor^level.
         // Level becomes 1. Base 200. 200 * 1.5^1 = 300.
         assert_eq!(capacity.0.price, 300.0);
+    }
+}
+
+#[test]
+fn test_bonus_lifetime_upgrade() {
+    let mut app = setup_app();
+    app.update(); // Spawn portal
+
+    // Initial check
+    {
+        let Ok((_, _, lifetime)) = app
+            .world_mut()
+            .query::<(&Portal, &PortalCapacity, &PortalBonusLifetime)>()
+            .single(app.world())
+        else {
+            panic!("Could not find portal bonus lifetime");
+        };
+        assert_eq!(lifetime.0.value, 0.0); // Base lifetime
+        assert_eq!(lifetime.0.price, 100.0); // Base lifetime price
+    }
+
+    // Trigger bonus lifetime upgrade
+    app.world_mut()
+        .resource_mut::<Messages<UpgradePortalBonusLifetime>>()
+        .write(UpgradePortalBonusLifetime);
+
+    app.update();
+
+    // Post upgrade check
+    {
+        let wallet = app.world().resource::<Wallet>();
+        // 1000 - 100 = 900
+        assert_eq!(wallet.void_shards, 900.0);
+
+        let Ok((_, _, lifetime)) = app
+            .world_mut()
+            .query::<(&Portal, &PortalCapacity, &PortalBonusLifetime)>()
+            .single(app.world())
+        else {
+            panic!("Could not find portal bonus lifetime");
+        };
+
+        // Lifetime value growth: Linear, factor 1.0. 0 + 1 = 1.
+        assert_eq!(lifetime.0.value, 1.0);
+
+        // Price growth: Exponential, factor 1.5. 100 * 1.5^1 = 150.
+        assert_eq!(lifetime.0.price, 150.0);
     }
 }
