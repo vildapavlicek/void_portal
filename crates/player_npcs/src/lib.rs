@@ -35,7 +35,7 @@ impl Plugin for PlayerNpcsPlugin {
         app.add_systems(
             Update,
             (
-                // link_starting_equipment,
+                link_starting_equipment,
                 recalculate_stats,
                 player_npc_movement_logic,
                 player_npc_decision_logic,
