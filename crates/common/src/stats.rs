@@ -9,7 +9,8 @@ pub enum GrowthStrategy {
     Exponential,
 }
 
-#[derive(Debug, Clone, Reflect, Deserialize)]
+#[derive(Debug, Clone, Reflect, Deserialize, Component)]
+#[reflect(Component)]
 pub struct UpgradeableStat {
     /// Current level of the stat
     pub level: f32,
