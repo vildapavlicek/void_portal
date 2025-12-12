@@ -39,10 +39,8 @@ impl LevelScaledStat {
         // Formula usually involves (level - 1) for scaling from base.
         let effective_level = if level > 0 { (level - 1) as f32 } else { 0.0 };
 
-        match self.growth_strategy {
-            GrowthStrategy::Linear => self.value + (effective_level * self.growth_factor),
-            GrowthStrategy::Exponential => self.value * self.growth_factor.powf(effective_level),
-        }
+        self.growth_strategy
+            .calculate(self.value, effective_level, self.growth_factor)
     }
 }
 

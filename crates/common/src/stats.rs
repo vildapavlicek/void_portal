@@ -9,6 +9,15 @@ pub enum GrowthStrategy {
     Exponential,
 }
 
+impl GrowthStrategy {
+    pub fn calculate(self, base: f32, level: f32, factor: f32) -> f32 {
+        match self {
+            Self::Linear => base + (level * factor),
+            Self::Exponential => base * (factor.powf(level)),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Reflect, Deserialize, Component)]
 #[reflect(Component)]
 pub struct UpgradeableStat {
