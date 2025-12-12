@@ -5,9 +5,11 @@ use {
     bevy_common_assets::ron::RonAssetPlugin,
     common::GameState,
     enemy::{Enemy, Health, SpawnIndex},
+    items::{Armor, Weapon},
     portal::PortalSpawnTracker,
     serde::Deserialize,
 };
+use std::time::Duration;
 
 pub struct PlayerNpcsPlugin;
 
@@ -20,13 +22,16 @@ impl Plugin for PlayerNpcsPlugin {
             .register_type::<Moving>()
             .register_type::<Attacking>()
             .register_type::<Projectile>()
-            .register_type::<SoldierConfig>();
+            .register_type::<SoldierConfig>()
+            .register_type::<Equipment>()
+            .register_type::<CombatStats>();
 
         app.add_systems(OnEnter(GameState::Playing), spawn_player_npc);
 
         app.add_systems(
             Update,
             (
+                recalculate_stats,
                 player_npc_movement_logic,
                 player_npc_decision_logic,
                 player_npc_attack_logic,
@@ -78,7 +83,61 @@ pub struct Projectile {
     pub lifetime: Timer,
 }
 
+#[derive(Component, Reflect, Default, Debug)]
+#[reflect(Component)]
+pub struct Equipment {
+    pub main_hand: Option<Entity>,
+    pub armor: Option<Entity>,
+}
+
+#[derive(Component, Reflect, Default, Debug)]
+#[reflect(Component)]
+pub struct CombatStats {
+    pub damage: f32,
+    pub attack_range: f32,
+    pub attack_cooldown: f32,
+    pub projectile_speed: f32,
+    pub move_speed: f32,
+}
+
 // Systems
+pub fn recalculate_stats(
+    mut query: Query<(&mut CombatStats, &Equipment, &mut Soldier, &mut AttackRange), Changed<Equipment>>,
+    weapon_query: Query<&Weapon>,
+    armor_query: Query<&Armor>,
+    config: Res<SoldierConfig>,
+) {
+    for (mut stats, equip, mut soldier, mut attack_range) in query.iter_mut() {
+        // 1. Reset to Base
+        stats.damage = config.projectile_damage;
+        stats.attack_range = config.attack_range;
+        stats.attack_cooldown = config.attack_timer;
+        stats.projectile_speed = config.projectile_speed;
+        stats.move_speed = config.move_speed;
+
+        // 2. Apply Weapon
+        if let Some(e) = equip.main_hand {
+            if let Ok(w) = weapon_query.get(e) {
+                stats.damage += w.damage;
+                stats.attack_range += w.range;
+                stats.attack_cooldown *= w.attack_speed_modifier;
+                stats.projectile_speed += w.projectile_speed;
+            }
+        }
+
+        // 3. Apply Armor
+        if let Some(e) = equip.armor {
+            if let Ok(a) = armor_query.get(e) {
+                stats.move_speed += a.movement_speed_modifier;
+            }
+        }
+
+        // 4. Update Dependent Components
+        soldier.attack_timer.set_duration(Duration::from_secs_f32(stats.attack_cooldown));
+        attack_range.0 = stats.attack_range;
+    }
+}
+
 pub fn spawn_player_npc(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
@@ -108,6 +167,14 @@ pub fn spawn_player_npc(
                 target: None,
             },
             AttackRange(soldier_config.attack_range),
+            Equipment::default(),
+            CombatStats {
+                damage: soldier_config.projectile_damage,
+                attack_range: soldier_config.attack_range,
+                attack_cooldown: soldier_config.attack_timer,
+                projectile_speed: soldier_config.projectile_speed,
+                move_speed: soldier_config.move_speed,
+            },
         ));
         info!("Player NPC spawned at y={}", player_npc_y);
     }
@@ -162,14 +229,14 @@ pub fn player_npc_decision_logic(
 pub fn player_npc_movement_logic(
     mut commands: Commands,
     time: Res<Time>,
-    soldier_config: Res<SoldierConfig>,
+    _soldier_config: Res<SoldierConfig>, // Keep using Res<SoldierConfig> or move to CombatStats
     mut player_npc_query: Query<
-        (Entity, &mut Transform, &Moving, &AttackRange),
+        (Entity, &mut Transform, &Moving, &AttackRange, &CombatStats),
         (Without<Attacking>, Without<Enemy>),
     >, // TODO: Make this generic for all PlayerNpc types, currently coupled to Soldier component
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
-    for (entity, mut player_npc_transform, moving, attack_range) in player_npc_query.iter_mut() {
+    for (entity, mut player_npc_transform, moving, attack_range, combat_stats) in player_npc_query.iter_mut() {
         let target = moving.0;
 
         if let Ok(target_transform) = enemy_query.get(target) {
@@ -181,7 +248,7 @@ pub fn player_npc_movement_logic(
                 let direction = (target_transform.translation - player_npc_transform.translation)
                     .normalize_or_zero();
                 player_npc_transform.translation +=
-                    direction * soldier_config.move_speed * time.delta_secs();
+                    direction * combat_stats.move_speed * time.delta_secs();
 
                 let new_distance = player_npc_transform
                     .translation
@@ -201,14 +268,14 @@ pub fn player_npc_movement_logic(
 pub fn player_npc_attack_logic(
     mut commands: Commands,
     time: Res<Time>,
-    soldier_config: Res<SoldierConfig>,
+    _soldier_config: Res<SoldierConfig>,
     mut player_npc_query: Query<
-        (Entity, &Transform, &mut Soldier, &Attacking, &AttackRange),
+        (Entity, &Transform, &mut Soldier, &Attacking, &AttackRange, &CombatStats),
         Without<Moving>,
     >, // TODO: Make this generic for all PlayerNpc types, currently coupled to Soldier component
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
-    for (entity, player_npc_transform, mut soldier, attacking, attack_range) in
+    for (entity, player_npc_transform, mut soldier, attacking, attack_range, combat_stats) in
         player_npc_query.iter_mut()
     {
         let target = attacking.0;
@@ -226,7 +293,10 @@ pub fn player_npc_attack_logic(
                     let direction = (target_transform.translation
                         - player_npc_transform.translation)
                         .normalize_or_zero();
-                    let speed = soldier_config.projectile_speed;
+
+                    let speed = combat_stats.projectile_speed;
+                    let range = combat_stats.attack_range;
+                    let lifetime_secs = if speed > 0.0 { range / speed } else { 0.0 };
 
                     commands.spawn((
                         Sprite {
@@ -237,9 +307,9 @@ pub fn player_npc_attack_logic(
                         Transform::from_translation(player_npc_transform.translation),
                         Projectile {
                             velocity: direction * speed,
-                            damage: soldier_config.projectile_damage,
+                            damage: combat_stats.damage,
                             lifetime: Timer::from_seconds(
-                                soldier_config.projectile_lifetime,
+                                lifetime_secs,
                                 TimerMode::Once,
                             ),
                         },
@@ -293,7 +363,9 @@ pub fn projectile_collision(
     }
 }
 
+// #[cfg(test)]
+// mod tests_logic;
+// #[cfg(test)]
+// mod tests_timing;
 #[cfg(test)]
-mod tests_logic;
-#[cfg(test)]
-mod tests_timing;
+mod tests_items;

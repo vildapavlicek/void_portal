@@ -6,6 +6,7 @@ use {
     bevy::{asset::LoadedFolder, prelude::*},
     common::{EnemyKilled, GameState, RequestUpgrade, UpgradePortal},
     enemy::{AvailableEnemies, EnemyConfig, EnemyPlugin},
+    items::ItemsPlugin,
     player_npcs::{PlayerNpcsPlugin, SoldierConfig},
     portal::{PortalConfig, PortalPlugin},
     ui::VoidUiPlugin,
@@ -35,6 +36,7 @@ impl Plugin for VoidPortalPlugin {
             PortalPlugin,
             PlayerNpcsPlugin,
             VoidUiPlugin,
+            ItemsPlugin,
         ));
 
         app.init_resource::<GameConfigHandles>();
