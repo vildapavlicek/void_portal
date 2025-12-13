@@ -22,7 +22,8 @@
 **Architecture & Patterns:**
 * **Strict ECS Separation:** Data lives in Components/Resources. Logic lives in Systems. Do not bind game logic to struct methods (keep the approach functional/data-oriented).
 * **Modular Design:** Every major feature (Portal Logic, Hero AI, UI, Stats) must be organized into its own `Plugin`.
-* **Data-Driven Configuration:** Use `.ron` files for gameplay variables (spawn rates, health scaling, upgrade costs) to allow balancing without recompilation.
+* **Data-Driven Configuration:** Use `.ron` files for gameplay variables to allow balancing without recompilation. Specific extensions help the asset loader distinguish types: `.portal.ron` (mechanics), `.enemy.ron` (enemy stats), and `.soldier.ron` (NPC stats).
+* **Observer Pattern:** Leverage Bevy 0.17+ Observers for event-driven logic (e.g., UI interactions, entity spawning/despawning hooks) to decouple systems.
 
 **Code Quality:**
 * **Error Handling:** Use `expect("context")` for unrecoverable errors to aid debugging. Avoid naked `unwrap()`.
@@ -37,6 +38,7 @@ The project is organized as a Cargo workspace with the following crates:
 * **`enemy`**: Handles enemy logic, systems, and configurations.
 * **`player_npcs`**: Manages player allies (Soldiers, Heroes, etc.) and their logic.
 * **`portal`**: Implements the core portal mechanics, upgrades, and stats.
+* **`items`**: Manages itemization components and equipment stats (e.g. `Melee`, `Ranged`, `Armor`).
 * **`ui`**: Dedicated crate for User Interface systems.
 * **`wallet`**: Manages player resources/currency (Void Shards).
 * **`assets`**: Handles asset loading, configurations, and management.
