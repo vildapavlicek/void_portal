@@ -1,0 +1,45 @@
+(
+  resources: {},
+  entities: {
+    1: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: ( 0.0, -50.0, 0.0 ),
+          scale: ( 1.0, 1.0, 1.0 ),
+          rotation: ( 0.0, 0.0, 0.0, 1.0 ),
+        ),
+        "bevy_sprite::sprite::Sprite": (
+          color: Srgba(Srgba(red: 0.0, green: 1.0, blue: 1.0, alpha: 1.0)),
+          custom_size: Some(( 32.0, 32.0 )),
+        ),
+        "player_npcs::PlayerNpc": (),
+        "player_npcs::MovementSpeed": (150.0),
+        "player_npcs::Target": (None),
+        "bevy_ecs::hierarchy::Children": ([
+          2,
+        ]),
+        "player_npcs::Intent": Idle,
+      },
+    ),
+    2: (
+      components: {
+        "bevy_ecs::hierarchy::ChildOf": (1),
+        "player_npcs::Weapon": (),
+        "items::Item": ( name: "Basic Gun" ),
+        "items::Ranged": (),
+        "items::BaseDamage": (1.0),
+        "items::AttackRange": (150.0),
+        "player_npcs::WeaponCooldown": (
+            timer: (
+                stopwatch: ( elapsed: ( secs: 0, nanos: 0 ), is_paused: false ),
+                duration: ( secs: 1, nanos: 750 ),
+                mode: Repeating,
+                finished: false,
+                times_finished_this_tick: 0,
+            ),
+        ),
+        "items::ProjectileStats": (speed: 300.0, lifetime: 10.0),
+      },
+    ),
+  }
+)
