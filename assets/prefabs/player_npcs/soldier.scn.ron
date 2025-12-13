@@ -12,47 +12,28 @@
           color: Srgba(Srgba(red: 0.0, green: 1.0, blue: 0.0, alpha: 1.0)),
           custom_size: Some(( 32.0, 32.0 )),
         ),
-        "player_npcs::Soldier": (
-          attack_timer: (stopwatch: (
-              elapsed: (
-                secs: 0,
-                nanos: 0,
-              ),
-              is_paused: false,
-            ),
-            duration: (
-              secs: 5,
-              nanos: 0,
-            ),
-            mode: Repeating,
-            finished: false,
-            times_finished_this_tick: 0,
-          ) ,
-          target: None,
-        ),
-        "player_npcs::AttackRange": (150.0),
-        "player_npcs::Equipment": ( main_hand: None, armor: None ),
-        "player_npcs::CombatStats": (
-            damage: 10.0, attack_range: 150.0, attack_cooldown: 1.0,
-            projectile_speed: 400.0, projectile_lifetime: 2.0, move_speed: 100.0,
-        ),
-        "player_npcs::BaseCombatStats": (
-            damage: 10.0, attack_range: 150.0, attack_cooldown: 1.0,
-            projectile_speed: 400.0, projectile_lifetime: 2.0, move_speed: 100.0,
-        ),
-        // "common::ParentId": (1)
+        "player_npcs::PlayerNpc": (),
+        "player_npcs::MovementSpeed": (100.0),
+        "player_npcs::Target": (None),
       },
     ),
     2: (
       components: {
-        // "common::ChildId": (1),
         "bevy_ecs::hierarchy::ChildOf": (1),
+        "player_npcs::Weapon": (),
         "items::Item": ( name: "Iron Sword" ),
         "items::Melee": (),
         "items::BaseDamage": (15.0),
         "items::AttackRange": (30.0),
-        "items::AttackSpeed": (1.0),
-        "items::AreaOfEffect": ( radius: 20.0, angle: 1.57 ),
+        "player_npcs::WeaponCooldown": (
+            timer: (
+                stopwatch: ( elapsed: ( secs: 0, nanos: 0 ), is_paused: false ),
+                duration: ( secs: 1, nanos: 0 ),
+                mode: Repeating,
+                finished: false,
+                times_finished_this_tick: 0,
+            ),
+        ),
       },
     ),
   }
