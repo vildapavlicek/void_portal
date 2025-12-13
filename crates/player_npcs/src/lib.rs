@@ -99,6 +99,9 @@ pub fn spawn_player_npc(
 
     let soldier_handle = asset_server.load::<DynamicScene>("prefabs/player_npcs/soldier.scn.ron");
     scene_spawner.spawn_dynamic(soldier_handle);
+
+    let soldier_handle = asset_server.load::<DynamicScene>("prefabs/player_npcs/ranged.scn.ron");
+    scene_spawner.spawn_dynamic(soldier_handle);
 }
 
 pub fn player_npc_decision_logic(
