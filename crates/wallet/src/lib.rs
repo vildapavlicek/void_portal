@@ -59,8 +59,7 @@ fn update_wallet_from_scavenge(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use common::Dead;
+    use {super::*, common::Dead};
 
     #[test]
     fn test_wallet_update() {

@@ -1,11 +1,8 @@
 use {
     crate::*,
-    bevy::{
-        prelude::*,
-        time::{Time, TimePlugin},
-    },
-    common::EnemyKilled,
-    enemy::{Enemy, Health, SpawnIndex},
+    bevy::time::{Time, TimePlugin},
+    common::{events::DamageMessage, EnemyKilled},
+    enemy::{apply_damage_logic, Enemy, Health, SpawnIndex},
     items::{AttackRange as ItemAttackRange, BaseDamage, Melee, ProjectileStats, Ranged},
     portal::{Portal, PortalSpawnTracker},
 };
@@ -17,6 +14,7 @@ fn create_app_with_minimal_plugins() -> App {
     app.add_plugins(MinimalPlugins.build().disable::<TimePlugin>()); // Manually inserting Time to control it
     app.insert_resource(Time::<()>::default());
     app.add_message::<EnemyKilled>(); // Register EnemyKilled message
+    app.add_message::<DamageMessage>(); // Register DamageMessage
 
     // Register types
     app.register_type::<PlayerNpc>()
@@ -36,10 +34,8 @@ fn create_app_with_minimal_plugins() -> App {
 
 fn spawn_portal_and_tracker(app: &mut App) {
     app.insert_resource(PortalSpawnTracker(0));
-    app.world_mut().spawn((
-        Portal::default(),
-        Transform::default(),
-    ));
+    app.world_mut()
+        .spawn((Portal::default(), Transform::default()));
 }
 
 #[test]
@@ -52,19 +48,20 @@ fn test_npc_acquires_target() {
     // Spawn PlayerNpc
     let npc = app
         .world_mut()
-        .spawn((
-            PlayerNpc,
-            Target(None),
-            Transform::default(),
-        ))
+        .spawn((PlayerNpc, Target(None), Transform::default(), Intent::Idle))
         .id();
 
     // Spawn Enemy
     let enemy = app
         .world_mut()
         .spawn((
-            Enemy { target_position: Vec2::ZERO },
-            Health { current: 100.0, max: 100.0 },
+            Enemy {
+                target_position: Vec2::ZERO,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
             SpawnIndex(0),
             Transform::from_xyz(10.0, 0.0, 0.0),
         ))
@@ -84,7 +81,10 @@ fn test_npc_moves_to_target() {
     let mut app = create_app_with_minimal_plugins();
     spawn_portal_and_tracker(&mut app);
 
-    app.add_systems(Update, (player_npc_decision_logic, player_npc_movement_logic).chain());
+    app.add_systems(
+        Update,
+        (player_npc_decision_logic, player_npc_movement_logic).chain(),
+    );
 
     // Spawn NPC
     let npc = app
@@ -94,22 +94,25 @@ fn test_npc_moves_to_target() {
             Target(None),
             MovementSpeed(100.0),
             Transform::from_xyz(0.0, 0.0, 0.0),
+            Intent::Idle,
         ))
         .id();
 
     // Spawn Weapon Child (Effective Range 20.0)
-    let child = app.world_mut().spawn((
-        Weapon,
-        ItemAttackRange(20.0),
-    )).id();
+    let child = app.world_mut().spawn((Weapon, ItemAttackRange(20.0))).id();
     app.world_mut().entity_mut(npc).add_child(child);
 
     // Spawn Enemy (Distance 100.0)
     let _enemy = app
         .world_mut()
         .spawn((
-            Enemy { target_position: Vec2::ZERO },
-            Health { current: 100.0, max: 100.0 },
+            Enemy {
+                target_position: Vec2::ZERO,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
             SpawnIndex(0),
             Transform::from_xyz(100.0, 0.0, 0.0),
         ))
@@ -129,8 +132,14 @@ fn test_npc_moves_to_target() {
     app.update();
 
     let transform = app.world().get::<Transform>(npc).unwrap();
-    assert!(transform.translation.x > 0.0, "NPC should move towards target");
-    assert!(transform.translation.x < 100.0, "NPC should not overshot instantly");
+    assert!(
+        transform.translation.x > 0.0,
+        "NPC should move towards target"
+    );
+    assert!(
+        transform.translation.x < 100.0,
+        "NPC should not overshot instantly"
+    );
 }
 
 #[test]
@@ -138,7 +147,10 @@ fn test_npc_stops_in_range() {
     let mut app = create_app_with_minimal_plugins();
     spawn_portal_and_tracker(&mut app);
 
-    app.add_systems(Update, (player_npc_decision_logic, player_npc_movement_logic).chain());
+    app.add_systems(
+        Update,
+        (player_npc_decision_logic, player_npc_movement_logic).chain(),
+    );
 
     // Spawn NPC at 80.0
     let npc = app
@@ -148,20 +160,23 @@ fn test_npc_stops_in_range() {
             Target(None),
             MovementSpeed(100.0),
             Transform::from_xyz(80.0, 0.0, 0.0),
+            Intent::Idle,
         ))
         .id();
 
     // Spawn Weapon Child (Effective Range 30.0)
-    let child = app.world_mut().spawn((
-        Weapon,
-        ItemAttackRange(30.0),
-    )).id();
+    let child = app.world_mut().spawn((Weapon, ItemAttackRange(30.0))).id();
     app.world_mut().entity_mut(npc).add_child(child);
 
     // Spawn Enemy at 100.0. Distance = 20.0. Range = 30.0. Should NOT move.
     app.world_mut().spawn((
-        Enemy { target_position: Vec2::ZERO },
-        Health { current: 100.0, max: 100.0 },
+        Enemy {
+            target_position: Vec2::ZERO,
+        },
+        Health {
+            current: 100.0,
+            max: 100.0,
+        },
         SpawnIndex(0),
         Transform::from_xyz(100.0, 0.0, 0.0),
     ));
@@ -172,7 +187,10 @@ fn test_npc_stops_in_range() {
     app.update(); // Movement
 
     let transform = app.world().get::<Transform>(npc).unwrap();
-    assert_eq!(transform.translation.x, 80.0, "NPC should not move if in range");
+    assert_eq!(
+        transform.translation.x, 80.0,
+        "NPC should not move if in range"
+    );
 }
 
 #[test]
@@ -180,7 +198,15 @@ fn test_melee_attack() {
     let mut app = create_app_with_minimal_plugins();
     spawn_portal_and_tracker(&mut app);
 
-    app.add_systems(Update, (player_npc_decision_logic, melee_attack_logic).chain());
+    app.add_systems(
+        Update,
+        (
+            player_npc_decision_logic,
+            melee_attack_emit,
+            apply_damage_logic,
+        )
+            .chain(),
+    );
 
     // Spawn NPC
     let npc = app
@@ -189,27 +215,36 @@ fn test_melee_attack() {
             PlayerNpc,
             Target(None),
             Transform::from_xyz(90.0, 0.0, 0.0),
+            Intent::Idle,
         ))
         .id();
 
     // Spawn Melee Weapon Child
-    let child = app.world_mut().spawn((
-        Weapon,
-        Melee,
-        BaseDamage(10.0),
-        ItemAttackRange(20.0),
-        WeaponCooldown {
-            timer: Timer::from_seconds(1.0, TimerMode::Repeating),
-        },
-    )).id();
+    let child = app
+        .world_mut()
+        .spawn((
+            Weapon,
+            Melee,
+            BaseDamage(10.0),
+            ItemAttackRange(20.0),
+            WeaponCooldown {
+                timer: Timer::from_seconds(1.0, TimerMode::Repeating),
+            },
+        ))
+        .id();
     app.world_mut().entity_mut(npc).add_child(child);
 
     // Spawn Enemy at 100.0. Distance 10.0 <= Range 20.0.
     let enemy = app
         .world_mut()
         .spawn((
-            Enemy { target_position: Vec2::ZERO },
-            Health { current: 50.0, max: 50.0 },
+            Enemy {
+                target_position: Vec2::ZERO,
+            },
+            Health {
+                current: 50.0,
+                max: 50.0,
+            },
             SpawnIndex(0),
             Transform::from_xyz(100.0, 0.0, 0.0),
         ))
@@ -237,7 +272,17 @@ fn test_ranged_attack_spawns_projectile() {
     let mut app = create_app_with_minimal_plugins();
     spawn_portal_and_tracker(&mut app);
 
-    app.add_systems(Update, (player_npc_decision_logic, ranged_attack_logic, move_projectiles, projectile_collision).chain());
+    app.add_systems(
+        Update,
+        (
+            player_npc_decision_logic,
+            ranged_attack_logic,
+            move_projectiles,
+            projectile_collision,
+            apply_damage_logic,
+        )
+            .chain(),
+    );
 
     // Spawn NPC
     let npc = app
@@ -246,31 +291,40 @@ fn test_ranged_attack_spawns_projectile() {
             PlayerNpc,
             Target(None),
             Transform::from_xyz(0.0, 0.0, 0.0),
+            Intent::Idle,
         ))
         .id();
 
     // Spawn Ranged Weapon Child
-    let child = app.world_mut().spawn((
-        Weapon,
-        Ranged,
-        BaseDamage(10.0),
-        ItemAttackRange(200.0),
-        WeaponCooldown {
-            timer: Timer::from_seconds(1.0, TimerMode::Repeating),
-        },
-        ProjectileStats {
-            speed: 100.0,
-            lifetime: 5.0,
-        },
-    )).id();
+    let child = app
+        .world_mut()
+        .spawn((
+            Weapon,
+            Ranged,
+            BaseDamage(10.0),
+            ItemAttackRange(200.0),
+            WeaponCooldown {
+                timer: Timer::from_seconds(1.0, TimerMode::Repeating),
+            },
+            ProjectileStats {
+                speed: 100.0,
+                lifetime: 5.0,
+            },
+        ))
+        .id();
     app.world_mut().entity_mut(npc).add_child(child);
 
     // Spawn Enemy at 50.0
     let _enemy = app
         .world_mut()
         .spawn((
-            Enemy { target_position: Vec2::ZERO },
-            Health { current: 50.0, max: 50.0 },
+            Enemy {
+                target_position: Vec2::ZERO,
+            },
+            Health {
+                current: 50.0,
+                max: 50.0,
+            },
             SpawnIndex(0),
             Transform::from_xyz(50.0, 0.0, 0.0),
         ))

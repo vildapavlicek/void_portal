@@ -18,6 +18,7 @@
         "bevy_ecs::hierarchy::Children": ([
           2,
         ]),
+        "player_npcs::Intent": Idle,
       },
     ),
     2: (
