@@ -7,7 +7,7 @@ use {
     common::{EnemyKilled, GameState, RequestUpgrade, UpgradePortal},
     enemy::{AvailableEnemies, EnemyConfig, EnemyPlugin},
     items::ItemsPlugin,
-    player_npcs::{PlayerNpcsPlugin, SoldierConfig},
+    player_npcs::PlayerNpcsPlugin,
     portal::{PortalConfig, PortalPlugin},
     ui::VoidUiPlugin,
     wallet::VoidWalletPlugin,
@@ -19,7 +19,6 @@ pub struct VoidPortalPlugin;
 struct GameConfigHandles {
     portal: Handle<PortalConfig>,
     enemies_folder: Handle<LoadedFolder>,
-    soldier: Handle<SoldierConfig>,
 }
 
 impl Plugin for VoidPortalPlugin {
@@ -63,7 +62,6 @@ fn start_loading(
 ) {
     handles.portal = asset_server.load("configs/main.portal.ron");
     handles.enemies_folder = asset_server.load_folder("configs/enemies");
-    handles.soldier = asset_server.load("configs/player_npcs/main.soldier.ron");
 
     commands.spawn((
         Text2d::new("Loading..."),
@@ -84,20 +82,17 @@ fn check_assets_ready(
     mut commands: Commands,
     handles: Res<GameConfigHandles>,
     portal_assets: Res<Assets<PortalConfig>>,
-    soldier_assets: Res<Assets<SoldierConfig>>,
     loaded_folders: Res<Assets<LoadedFolder>>,
     enemy_assets: Res<Assets<EnemyConfig>>,
     mut available_enemies: ResMut<AvailableEnemies>,
     mut next_state: ResMut<NextState<GameState>>,
     loading_text_query: Query<Entity, With<LoadingText>>,
 ) {
-    if let (Some(portal), Some(soldier), Some(enemies_folder)) = (
+    if let (Some(portal), Some(enemies_folder)) = (
         portal_assets.get(&handles.portal),
-        soldier_assets.get(&handles.soldier),
         loaded_folders.get(&handles.enemies_folder),
     ) {
         commands.insert_resource(portal.clone());
-        commands.insert_resource(soldier.clone());
 
         available_enemies.0.clear();
         for handle in &enemies_folder.handles {
