@@ -23,3 +23,18 @@ pub struct ChangeActiveLevel {
 pub struct EnemyScavenged {
     pub amount: f32,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Reflect)]
+pub enum DamageType {
+    Physical,
+    Magic,
+    Void,
+}
+
+#[derive(Message, Debug, Clone)]
+pub struct DamageMessage {
+    pub source: Entity,
+    pub target: Entity,
+    pub amount: f32,
+    pub damage_type: DamageType,
+}

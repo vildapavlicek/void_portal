@@ -3,7 +3,10 @@
 use {
     bevy::prelude::*,
     bevy_common_assets::ron::RonAssetPlugin,
-    common::{Dead, EnemyKilled, EnemyScavenged, GameState, Reward, ScavengeModifier},
+    common::{
+        events::DamageMessage, Dead, EnemyKilled, EnemyScavenged, GameState, Reward,
+        ScavengeModifier,
+    },
     serde::Deserialize,
 };
 
@@ -27,6 +30,7 @@ impl Plugin for EnemyPlugin {
             (
                 move_enemies,
                 enemy_lifetime,
+                apply_damage_logic,
                 handle_dying_enemies,
                 despawn_dead_bodies,
                 update_enemy_health_ui,
@@ -88,6 +92,18 @@ pub fn move_enemies(time: Res<Time>, mut enemy_query: Query<(&mut Transform, &En
 
         if distance > 1.0 {
             transform.translation += (direction * speed.0 * time.delta_secs()).extend(0.0);
+        }
+    }
+}
+
+pub fn apply_damage_logic(
+    mut messages: MessageReader<DamageMessage>,
+    mut enemy_query: Query<(Entity, &mut Health), With<Enemy>>,
+) {
+    for msg in messages.read() {
+        if let Ok((entity, mut health)) = enemy_query.get_mut(msg.target) {
+            health.current -= msg.amount;
+            debug!("Unit {:?} took {} damage", entity, msg.amount);
         }
     }
 }

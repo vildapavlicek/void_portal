@@ -2,8 +2,8 @@
 
 use {
     bevy::{prelude::*, scene::DynamicScene},
-    common::GameState,
-    enemy::{Enemy, Health, SpawnIndex},
+    common::{events::DamageMessage, GameState},
+    enemy::{Enemy, SpawnIndex},
     items::{
         AttackRange as ItemAttackRange, BaseDamage, Melee, ProjectileStats as ItemProjectileStats,
         Ranged,
@@ -15,6 +15,7 @@ pub struct PlayerNpcsPlugin;
 
 impl Plugin for PlayerNpcsPlugin {
     fn build(&self, app: &mut App) {
+        app.add_message::<DamageMessage>();
         app.register_type::<PlayerNpc>()
             .register_type::<MovementSpeed>()
             .register_type::<Target>()
@@ -28,11 +29,12 @@ impl Plugin for PlayerNpcsPlugin {
             Update,
             (
                 player_npc_decision_logic,
-                player_npc_movement_logic,
-                melee_attack_logic,
-                ranged_attack_logic,
-                move_projectiles,
-                projectile_collision,
+                (
+                    player_npc_movement_logic,
+                    melee_attack_emit,
+                    ranged_attack_logic,
+                ),
+                (move_projectiles, projectile_collision),
             )
                 .chain()
                 .run_if(in_state(GameState::Playing)),
@@ -48,9 +50,18 @@ pub struct PlayerNpc;
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
-pub struct MovementSpeed(pub f32);
+pub enum Intent {
+    #[default]
+    Idle,
+    MoveTo(Vec3),
+    Attack(Entity),
+}
 
 #[derive(Component, Reflect, Default)]
+#[reflect(Component)]
+pub struct MovementSpeed(pub f32);
+
+#[derive(Debug, Component, Reflect, Default)]
 #[reflect(Component)]
 pub struct Target(pub Option<Entity>);
 
@@ -64,12 +75,13 @@ pub struct WeaponCooldown {
     pub timer: Timer,
 }
 
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct Projectile {
     pub velocity: Vec3,
     pub damage: f32,
     pub lifetime: Timer,
+    pub source: Entity,
 }
 
 // Systems
@@ -90,14 +102,25 @@ pub fn spawn_player_npc(
 }
 
 pub fn player_npc_decision_logic(
-    mut player_npc_query: Query<(Entity, &mut Target, Option<&Children>), With<PlayerNpc>>,
+    mut player_npc_query: Query<
+        (
+            Entity,
+            &mut Intent,
+            &mut Target,
+            &Transform,
+            Option<&Children>,
+        ),
+        With<PlayerNpc>,
+    >,
     weapon_query: Query<&ItemAttackRange, With<Weapon>>,
-    enemy_query: Query<(Entity, &SpawnIndex), With<Enemy>>,
+    enemy_query: Query<(Entity, &SpawnIndex, &Transform), With<Enemy>>,
     portal_tracker: Res<PortalSpawnTracker>,
 ) {
     let current_spawn_count = portal_tracker.0;
 
-    for (_npc_entity, mut target_comp, children) in player_npc_query.iter_mut() {
+    for (_npc_entity, mut intent, mut target_comp, npc_transform, children) in
+        player_npc_query.iter_mut()
+    {
         // 1. Calculate Effective Range
         let mut max_range = 0.0;
         if let Some(children) = children {
@@ -120,93 +143,71 @@ pub fn player_npc_decision_logic(
         if !target_valid {
             target_comp.0 = enemy_query
                 .iter()
-                .max_by_key(|(_, index)| current_spawn_count.wrapping_sub(index.0))
-                .map(|(e, _)| e);
+                .max_by_key(|(_, index, _)| current_spawn_count.wrapping_sub(index.0))
+                .map(|(e, _, _)| e);
+            info!(?target_comp, "found valid target");
+        }
+
+        // Decision logic based on target
+        let Some(target_entity) = target_comp.0 else {
+            *intent = Intent::Idle;
+            continue;
+        };
+
+        if let Ok((_, _, target_transform)) = enemy_query.get(target_entity) {
+            let distance = npc_transform
+                .translation
+                .distance(target_transform.translation);
+
+            if distance <= max_range {
+                *intent = Intent::Attack(target_entity);
+            } else {
+                *intent = Intent::MoveTo(target_transform.translation);
+            }
+        } else {
+            // Target dead or gone
+            info!("setting intent to idle");
+            *intent = Intent::Idle;
         }
     }
 }
 
 pub fn player_npc_movement_logic(
     time: Res<Time>,
-    mut player_npc_query: Query<
-        (&mut Transform, &Target, &MovementSpeed, Option<&Children>),
-        (With<PlayerNpc>, Without<Enemy>),
-    >,
-    weapon_query: Query<&ItemAttackRange, With<Weapon>>,
-    enemy_query: Query<&Transform, With<Enemy>>,
+    mut player_npc_query: Query<(&mut Transform, &Intent, &MovementSpeed), With<PlayerNpc>>,
 ) {
-    for (mut player_transform, target_comp, speed, children) in player_npc_query.iter_mut() {
-        let Some(target) = target_comp.0 else {
-            continue;
-        };
-        let Ok(target_transform) = enemy_query.get(target) else {
-            continue;
-        };
-
-        // Calculate Effective Range
-        let mut effective_range = 0.0;
-        if let Some(children) = children {
-            for child in children.iter() {
-                if let Ok(range) = weapon_query.get(child) {
-                    if range.0 > effective_range {
-                        effective_range = range.0;
-                    }
-                }
-            }
-        }
-
-        let distance = player_transform
-            .translation
-            .distance(target_transform.translation);
-
-        if distance > effective_range {
-            let direction =
-                (target_transform.translation - player_transform.translation).normalize_or_zero();
-            player_transform.translation += direction * speed.0 * time.delta_secs();
+    for (mut transform, intent, speed) in player_npc_query.iter_mut() {
+        if let Intent::MoveTo(target_pos) = intent {
+            let dir = (*target_pos - transform.translation).normalize_or_zero();
+            transform.translation += dir * speed.0 * time.delta_secs();
         }
     }
 }
 
-pub fn melee_attack_logic(
+pub fn melee_attack_emit(
     time: Res<Time>,
-    player_npc_query: Query<(Entity, &Transform, &Target, &Children), With<PlayerNpc>>,
+    player_npc_query: Query<(Entity, &Intent, &Children), With<PlayerNpc>>,
     mut weapon_query: Query<
         (&mut WeaponCooldown, &ItemAttackRange, &BaseDamage),
         (With<Weapon>, With<Melee>),
     >,
-    mut enemy_query: Query<(&Transform, &mut Health), With<Enemy>>,
+    mut damage_events: MessageWriter<DamageMessage>,
 ) {
-    for (npc_entity, npc_tf, target_comp, children) in player_npc_query.iter() {
-        let Some(target_entity) = target_comp.0 else {
-            continue;
-        };
-        let Ok((target_tf, mut target_health)) = enemy_query.get_mut(target_entity) else {
-            warn!("target entity doesn't exist, or is missing required components");
-            continue;
-        };
-
-        let distance = npc_tf.translation.distance(target_tf.translation);
-
-        for child in children.iter() {
-            match weapon_query.get_mut(child) {
-                Ok((mut cooldown, range, damage)) => {
+    for (npc_entity, intent, children) in player_npc_query.iter() {
+        if let Intent::Attack(target_entity) = intent {
+            for child in children.iter() {
+                if let Ok((mut cooldown, _range, damage)) = weapon_query.get_mut(child) {
                     cooldown.timer.tick(time.delta());
 
                     if cooldown.timer.just_finished() {
-                        // Check individual weapon range
-                        if distance <= range.0 {
-                            // Instant Hit
-                            target_health.current -= damage.0;
-                            info!(
-                                "Melee hit from {:?} (Weapon {:?}) for {}",
-                                npc_entity, child, damage.0
-                            );
-                        }
+                        // EMIT MESSAGE
+                        damage_events.write(DamageMessage {
+                            source: npc_entity,
+                            target: *target_entity,
+                            amount: damage.0,
+                            damage_type: common::events::DamageType::Physical,
+                        });
                     }
-                }
-                Err(err) => {
-                    error!(%err, "no meelee weapon found");
-                    return;
                 }
             }
         }
@@ -216,7 +217,7 @@ pub fn melee_attack_logic(
 pub fn ranged_attack_logic(
     mut commands: Commands,
     time: Res<Time>,
-    player_npc_query: Query<(Entity, &Transform, &Target, &Children), With<PlayerNpc>>,
+    player_npc_query: Query<(Entity, &Transform, &Intent, &Children), With<PlayerNpc>>,
     mut weapon_query: Query<
         (
             &mut WeaponCooldown,
@@ -228,40 +229,38 @@ pub fn ranged_attack_logic(
     >,
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
-    for (_npc_entity, npc_tf, target_comp, children) in player_npc_query.iter() {
-        let Some(target_entity) = target_comp.0 else {
-            continue;
-        };
-        let Ok(target_tf) = enemy_query.get(target_entity) else {
+    for (npc_entity, npc_tf, intent, children) in player_npc_query.iter() {
+        let Intent::Attack(target_entity) = intent else {
             continue;
         };
 
-        let distance = npc_tf.translation.distance(target_tf.translation);
+        let Ok(target_tf) = enemy_query.get(*target_entity) else {
+            continue;
+        };
 
         for child in children.iter() {
-            if let Ok((mut cooldown, range, damage, proj_stats)) = weapon_query.get_mut(child) {
+            if let Ok((mut cooldown, _range, damage, proj_stats)) = weapon_query.get_mut(child) {
                 cooldown.timer.tick(time.delta());
 
                 if cooldown.timer.just_finished() {
-                    if distance <= range.0 {
-                        let direction =
-                            (target_tf.translation - npc_tf.translation).normalize_or_zero();
+                    let direction =
+                        (target_tf.translation - npc_tf.translation).normalize_or_zero();
 
-                        // Spawn Projectile
-                        commands.spawn((
-                            Sprite {
-                                color: Color::srgb(1.0, 1.0, 0.0), // Yellow
-                                custom_size: Some(Vec2::new(8.0, 8.0)),
-                                ..default()
-                            },
-                            Transform::from_translation(npc_tf.translation),
-                            Projectile {
-                                velocity: direction * proj_stats.speed,
-                                damage: damage.0,
-                                lifetime: Timer::from_seconds(proj_stats.lifetime, TimerMode::Once),
-                            },
-                        ));
-                    }
+                    // Spawn Projectile
+                    commands.spawn((
+                        Sprite {
+                            color: Color::srgb(1.0, 1.0, 0.0), // Yellow
+                            custom_size: Some(Vec2::new(8.0, 8.0)),
+                            ..default()
+                        },
+                        Transform::from_translation(npc_tf.translation),
+                        Projectile {
+                            velocity: direction * proj_stats.speed,
+                            damage: damage.0,
+                            lifetime: Timer::from_seconds(proj_stats.lifetime, TimerMode::Once),
+                            source: npc_entity,
+                        },
+                    ));
                 }
             }
         }
@@ -287,17 +286,23 @@ pub fn move_projectiles(
 pub fn projectile_collision(
     mut commands: Commands,
     projectile_query: Query<(Entity, &Transform, &Projectile)>,
-    mut enemy_query: Query<(Entity, &Transform, &mut Health), With<Enemy>>,
+    enemy_query: Query<(Entity, &Transform), With<Enemy>>,
+    mut damage_events: MessageWriter<DamageMessage>,
 ) {
     for (proj_entity, proj_transform, projectile) in projectile_query.iter() {
         let mut hit = false;
-        for (_, enemy_transform, mut health) in enemy_query.iter_mut() {
+        for (enemy_entity, enemy_transform) in enemy_query.iter() {
             let distance = proj_transform
                 .translation
                 .distance(enemy_transform.translation);
             // Enemy size is 24, Projectile 8. Radius approx 12 + 4 = 16. Use 20 for buffer.
             if distance < 20.0 {
-                health.current -= projectile.damage;
+                damage_events.write(DamageMessage {
+                    source: projectile.source,
+                    target: enemy_entity,
+                    amount: projectile.damage,
+                    damage_type: common::events::DamageType::Physical,
+                });
                 hit = true;
                 break;
             }

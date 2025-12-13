@@ -138,10 +138,7 @@ pub fn spawn_portal(
         commands.entity(portal_entity).with_children(|parent| {
             for (name, config) in &portal_config.upgrades {
                 // New logic: UpgradeableStat handles calculation
-                let stat = UpgradeableStat::new(
-                    config.value.clone(),
-                    config.price.clone(),
-                );
+                let stat = UpgradeableStat::new(config.value.clone(), config.price.clone());
 
                 let id = parent
                     .spawn((UpgradeSlot { name: name.clone() }, stat))
