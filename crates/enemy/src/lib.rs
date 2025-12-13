@@ -3,7 +3,7 @@
 use {
     bevy::prelude::*,
     bevy_common_assets::ron::RonAssetPlugin,
-    common::{Dead, EnemyKilled, GameState},
+    common::{Dead, EnemyKilled, EnemyScavenged, GameState, Reward, ScavengeModifier},
     serde::Deserialize,
 };
 
@@ -95,11 +95,34 @@ pub fn move_enemies(time: Res<Time>, mut enemy_query: Query<(&mut Transform, &En
 pub fn enemy_lifetime(
     mut commands: Commands,
     time: Res<Time>,
-    mut lifetime_query: Query<(Entity, &mut Lifetime)>,
+    mut lifetime_query: Query<(
+        Entity,
+        &mut Lifetime,
+        &Health,
+        &Reward,
+        Option<&ScavengeModifier>,
+    )>,
+    mut events: MessageWriter<EnemyScavenged>,
 ) {
-    for (entity, mut lifetime) in lifetime_query.iter_mut() {
+    for (entity, mut lifetime, health, reward, modifier) in lifetime_query.iter_mut() {
         lifetime.timer.tick(time.delta());
         if lifetime.timer.is_finished() {
+            // Scavenger Logic
+            let damage_dealt = health.max - health.current;
+            if damage_dealt > 0.0 {
+                let percentage = damage_dealt / health.max;
+                // If modifier is missing, default to 0.0 (no scavenger reward without config) or maybe 0.5?
+                // The plan says we attach it, so it should be there. Let's default to 0.5 if missing as a fallback,
+                // or 0.0 to be safe. Since config drives it, if it's missing, it wasn't configured, so 0.0.
+                let penalty = modifier.map(|m| m.0).unwrap_or(0.0);
+                let amount = reward.0 * percentage * penalty;
+
+                if amount > 0.0 {
+                    events.write(EnemyScavenged { amount });
+                    info!("Enemy scavenged for {}", amount);
+                }
+            }
+
             commands.entity(entity).despawn();
             info!("Enemy despawned due to lifetime expiry");
         }

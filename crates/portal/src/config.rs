@@ -5,6 +5,7 @@ pub struct PortalConfig {
     pub level: u32,
     pub level_up_price: GrowthStrategy,
     pub portal_top_offset: f32,
+    pub scavenger_penalty_coef: f32,
     pub level_scaled_stats: LevelScaledStats,
     pub upgrades: HashMap<String, IndependentStatConfig>,
 }

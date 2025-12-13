@@ -4,7 +4,10 @@
 use {
     bevy::{prelude::*, window::PrimaryWindow},
     bevy_common_assets::ron::RonAssetPlugin,
-    common::{GameState, GrowthStrategy, RequestUpgrade, Reward, UpgradePortal, UpgradeableStat},
+    common::{
+        ChangeActiveLevel, GameState, GrowthStrategy, RequestUpgrade, Reward, ScavengeModifier,
+        UpgradePortal, UpgradeableStat,
+    },
     enemy::{AvailableEnemies, Enemy, Health, Lifetime, SpawnIndex, Speed},
     rand::Rng,
     std::collections::HashMap,
@@ -38,6 +41,7 @@ impl Plugin for PortalPlugin {
                 spawn_enemies,
                 handle_portal_upgrade,
                 handle_generic_upgrades,
+                handle_active_level_change,
             )
                 .run_if(in_state(GameState::Playing)),
         );
@@ -48,7 +52,8 @@ impl Plugin for PortalPlugin {
 #[derive(Component, Reflect, Default, Clone)]
 #[reflect(Component)]
 pub struct Portal {
-    pub level: u32,
+    pub max_unlocked_level: u32,
+    pub active_level: u32,
     pub upgrade_price: f32,
     pub price_strategy: GrowthStrategy,
 }
@@ -97,7 +102,7 @@ pub fn spawn_portal(
             .level_up_price
             .calculate(portal_config.level as f32);
 
-        // Calculate initial spawn time
+        // Calculate initial spawn time (based on active level, which is config.level initially)
         let initial_spawn_time = portal_config
             .level_scaled_stats
             .spawn_timer
@@ -112,7 +117,8 @@ pub fn spawn_portal(
                 },
                 Transform::from_xyz(0.0, portal_y, 0.0),
                 Portal {
-                    level: portal_config.level,
+                    max_unlocked_level: portal_config.level,
+                    active_level: portal_config.level,
                     upgrade_price: initial_price,
                     price_strategy: portal_config.level_up_price.clone(),
                 },
@@ -170,6 +176,7 @@ pub fn spawn_enemies(
     upgrade_query: Query<(&UpgradeSlot, &UpgradeableStat)>,
     mut spawn_tracker: ResMut<PortalSpawnTracker>,
     window_query: Query<&Window, With<PrimaryWindow>>,
+    portal_config: Res<PortalConfig>,
 ) {
     for (portal_transform, portal, upgrades, portal_stats, mut spawn_timer) in
         portal_query.iter_mut()
@@ -218,16 +225,23 @@ pub fn spawn_enemies(
             let half_height = window.height() / 2.0;
 
             // Dynamic stats calculation using PortalStats component and GrowthStrategy
-            let health_multiplier = portal_stats.stats.enemy_health.calculate(portal.level as f32);
+            // USES ACTIVE LEVEL
+            let health_multiplier = portal_stats
+                .stats
+                .enemy_health
+                .calculate(portal.active_level as f32);
             let reward_multiplier = portal_stats
                 .stats
                 .void_shards_reward
-                .calculate(portal.level as f32);
+                .calculate(portal.active_level as f32);
             let lifetime_multiplier = portal_stats
                 .stats
                 .base_enemy_lifetime
-                .calculate(portal.level as f32);
-            let base_speed = portal_stats.stats.base_enemy_speed.calculate(portal.level as f32);
+                .calculate(portal.active_level as f32);
+            let base_speed = portal_stats
+                .stats
+                .base_enemy_speed
+                .calculate(portal.active_level as f32);
 
             let max_health = health_multiplier * enemy_config.health_coef;
             let speed = base_speed * enemy_config.speed_coef;
@@ -260,6 +274,7 @@ pub fn spawn_enemies(
                     },
                     Reward(reward),
                     Speed(speed),
+                    ScavengeModifier(portal_config.scavenger_penalty_coef),
                 ))
                 .with_children(|parent| {
                     parent.spawn((
@@ -289,23 +304,62 @@ pub fn handle_portal_upgrade(
             if wallet.void_shards >= portal.upgrade_price {
                 wallet.void_shards -= portal.upgrade_price;
 
-                portal.level += 1;
+                let old_max_level = portal.max_unlocked_level;
+                portal.max_unlocked_level += 1;
 
-                // Update Price using Strategy
-                portal.upgrade_price = portal.price_strategy.calculate(portal.level as f32);
+                // QoL: If active level was at max, snap to new max
+                if portal.active_level == old_max_level {
+                    portal.active_level = portal.max_unlocked_level;
+                }
 
-                // Update Spawn Timer
-                let new_spawn_time = stats.stats.spawn_timer.calculate(portal.level as f32);
+                // Update Price using Strategy (based on MAX level)
+                portal.upgrade_price = portal
+                    .price_strategy
+                    .calculate(portal.max_unlocked_level as f32);
+
+                // Update Spawn Timer (based on ACTIVE level)
+                let new_spawn_time = stats
+                    .stats
+                    .spawn_timer
+                    .calculate(portal.active_level as f32);
                 spawn_timer
                     .0
                     .set_duration(std::time::Duration::from_secs_f32(new_spawn_time));
 
                 info!(
-                    "Portal upgraded to Level {}. New Price: {}",
-                    portal.level, portal.upgrade_price
+                    "Portal upgraded to Max Level {}. New Price: {}",
+                    portal.max_unlocked_level, portal.upgrade_price
                 );
             } else {
                 warn!("Not enough shards to upgrade portal!");
+            }
+        }
+    }
+}
+
+pub fn handle_active_level_change(
+    mut events: MessageReader<ChangeActiveLevel>,
+    mut portal_query: Query<(&mut Portal, &PortalStats, &mut SpawnTimer)>,
+) {
+    for event in events.read() {
+        if let Ok((mut portal, stats, mut spawn_timer)) = portal_query.get_mut(event.portal_entity)
+        {
+            let new_level = (portal.active_level as i32 + event.change)
+                .clamp(1, portal.max_unlocked_level as i32) as u32;
+
+            if new_level != portal.active_level {
+                portal.active_level = new_level;
+
+                // Update Spawn Timer for new active level
+                let new_spawn_time = stats
+                    .stats
+                    .spawn_timer
+                    .calculate(portal.active_level as f32);
+                spawn_timer
+                    .0
+                    .set_duration(std::time::Duration::from_secs_f32(new_spawn_time));
+
+                info!("Portal active level changed to {}", portal.active_level);
             }
         }
     }
