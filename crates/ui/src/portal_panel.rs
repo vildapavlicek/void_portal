@@ -1,6 +1,8 @@
 use {
     bevy::prelude::*,
-    common::{GameState, RequestUpgrade, UpgradePortal, UpgradeableStat},
+    common::{
+        ChangeActiveLevel, GameState, RequestUpgrade, UpgradePortal, UpgradeableStat,
+    },
     portal::{Portal, PortalStats, UpgradeSlot},
     wallet::Wallet,
 };
@@ -54,6 +56,11 @@ enum PortalUiStat {
     Generic,
 }
 
+#[derive(Component)]
+struct PortalLevelControl {
+    direction: i32, // -1 or +1
+}
+
 // Attach observer to Portal entities
 fn attach_portal_observer(
     mut commands: Commands,
@@ -103,7 +110,7 @@ fn spawn_portal_ui(
     let current_reward = stats
         .stats
         .void_shards_reward
-        .calculate(portal.level as f32);
+        .calculate(portal.active_level as f32);
 
     commands
         .spawn((
@@ -150,7 +157,7 @@ fn spawn_portal_ui(
                         TextColor(Color::WHITE),
                     ));
 
-                    // --- Section 1: Portal Level ---
+                    // --- Section 1: Portal Level Control ---
                     p.spawn((Node {
                         width: Val::Percent(100.0),
                         flex_direction: FlexDirection::Row,
@@ -160,30 +167,89 @@ fn spawn_portal_ui(
                         ..default()
                     },))
                         .with_children(|row| {
-                            row.spawn((Node {
-                                flex_direction: FlexDirection::Column,
+                            // Left Side: Active / Max + Controls
+                            row.spawn(Node {
+                                flex_direction: FlexDirection::Row,
+                                align_items: AlignItems::Center,
+                                column_gap: Val::Px(10.0),
                                 ..default()
-                            },))
-                                .with_children(|col| {
-                                    col.spawn((
-                                        Text::new(format!("Level {}", portal.level)),
+                            }).with_children(|control_row| {
+                                // Decrease Button
+                                control_row.spawn((
+                                    Button,
+                                    Node {
+                                        width: Val::Px(30.0),
+                                        height: Val::Px(30.0),
+                                        justify_content: JustifyContent::Center,
+                                        align_items: AlignItems::Center,
+                                        ..default()
+                                    },
+                                    BackgroundColor(Color::hsla(0.0, 0.0, 0.5, 1.0)),
+                                    BorderRadius::all(Val::Px(5.0)),
+                                    PortalLevelControl { direction: -1 },
+                                    PortalUiLink(portal_entity),
+                                ))
+                                .observe(on_level_control_click)
+                                .with_children(|btn| {
+                                    btn.spawn((
+                                        Text::new("<"),
                                         TextFont::default(),
                                         TextColor(Color::WHITE),
-                                        PortalUiStat::Level,
-                                        PortalUiLink(portal_entity),
-                                    ));
-                                    col.spawn((
-                                        Text::new(format!("Reward: {:.2}", current_reward)),
-                                        TextFont {
-                                            font_size: 14.0,
-                                            ..default()
-                                        },
-                                        TextColor(Color::srgb(0.8, 0.8, 1.0)),
-                                        PortalUiStat::Reward,
-                                        PortalUiLink(portal_entity),
                                     ));
                                 });
 
+                                // Level Text
+                                control_row.spawn((Node {
+                                    flex_direction: FlexDirection::Column,
+                                    align_items: AlignItems::Center,
+                                    ..default()
+                                },))
+                                    .with_children(|col| {
+                                        col.spawn((
+                                            Text::new(format!("Level {} / {}", portal.active_level, portal.max_unlocked_level)),
+                                            TextFont::default(),
+                                            TextColor(Color::WHITE),
+                                            PortalUiStat::Level,
+                                            PortalUiLink(portal_entity),
+                                        ));
+                                        col.spawn((
+                                            Text::new(format!("Reward: {:.2}", current_reward)),
+                                            TextFont {
+                                                font_size: 14.0,
+                                                ..default()
+                                            },
+                                            TextColor(Color::srgb(0.8, 0.8, 1.0)),
+                                            PortalUiStat::Reward,
+                                            PortalUiLink(portal_entity),
+                                        ));
+                                    });
+
+                                // Increase Button
+                                control_row.spawn((
+                                    Button,
+                                    Node {
+                                        width: Val::Px(30.0),
+                                        height: Val::Px(30.0),
+                                        justify_content: JustifyContent::Center,
+                                        align_items: AlignItems::Center,
+                                        ..default()
+                                    },
+                                    BackgroundColor(Color::hsla(0.0, 0.0, 0.5, 1.0)),
+                                    BorderRadius::all(Val::Px(5.0)),
+                                    PortalLevelControl { direction: 1 },
+                                    PortalUiLink(portal_entity),
+                                ))
+                                .observe(on_level_control_click)
+                                .with_children(|btn| {
+                                    btn.spawn((
+                                        Text::new(">"),
+                                        TextFont::default(),
+                                        TextColor(Color::WHITE),
+                                    ));
+                                });
+                            });
+
+                            // Right Side: Upgrade Button
                             spawn_upgrade_button(
                                 row,
                                 PortalUpgradeTarget::Level,
@@ -296,6 +362,19 @@ fn block_click(mut trigger: On<Pointer<Click>>) {
     trigger.propagate(false);
 }
 
+fn on_level_control_click(
+    trigger: On<Pointer<Click>>,
+    mut events: MessageWriter<ChangeActiveLevel>,
+    query: Query<(&PortalLevelControl, &PortalUiLink)>,
+) {
+    if let Ok((control, link)) = query.get(trigger.entity) {
+        events.write(ChangeActiveLevel {
+            portal_entity: link.0,
+            change: control.direction,
+        });
+    }
+}
+
 // Handle Upgrade Click
 fn on_upgrade_click(
     trigger: On<Pointer<Click>>,
@@ -383,7 +462,7 @@ fn update_portal_ui_stats(
         match stat_type {
             PortalUiStat::Level => {
                 if let Ok((portal, _)) = portal_query.get(link.0) {
-                    **text = format!("Level {}", portal.level);
+                    **text = format!("Level {} / {}", portal.active_level, portal.max_unlocked_level);
                 }
             }
             PortalUiStat::Reward => {
@@ -391,7 +470,7 @@ fn update_portal_ui_stats(
                     let current_reward = stats
                         .stats
                         .void_shards_reward
-                        .calculate(portal.level as f32);
+                        .calculate(portal.active_level as f32);
                     **text = format!("Reward: {:.2}", current_reward);
                 }
             }
@@ -469,6 +548,7 @@ mod tests {
                 coefficient: 1.5,
             },
             portal_top_offset: 50.0,
+            scavenger_penalty_coef: 0.5,
             level_scaled_stats: portal::LevelScaledStats {
                 void_shards_reward: GrowthStrategy::Linear {
                     base: 10.0,
@@ -501,6 +581,7 @@ mod tests {
         });
         app.add_message::<UpgradePortal>();
         app.add_message::<RequestUpgrade>();
+        app.add_message::<ChangeActiveLevel>();
 
         // Add Plugin
         app.add_plugins(PortalPanelPlugin);
@@ -513,7 +594,8 @@ mod tests {
             .world_mut()
             .spawn((
                 Portal {
-                    level: 1,
+                    max_unlocked_level: 1,
+                    active_level: 1,
                     upgrade_price: 100.0,
                     ..default()
                 },

@@ -66,6 +66,7 @@ fn setup_app() -> App {
             coefficient: 50.0,
         },
         portal_top_offset: 100.0,
+        scavenger_penalty_coef: 0.5,
         level_scaled_stats: LevelScaledStats {
             void_shards_reward: GrowthStrategy::Linear {
                 base: 10.0,
@@ -126,7 +127,8 @@ fn test_portal_initial_level() {
 
     assert!(portal.is_some());
     let portal = portal.unwrap();
-    assert_eq!(portal.level, 0);
+    assert_eq!(portal.max_unlocked_level, 0);
+    assert_eq!(portal.active_level, 0);
     // Price at Level 0: 100 + 0*50 = 100
     assert_eq!(portal.upgrade_price, 100.0);
 }
@@ -190,7 +192,9 @@ fn test_portal_upgrade() {
             .single(app.world())
             .unwrap();
         // Level 1
-        assert_eq!(portal.level, 1);
+        assert_eq!(portal.max_unlocked_level, 1);
+        // Active Level snaps to new max (QoL)
+        assert_eq!(portal.active_level, 1);
 
         // New Price at L1: 100 + 1*50 = 150
         assert_eq!(portal.upgrade_price, 150.0);

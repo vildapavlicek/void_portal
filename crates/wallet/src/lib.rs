@@ -2,7 +2,7 @@
 
 use {
     bevy::prelude::*,
-    common::{EnemyKilled, Reward},
+    common::{EnemyKilled, EnemyScavenged, Reward},
 };
 
 pub struct VoidWalletPlugin;
@@ -10,7 +10,11 @@ pub struct VoidWalletPlugin;
 impl Plugin for VoidWalletPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Wallet>()
-            .add_systems(Update, update_wallet_from_enemy_killed);
+            .add_message::<common::EnemyScavenged>()
+            .add_systems(
+                Update,
+                (update_wallet_from_enemy_killed, update_wallet_from_scavenge),
+            );
     }
 }
 
@@ -40,9 +44,23 @@ fn update_wallet_from_enemy_killed(
     }
 }
 
+fn update_wallet_from_scavenge(
+    mut events: MessageReader<EnemyScavenged>,
+    mut wallet: ResMut<Wallet>,
+) {
+    for event in events.read() {
+        wallet.void_shards += event.amount;
+        info!(
+            "Wallet scavenge update: +{}. Total: {}",
+            event.amount, wallet.void_shards
+        );
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use common::Dead;
 
     #[test]
     fn test_wallet_update() {
@@ -94,5 +112,25 @@ mod tests {
         app.update();
 
         assert_eq!(app.world().resource::<Wallet>().void_shards, 15.5);
+    }
+
+    #[test]
+    fn test_wallet_scavenge() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(VoidWalletPlugin);
+        // Note: VoidWalletPlugin already adds EnemyScavenged message, but NOT EnemyKilled
+        // So when Update runs, `update_wallet_from_enemy_killed` panics because `EnemyKilled` is missing.
+        // We must add it for the system to not panic, or disable the system for this test.
+        app.add_message::<EnemyKilled>();
+
+        assert_eq!(app.world().resource::<Wallet>().void_shards, 0.0);
+
+        let mut messages = app.world_mut().resource_mut::<Messages<EnemyScavenged>>();
+        messages.write(EnemyScavenged { amount: 12.5 });
+
+        app.update();
+
+        assert_eq!(app.world().resource::<Wallet>().void_shards, 12.5);
     }
 }
