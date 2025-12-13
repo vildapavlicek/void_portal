@@ -5,8 +5,8 @@ use {
     common::GameState,
     enemy::{Enemy, Health, SpawnIndex},
     items::{
-        AttackRange as ItemAttackRange, BaseDamage, Melee,
-        ProjectileStats as ItemProjectileStats, Ranged,
+        AttackRange as ItemAttackRange, BaseDamage, Melee, ProjectileStats as ItemProjectileStats,
+        Ranged,
     },
     portal::PortalSpawnTracker,
 };
@@ -136,8 +136,12 @@ pub fn player_npc_movement_logic(
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
     for (mut player_transform, target_comp, speed, children) in player_npc_query.iter_mut() {
-        let Some(target) = target_comp.0 else { continue };
-        let Ok(target_transform) = enemy_query.get(target) else { continue };
+        let Some(target) = target_comp.0 else {
+            continue;
+        };
+        let Ok(target_transform) = enemy_query.get(target) else {
+            continue;
+        };
 
         // Calculate Effective Range
         let mut effective_range = 0.0;
@@ -151,42 +155,58 @@ pub fn player_npc_movement_logic(
             }
         }
 
-        let distance = player_transform.translation.distance(target_transform.translation);
+        let distance = player_transform
+            .translation
+            .distance(target_transform.translation);
 
         if distance > effective_range {
-            let direction = (target_transform.translation - player_transform.translation).normalize_or_zero();
+            let direction =
+                (target_transform.translation - player_transform.translation).normalize_or_zero();
             player_transform.translation += direction * speed.0 * time.delta_secs();
         }
     }
 }
 
 pub fn melee_attack_logic(
-    _commands: Commands,
     time: Res<Time>,
     player_npc_query: Query<(Entity, &Transform, &Target, &Children), With<PlayerNpc>>,
     mut weapon_query: Query<
         (&mut WeaponCooldown, &ItemAttackRange, &BaseDamage),
-        (With<Weapon>, With<Melee>)
+        (With<Weapon>, With<Melee>),
     >,
     mut enemy_query: Query<(&Transform, &mut Health), With<Enemy>>,
 ) {
     for (npc_entity, npc_tf, target_comp, children) in player_npc_query.iter() {
-        let Some(target_entity) = target_comp.0 else { continue };
-        let Ok((target_tf, mut target_health)) = enemy_query.get_mut(target_entity) else { continue };
+        let Some(target_entity) = target_comp.0 else {
+            continue;
+        };
+        let Ok((target_tf, mut target_health)) = enemy_query.get_mut(target_entity) else {
+            warn!("target entity doesn't exist, or is missing required components");
+            continue;
+        };
 
         let distance = npc_tf.translation.distance(target_tf.translation);
 
         for child in children.iter() {
-            if let Ok((mut cooldown, range, damage)) = weapon_query.get_mut(child) {
-                cooldown.timer.tick(time.delta());
+            match weapon_query.get_mut(child) {
+                Ok((mut cooldown, range, damage)) => {
+                    cooldown.timer.tick(time.delta());
 
-                if cooldown.timer.just_finished() {
-                    // Check individual weapon range
-                    if distance <= range.0 {
-                        // Instant Hit
-                        target_health.current -= damage.0;
-                        info!("Melee hit from {:?} (Weapon {:?}) for {}", npc_entity, child, damage.0);
+                    if cooldown.timer.just_finished() {
+                        // Check individual weapon range
+                        if distance <= range.0 {
+                            // Instant Hit
+                            target_health.current -= damage.0;
+                            info!(
+                                "Melee hit from {:?} (Weapon {:?}) for {}",
+                                npc_entity, child, damage.0
+                            );
+                        }
                     }
+                }
+                Err(err) => {
+                    error!(%err, "no meelee weapon found");
+                    return;
                 }
             }
         }
@@ -198,14 +218,23 @@ pub fn ranged_attack_logic(
     time: Res<Time>,
     player_npc_query: Query<(Entity, &Transform, &Target, &Children), With<PlayerNpc>>,
     mut weapon_query: Query<
-        (&mut WeaponCooldown, &ItemAttackRange, &BaseDamage, &ItemProjectileStats),
-        (With<Weapon>, With<Ranged>)
+        (
+            &mut WeaponCooldown,
+            &ItemAttackRange,
+            &BaseDamage,
+            &ItemProjectileStats,
+        ),
+        (With<Weapon>, With<Ranged>),
     >,
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
     for (_npc_entity, npc_tf, target_comp, children) in player_npc_query.iter() {
-        let Some(target_entity) = target_comp.0 else { continue };
-        let Ok(target_tf) = enemy_query.get(target_entity) else { continue };
+        let Some(target_entity) = target_comp.0 else {
+            continue;
+        };
+        let Ok(target_tf) = enemy_query.get(target_entity) else {
+            continue;
+        };
 
         let distance = npc_tf.translation.distance(target_tf.translation);
 
@@ -215,7 +244,8 @@ pub fn ranged_attack_logic(
 
                 if cooldown.timer.just_finished() {
                     if distance <= range.0 {
-                        let direction = (target_tf.translation - npc_tf.translation).normalize_or_zero();
+                        let direction =
+                            (target_tf.translation - npc_tf.translation).normalize_or_zero();
 
                         // Spawn Projectile
                         commands.spawn((
