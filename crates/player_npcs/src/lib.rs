@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 
 use {
-    bevy::{prelude::*, scene::DynamicScene, window::PrimaryWindow},
+    bevy::{prelude::*, scene::DynamicScene},
     bevy_common_assets::ron::RonAssetPlugin,
     common::GameState,
     enemy::{Enemy, Health, SpawnIndex},
@@ -239,8 +239,6 @@ pub fn recalculate_stats(
 }
 
 pub fn spawn_player_npc(
-    mut commands: Commands,
-    window_query: Query<&Window, With<PrimaryWindow>>,
     player_npc_query: Query<Entity, With<Soldier>>,
     asset_server: Res<AssetServer>,
     mut scene_spawner: ResMut<SceneSpawner>,

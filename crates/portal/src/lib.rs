@@ -132,10 +132,7 @@ pub fn spawn_portal(
         commands.entity(portal_entity).with_children(|parent| {
             for (name, config) in &portal_config.upgrades {
                 // New logic: UpgradeableStat handles calculation
-                let stat = UpgradeableStat::new(
-                    config.value.clone(),
-                    config.price.clone(),
-                );
+                let stat = UpgradeableStat::new(config.value.clone(), config.price.clone());
 
                 let id = parent
                     .spawn((UpgradeSlot { name: name.clone() }, stat))
@@ -218,7 +215,10 @@ pub fn spawn_enemies(
             let half_height = window.height() / 2.0;
 
             // Dynamic stats calculation using PortalStats component and GrowthStrategy
-            let health_multiplier = portal_stats.stats.enemy_health.calculate(portal.level as f32);
+            let health_multiplier = portal_stats
+                .stats
+                .enemy_health
+                .calculate(portal.level as f32);
             let reward_multiplier = portal_stats
                 .stats
                 .void_shards_reward
@@ -227,7 +227,10 @@ pub fn spawn_enemies(
                 .stats
                 .base_enemy_lifetime
                 .calculate(portal.level as f32);
-            let base_speed = portal_stats.stats.base_enemy_speed.calculate(portal.level as f32);
+            let base_speed = portal_stats
+                .stats
+                .base_enemy_speed
+                .calculate(portal.level as f32);
 
             let max_health = health_multiplier * enemy_config.health_coef;
             let speed = base_speed * enemy_config.speed_coef;
