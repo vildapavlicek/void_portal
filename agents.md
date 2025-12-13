@@ -20,31 +20,46 @@
 ## 3. Technical Constraints & Style Guide
 
 **Architecture & Patterns:**
-* **Strict ECS Separation:** Data lives in Components/Resources. Logic lives in Systems. Do not bind game logic to struct methods (keep the approach functional/data-oriented).
-* **Modular Design:** Every major feature (Portal Logic, Hero AI, UI, Stats) must be organized into its own `Plugin`.
-* **Data-Driven Configuration:** Use `.ron` files for gameplay variables to allow balancing without recompilation. Specific extensions help the asset loader distinguish types: `.portal.ron` (mechanics), `.enemy.ron` (enemy stats), and `.soldier.ron` (NPC stats).
-* **Observer Pattern:** Leverage Bevy 0.17+ Observers for event-driven logic (e.g., UI interactions, entity spawning/despawning hooks) to decouple systems.
+* **Reactive ECS (Message-Based):** Avoid direct mutation across domains. Logic should be "Fire and Forget" where possible.
+    * *Pattern:* System A emits a `Message`; System B consumes it and mutates state.
+* **Data-Driven Hybrid Approach:**
+    * **Definitions:** Use `.ron` files for base stats/composition.
+    * **Scaling:** Use Rust `GrowthStrategy` logic for incremental scaling.
+* **Component Composition:** Use granular components (`Melee`, `AttackRange`, `Damage`) instead of monolithic objects (`Sword`).
+* **Observer Pattern:** Use Observers for UI interactions and entity lifecycle hooks.
 
 **Code Quality:**
-* **Error Handling:** Use `expect("context")` for unrecoverable errors to aid debugging. Avoid naked `unwrap()`.
-* **No Unsafe:** `unsafe` code is strictly forbidden unless absolutely unavoidable.
-* **Intentional Documentation:** Comments must explain the *reasoning* ("why we chose this specific approach") rather than just describing what the code does.
+* **Error Handling:** Use `expect("context")` for unrecoverable errors. Avoid naked `unwrap()`.
+* **No Unsafe:** `unsafe` code is strictly forbidden.
+* **Intentional Documentation:** Explain the *why*, not just the *how*.
 
-## 4. Project Structure
+## 4. The Core Game Loop Architecture
+Gameplay logic must follow this 4-phase execution flow (enforced via System Sets):
+
+1.  **Phase 1: Decision (Intent)**
+    * Entities decide *what* to do (e.g., `npc_decision_system` sets `Intent::Attack`).
+2.  **Phase 2: Execution (Resolution)**
+    * Systems resolve `Intent` into **Messages** (e.g., `melee_execution_system` emits `DamageMessage`).
+3.  **Phase 3: Application (Effects)**
+    * Systems consume Messages to mutate state (e.g., `damage_application_system` applies mitigation and reduces `Health`).
+4.  **Phase 4: Cleanup & Lifecycle**
+    * Handle consequences (e.g., `death_system` handles 0 HP entities, rewards, and despawning).
+
+## 5. Project Structure
 
 The project is organized as a Cargo workspace with the following crates:
-* **`common`**: Contains shared types, states (`GameState`), and messages used across the entire project.
-* **`game_core`**: Acts as the main glue crate, aggregating other crates and handling global setup.
-* **`enemy`**: Handles enemy logic, systems, and configurations.
-* **`player_npcs`**: Manages player allies (Soldiers, Heroes, etc.) and their logic.
-* **`portal`**: Implements the core portal mechanics, upgrades, and stats.
-* **`items`**: Manages itemization components and equipment stats (e.g. `Melee`, `Ranged`, `Armor`).
-* **`ui`**: Dedicated crate for User Interface systems.
-* **`wallet`**: Manages player resources/currency (Void Shards).
-* **`assets`**: Handles asset loading, configurations, and management.
-* **`src/` (Root)**: Contains the main binary entry point.
+* **`common`**: Shared types, `GameState`, and global **Messages** (Events).
+* **`game_core`**: Main glue crate, global setup.
+* **`enemy`**: Enemy logic and configurations.
+* **`player_npcs`**: Player ally logic (Soldiers, Heroes).
+* **`portal`**: Core portal mechanics, upgrades, spawning.
+* **`items`**: Itemization components (`Melee`, `Ranged`, `Armor`).
+* **`ui`**: User Interface systems.
+* **`wallet`**: Resource/currency management.
+* **`assets`**: Asset loading and management.
+* **`src/` (Root)**: Main binary entry point.
 
 # Pre-commit
-Always run `cargo +nightly fmt` before pushing any changes to ensure code is well formatted.
-Always run `cargo check` and check for lints.
-Always run `cargo clippy` to check for lints.
+* Run `cargo +nightly fmt`.
+* Run `cargo check` and `cargo clippy`.
+* **Architecture Check:** Ensure new systems are added to the correct Phase/SystemSet.
