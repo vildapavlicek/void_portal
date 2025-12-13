@@ -13,8 +13,11 @@
           custom_size: Some(( 32.0, 32.0 )),
         ),
         "player_npcs::PlayerNpc": (),
-        "player_npcs::MovementSpeed": (100.0),
+        "player_npcs::MovementSpeed": (150.0),
         "player_npcs::Target": (None),
+        "bevy_ecs::hierarchy::Children": ([
+          2,
+        ]),
       },
     ),
     2: (
@@ -23,7 +26,7 @@
         "player_npcs::Weapon": (),
         "items::Item": ( name: "Iron Sword" ),
         "items::Melee": (),
-        "items::BaseDamage": (15.0),
+        "items::BaseDamage": (5.0),
         "items::AttackRange": (30.0),
         "player_npcs::WeaponCooldown": (
             timer: (
