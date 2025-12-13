@@ -1,17 +1,16 @@
 use {
     bevy::{prelude::*, time::TimePlugin},
-    common::{EnemyKilled, Reward},
+    common::{EnemyKilled, GrowthStrategy, Reward},
     enemy::{
         despawn_dead_bodies, enemy_lifetime, handle_dying_enemies, move_enemies,
         update_enemy_health_ui, AvailableEnemies, Enemy, EnemyConfig,
     },
-    player_npcs::{
-        move_projectiles, player_npc_attack_logic, player_npc_decision_logic,
-        player_npc_movement_logic, projectile_collision, spawn_player_npc, SoldierConfig,
-    },
+    player_npcs::{move_projectiles, projectile_collision},
     portal::{
-        spawn_enemies, spawn_portal, EnemySpawnTimer, Portal, PortalConfig, PortalSpawnTracker,
+        spawn_enemies, spawn_portal, IndependentStatConfig, LevelScaledStats, Portal, PortalConfig,
+        PortalSpawnTracker,
     },
+    std::collections::HashMap,
 };
 
 // Helper to setup the app with necessary resources
@@ -31,18 +30,45 @@ fn setup_app() -> App {
     ));
 
     // Resources
+    let level_scaled_stats = LevelScaledStats {
+        void_shards_reward: GrowthStrategy::Linear {
+            base: 10.0,
+            coefficient: 1.0,
+        },
+        spawn_timer: GrowthStrategy::Static(1.0),
+        enemy_health: GrowthStrategy::Linear {
+            base: 100.0,
+            coefficient: 10.0,
+        },
+        base_enemy_speed: GrowthStrategy::Static(100.0),
+        base_enemy_lifetime: GrowthStrategy::Static(5.0),
+    };
+
+    let mut upgrades = HashMap::new();
+    upgrades.insert(
+        "Capacity".to_string(),
+        IndependentStatConfig {
+            value: GrowthStrategy::Static(10.0),
+            price: GrowthStrategy::Static(100.0),
+        },
+    );
+    upgrades.insert(
+        "Lifetime".to_string(),
+        IndependentStatConfig {
+            value: GrowthStrategy::Static(0.0),
+            price: GrowthStrategy::Static(100.0),
+        },
+    );
+
     app.insert_resource(PortalConfig {
-        spawn_timer: 1.0,
-        base_void_shards_reward: 10.0,
-        base_upgrade_price: 100.0,
-        upgrade_price_increase_coef: 1.5,
+        level: 0,
+        level_up_price: GrowthStrategy::Exponential {
+            base: 100.0,
+            factor: 1.5,
+        },
         portal_top_offset: 100.0,
-        base_enemy_health: 100.0,
-        base_enemy_speed: 100.0,
-        base_enemy_lifetime: 5.0,
-        base_enemy_reward: 5.0,
-        enemy_health_growth_factor: 1.0,
-        enemy_reward_growth_factor: 1.0,
+        level_scaled_stats,
+        upgrades,
     });
 
     app.insert_resource(AvailableEnemies(vec![EnemyConfig {
@@ -50,23 +76,9 @@ fn setup_app() -> App {
         lifetime_coef: 1.0,
         speed_coef: 1.0,
         reward_coef: 1.0,
-        spawn_limit: 10,
     }]));
 
-    app.insert_resource(SoldierConfig {
-        attack_timer: 1.0,
-        projectile_speed: 100.0,
-        projectile_damage: 10.0,
-        projectile_lifetime: 2.0,
-        attack_range: 200.0,
-        move_speed: 100.0,
-    });
-
     app.init_resource::<PortalSpawnTracker>();
-    app.insert_resource(EnemySpawnTimer(Timer::from_seconds(
-        1.0,
-        TimerMode::Repeating,
-    )));
 
     // Add Systems
     app.add_systems(
@@ -79,10 +91,6 @@ fn setup_app() -> App {
             handle_dying_enemies,
             despawn_dead_bodies,
             update_enemy_health_ui,
-            spawn_player_npc,
-            player_npc_decision_logic,
-            player_npc_movement_logic,
-            player_npc_attack_logic,
             move_projectiles,
             projectile_collision,
         ),
