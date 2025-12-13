@@ -23,6 +23,8 @@ impl Plugin for PortalPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(RonAssetPlugin::<PortalConfig>::new(&["portal.ron"]));
 
+        app.add_message::<ChangeActiveLevel>();
+
         app.register_type::<Portal>()
             .register_type::<UpgradeSlot>()
             .register_type::<UpgradeableStat>()
