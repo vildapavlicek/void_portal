@@ -6,6 +6,7 @@
         coefficient: 250.0,
     ),
     portal_top_offset: 100.0,
+    scavenger_penalty_coef: 1.0,
 
     level_scaled_stats: (
         void_shards_reward: Linear(

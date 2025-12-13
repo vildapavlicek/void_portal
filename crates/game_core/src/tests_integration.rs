@@ -69,6 +69,7 @@ fn setup_app() -> App {
         portal_top_offset: 100.0,
         level_scaled_stats,
         upgrades,
+        scavenger_penalty_coef: 1.0,
     });
 
     app.insert_resource(AvailableEnemies(vec![EnemyConfig {
