@@ -1,4 +1,5 @@
 #![allow(clippy::type_complexity)]
+// Bevy systems often require many arguments (Resources, Queries, etc.) which exceeds the default clippy limit.
 #![allow(clippy::too_many_arguments)]
 
 use {
