@@ -8,7 +8,7 @@ use {
     enemy::{AvailableEnemies, EnemyConfig, EnemyPlugin},
     items::ItemsPlugin,
     player_npcs::PlayerNpcsPlugin,
-    portal::{PortalConfig, PortalPlugin},
+    portal::PortalPlugin,
     ui::VoidUiPlugin,
     wallet::VoidWalletPlugin,
 };
@@ -17,7 +17,7 @@ pub struct VoidPortalPlugin;
 
 #[derive(Resource, Default)]
 struct GameConfigHandles {
-    portal: Handle<PortalConfig>,
+    portal_scene: Handle<DynamicScene>,
     enemies_folder: Handle<LoadedFolder>,
 }
 
@@ -60,7 +60,7 @@ fn start_loading(
     asset_server: Res<AssetServer>,
     mut handles: ResMut<GameConfigHandles>,
 ) {
-    handles.portal = asset_server.load("configs/main.portal.ron");
+    handles.portal_scene = asset_server.load("prefabs/portal.scn.ron");
     handles.enemies_folder = asset_server.load_folder("configs/enemies");
 
     commands.spawn((
@@ -81,18 +81,26 @@ struct LoadingText;
 fn check_assets_ready(
     mut commands: Commands,
     handles: Res<GameConfigHandles>,
-    portal_assets: Res<Assets<PortalConfig>>,
+    // We don't need to check for PortalConfig asset anymore, just that the scene handle is "ready" (which load returns immediately,
+    // but to follow the pattern we might want to check load state.
+    // However, for DynamicScene, usually we just spawn it.
+    // We DO need to wait for enemies folder to be loaded to populate AvailableEnemies.
     loaded_folders: Res<Assets<LoadedFolder>>,
     enemy_assets: Res<Assets<EnemyConfig>>,
     mut available_enemies: ResMut<AvailableEnemies>,
     mut next_state: ResMut<NextState<GameState>>,
     loading_text_query: Query<Entity, With<LoadingText>>,
+    asset_server: Res<AssetServer>,
 ) {
-    if let (Some(portal), Some(enemies_folder)) = (
-        portal_assets.get(&handles.portal),
-        loaded_folders.get(&handles.enemies_folder),
-    ) {
-        commands.insert_resource(portal.clone());
+    // Check if enemies are loaded
+    if let Some(enemies_folder) = loaded_folders.get(&handles.enemies_folder) {
+        // Also check if portal scene is loaded?
+        // Not strictly required to access its content here (since we just spawn it),
+        // but good for ensuring smooth transition.
+        use bevy::asset::LoadState;
+        if asset_server.load_state(&handles.portal_scene) != LoadState::Loaded {
+            return;
+        }
 
         available_enemies.0.clear();
         for handle in &enemies_folder.handles {
@@ -107,6 +115,12 @@ fn check_assets_ready(
         } else {
             info!("Loaded {} enemy configs", available_enemies.0.len());
         }
+
+        // Spawn the Portal Scene
+        commands.spawn(DynamicSceneBundle {
+            scene: handles.portal_scene.clone(),
+            ..default()
+        });
 
         for entity in loading_text_query.iter() {
             commands.entity(entity).despawn();

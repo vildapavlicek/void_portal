@@ -1,0 +1,78 @@
+(
+  entities: {
+    1: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (0.0, 0.0, 0.0), // Y-position handled by system
+        ),
+        "bevy_sprite::sprite::Sprite": (
+          color: Srgba(red: 0.5, green: 0.0, blue: 0.5, alpha: 1.0),
+          custom_size: Some((16.0, 32.0)),
+        ),
+        "portal::components::PortalRoot": (),
+
+        "portal::components::PortalLevel": (
+            active: 1,
+            max_unlocked: 1,
+        ),
+
+        "portal::components::UpgradeCost": (
+            strategy: Linear(base: 500.0, coefficient: 250.0),
+            current_price: 500.0,
+        ),
+
+        "portal::components::PortalSpawner": (
+            timer: (
+                mode: Repeating,
+                duration: (secs: 2, nanos: 0),
+                elapsed: (secs: 0, nanos: 0),
+            ),
+            interval_strategy: Static(2.0),
+        ),
+
+        "portal::components::EnemyScaling": (
+            reward_strategy: Linear(base: 10.0, coefficient: 7.5),
+            health_strategy: Exponential(base: 5.0, factor: 1.5),
+            speed_strategy: Static(150.0),
+            lifetime_strategy: Incremental(base: 10.0, step: 1.1),
+        ),
+
+        "portal::components::ScavengerPenalty": (1.0),
+
+        // Pickable for UI interaction
+        "ui::Pickable": (),
+      },
+      children: [2, 3],
+    ),
+
+    // Child: Capacity Upgrade
+    2: (
+      parent: 1,
+      components: {
+        "portal::UpgradeSlot": ( name: "Capacity" ),
+        "common::stats::UpgradeableStat": (
+            level: 0.0,
+            value: 5.0,
+            price: 200.0,
+            value_strategy: Static(5.0),
+            price_strategy: Static(200.0),
+        ),
+      }
+    ),
+
+    // Child: Lifetime Upgrade
+    3: (
+      parent: 1,
+      components: {
+        "portal::UpgradeSlot": ( name: "Lifetime" ),
+        "common::stats::UpgradeableStat": (
+            level: 0.0,
+            value: 1.0,
+            price: 500.0,
+            value_strategy: Static(1.0),
+            price_strategy: Static(500.0),
+        ),
+      }
+    ),
+  }
+)
