@@ -7,6 +7,7 @@ use {
     common::{EnemyKilled, GameState, RequestUpgrade, UpgradePortal},
     enemy::{AvailableEnemies, EnemyConfig, EnemyPlugin},
     items::ItemsPlugin,
+    monster_factory::MonsterFactoryPlugin,
     player_npcs::PlayerNpcsPlugin,
     portal::PortalPlugin,
     ui::VoidUiPlugin,
@@ -36,6 +37,7 @@ impl Plugin for VoidPortalPlugin {
             PlayerNpcsPlugin,
             VoidUiPlugin,
             ItemsPlugin,
+            MonsterFactoryPlugin,
         ));
 
         app.init_resource::<GameConfigHandles>();
@@ -91,14 +93,15 @@ fn check_assets_ready(
     mut next_state: ResMut<NextState<GameState>>,
     loading_text_query: Query<Entity, With<LoadingText>>,
     asset_server: Res<AssetServer>,
+    mut scene_spawner: ResMut<SceneSpawner>,
 ) {
     // Check if enemies are loaded
     if let Some(enemies_folder) = loaded_folders.get(&handles.enemies_folder) {
         // Also check if portal scene is loaded?
         // Not strictly required to access its content here (since we just spawn it),
         // but good for ensuring smooth transition.
-        use bevy::asset::LoadState;
-        if asset_server.load_state(&handles.portal_scene) != LoadState::Loaded {
+
+        if !asset_server.is_loaded_with_dependencies(&handles.portal_scene) {
             return;
         }
 
@@ -117,10 +120,7 @@ fn check_assets_ready(
         }
 
         // Spawn the Portal Scene
-        commands.spawn(DynamicSceneBundle {
-            scene: handles.portal_scene.clone(),
-            ..default()
-        });
+        scene_spawner.spawn_dynamic(handles.portal_scene.clone());
 
         for entity in loading_text_query.iter() {
             commands.entity(entity).despawn();
