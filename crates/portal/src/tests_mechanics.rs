@@ -1,19 +1,72 @@
 use {
     crate::{
         handle_generic_upgrades, handle_portal_upgrade, portal_spawn_logic, portal_tick_logic,
-        spawn_portal, IndependentStatConfig, LevelScaledStats, Portal, PortalConfig,
-        PortalSpawnTracker, UpgradeSlot,
+        PortalLevel, PortalSpawner, UpgradeCost, EnemyScaling, UpgradeSlot,
+        PortalSpawnTracker,
     },
     bevy::{prelude::*, time::TimePlugin},
     common::{
         GrowthStrategy, RequestUpgrade, Reward, SpawnEnemyRequest, UpgradePortal, UpgradeableStat,
     },
     enemy::{AvailableEnemies, Enemy, EnemyConfig, Health, Lifetime},
-    std::collections::HashMap,
     wallet::Wallet,
 };
 
-// Helper to setup the app with necessary resources
+// Helper to manually spawn the "Archetype" (Mocking the Scene)
+fn spawn_test_portal(commands: &mut Commands) -> Entity {
+    let portal_entity = commands.spawn((
+        PortalLevel { active: 0, max_unlocked: 0 },
+        UpgradeCost {
+            strategy: GrowthStrategy::Linear { base: 100.0, coefficient: 50.0 },
+            current_price: 100.0,
+        },
+        PortalSpawner {
+            timer: Timer::from_seconds(1.0, TimerMode::Repeating),
+            interval_strategy: GrowthStrategy::Linear { base: 1.0, coefficient: 0.1 },
+        },
+        EnemyScaling {
+            health_strategy: GrowthStrategy::Linear { base: 50.0, coefficient: 10.0 },
+            reward_strategy: GrowthStrategy::Linear { base: 10.0, coefficient: 0.0 },
+            speed_strategy: GrowthStrategy::Static(20.0),
+            lifetime_strategy: GrowthStrategy::Linear { base: 5.0, coefficient: 0.5 },
+        },
+    )).id();
+
+    // Spawn Children (Upgrades)
+    commands.entity(portal_entity).with_children(|parent| {
+         // Capacity Upgrade
+        parent.spawn((
+            UpgradeSlot { name: "Capacity".to_string() },
+            UpgradeableStat {
+                level: 0.0,
+                value: 5.0,
+                price: 200.0,
+                value_strategy: GrowthStrategy::Incremental { base: 5.0, step: 1.0 },
+                price_strategy: GrowthStrategy::Exponential { base: 200.0, factor: 1.5 },
+            },
+        ));
+
+        // Lifetime Upgrade
+        parent.spawn((
+            UpgradeSlot { name: "Lifetime".to_string() },
+            UpgradeableStat {
+                level: 0.0,
+                value: 0.0,
+                price: 100.0,
+                value_strategy: GrowthStrategy::Incremental { base: 0.0, step: 1.0 },
+                price_strategy: GrowthStrategy::Exponential { base: 100.0, factor: 1.5 },
+            },
+        ));
+    });
+
+    portal_entity
+}
+
+// Wrapper system for spawn helper (since we need Commands)
+fn spawn_setup_system(mut commands: Commands) {
+    spawn_test_portal(&mut commands);
+}
+
 fn setup_app() -> App {
     let mut app = App::new();
     // Disable TimePlugin to control time manually
@@ -33,65 +86,6 @@ fn setup_app() -> App {
         bevy::window::PrimaryWindow,
     ));
 
-    let mut upgrades = HashMap::new();
-    upgrades.insert(
-        "Capacity".to_string(),
-        IndependentStatConfig {
-            value: GrowthStrategy::Incremental {
-                base: 5.0,
-                step: 1.0,
-            },
-            price: GrowthStrategy::Exponential {
-                base: 200.0,
-                factor: 1.5,
-            },
-        },
-    );
-    upgrades.insert(
-        "Lifetime".to_string(),
-        IndependentStatConfig {
-            value: GrowthStrategy::Incremental {
-                base: 0.0,
-                step: 1.0,
-            },
-            price: GrowthStrategy::Exponential {
-                base: 100.0,
-                factor: 1.5,
-            },
-        },
-    );
-
-    // Resources
-    app.insert_resource(PortalConfig {
-        level: 0, // Start at 0 per new requirement
-        level_up_price: GrowthStrategy::Linear {
-            base: 100.0,
-            coefficient: 50.0,
-        },
-        portal_top_offset: 100.0,
-        scavenger_penalty_coef: 0.5,
-        level_scaled_stats: LevelScaledStats {
-            void_shards_reward: GrowthStrategy::Linear {
-                base: 10.0,
-                coefficient: 0.0,
-            },
-            spawn_timer: GrowthStrategy::Linear {
-                base: 1.0,
-                coefficient: 0.1,
-            },
-            enemy_health: GrowthStrategy::Linear {
-                base: 50.0,
-                coefficient: 10.0,
-            },
-            base_enemy_speed: GrowthStrategy::Static(20.0),
-            base_enemy_lifetime: GrowthStrategy::Linear {
-                base: 5.0,
-                coefficient: 0.5,
-            },
-        },
-        upgrades,
-    });
-
     app.insert_resource(AvailableEnemies(vec![EnemyConfig {
         health_coef: 1.0,
         lifetime_coef: 1.0,
@@ -100,17 +94,16 @@ fn setup_app() -> App {
     }]));
 
     app.init_resource::<PortalSpawnTracker>();
-    // Time resource already inserted above
 
     app.insert_resource(Wallet {
         void_shards: 1000.0,
-    }); // Rich wallet
+    });
 
     // Add Systems
+    app.add_systems(Startup, spawn_setup_system);
     app.add_systems(
         Update,
         (
-            spawn_portal,
             (portal_tick_logic, portal_spawn_logic).chain(),
             handle_portal_upgrade,
             handle_generic_upgrades,
@@ -123,17 +116,14 @@ fn setup_app() -> App {
 #[test]
 fn test_portal_initial_level() {
     let mut app = setup_app();
-    app.update();
+    app.update(); // Spawns portal
 
-    let mut portal_query = app.world_mut().query::<&Portal>();
-    let portal = portal_query.iter(app.world()).next();
+    let mut portal_query = app.world_mut().query::<(&PortalLevel, &UpgradeCost)>();
+    let (level, cost) = portal_query.iter(app.world()).next().expect("Portal not spawned");
 
-    assert!(portal.is_some());
-    let portal = portal.unwrap();
-    assert_eq!(portal.max_unlocked_level, 0);
-    assert_eq!(portal.active_level, 0);
-    // Price at Level 0: 100 + 0*50 = 100
-    assert_eq!(portal.upgrade_price, 100.0);
+    assert_eq!(level.max_unlocked, 0);
+    assert_eq!(level.active, 0);
+    assert_eq!(cost.current_price, 100.0);
 }
 
 #[test]
@@ -189,18 +179,18 @@ fn test_portal_upgrade() {
         // Cost at L0 is 100. 1000 - 100 = 900
         assert_eq!(wallet.void_shards, 900.0);
 
-        let portal = app
+        let (level, cost) = app
             .world_mut()
-            .query::<&Portal>()
-            .single(app.world())
-            .unwrap();
+            .query::<(&PortalLevel, &UpgradeCost)>()
+            .single(app.world());
+
         // Level 1
-        assert_eq!(portal.max_unlocked_level, 1);
+        assert_eq!(level.max_unlocked, 1);
         // Active Level snaps to new max (QoL)
-        assert_eq!(portal.active_level, 1);
+        assert_eq!(level.active, 1);
 
         // New Price at L1: 100 + 1*50 = 150
-        assert_eq!(portal.upgrade_price, 150.0);
+        assert_eq!(cost.current_price, 150.0);
     }
 }
 
