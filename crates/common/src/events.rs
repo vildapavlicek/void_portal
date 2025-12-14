@@ -1,6 +1,11 @@
 use bevy::prelude::*;
 
 #[derive(Message, Debug, Clone)]
+pub struct SpawnEnemyRequest {
+    pub portal_entity: Entity,
+}
+
+#[derive(Message, Debug, Clone)]
 pub struct EnemyKilled {
     pub entity: Entity,
 }

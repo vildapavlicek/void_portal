@@ -1,11 +1,13 @@
 use {
     crate::{
-        handle_generic_upgrades, handle_portal_upgrade, spawn_enemies, spawn_portal,
-        IndependentStatConfig, LevelScaledStats, Portal, PortalConfig, PortalSpawnTracker,
-        UpgradeSlot,
+        handle_generic_upgrades, handle_portal_upgrade, portal_spawn_logic, portal_tick_logic,
+        spawn_portal, IndependentStatConfig, LevelScaledStats, Portal, PortalConfig,
+        PortalSpawnTracker, UpgradeSlot,
     },
     bevy::{prelude::*, time::TimePlugin},
-    common::{GrowthStrategy, RequestUpgrade, Reward, UpgradePortal, UpgradeableStat},
+    common::{
+        GrowthStrategy, RequestUpgrade, Reward, SpawnEnemyRequest, UpgradePortal, UpgradeableStat,
+    },
     enemy::{AvailableEnemies, Enemy, EnemyConfig, Health, Lifetime},
     std::collections::HashMap,
     wallet::Wallet,
@@ -20,6 +22,7 @@ fn setup_app() -> App {
 
     app.add_message::<UpgradePortal>();
     app.add_message::<RequestUpgrade>();
+    app.add_message::<SpawnEnemyRequest>();
 
     // Mock Window
     app.world_mut().spawn((
@@ -108,7 +111,7 @@ fn setup_app() -> App {
         Update,
         (
             spawn_portal,
-            spawn_enemies,
+            (portal_tick_logic, portal_spawn_logic).chain(),
             handle_portal_upgrade,
             handle_generic_upgrades,
         ),

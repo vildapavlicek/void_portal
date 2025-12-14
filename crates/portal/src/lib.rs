@@ -6,7 +6,7 @@ use {
     bevy_common_assets::ron::RonAssetPlugin,
     common::{
         ChangeActiveLevel, GameState, GrowthStrategy, RequestUpgrade, Reward, ScavengeModifier,
-        UpgradePortal, UpgradeableStat,
+        SpawnEnemyRequest, UpgradePortal, UpgradeableStat,
     },
     enemy::{AvailableEnemies, Enemy, Health, Lifetime, SpawnIndex, Speed},
     rand::Rng,
@@ -35,12 +35,14 @@ impl Plugin for PortalPlugin {
 
         app.init_resource::<PortalSpawnTracker>();
 
+        app.add_message::<SpawnEnemyRequest>();
+
         app.add_systems(OnEnter(GameState::Playing), spawn_portal);
 
         app.add_systems(
             Update,
             (
-                spawn_enemies,
+                (portal_tick_logic, portal_spawn_logic).chain(),
                 handle_portal_upgrade,
                 handle_generic_upgrades,
                 handle_active_level_change,
@@ -160,26 +162,19 @@ pub fn spawn_portal(
     }
 }
 
-pub fn spawn_enemies(
-    mut commands: Commands,
+// 1. DECISION SYSTEM: Checks Timer & Capacity
+pub fn portal_tick_logic(
     time: Res<Time>,
+    mut portal_query: Query<(Entity, &mut SpawnTimer, &PortalUpgrades)>,
+    upgrade_query: Query<&UpgradeableStat>,
+    enemy_query: Query<(), With<Enemy>>,
     available_enemies: Res<AvailableEnemies>,
-    enemy_query: Query<Entity, With<Enemy>>,
-    mut portal_query: Query<(
-        &Transform,
-        &Portal,
-        &PortalUpgrades,
-        &PortalStats,
-        &mut SpawnTimer,
-    )>,
-    upgrade_query: Query<(&UpgradeSlot, &UpgradeableStat)>,
-    mut spawn_tracker: ResMut<PortalSpawnTracker>,
-    window_query: Query<&Window, With<PrimaryWindow>>,
-    portal_config: Res<PortalConfig>,
+    mut spawn_events: MessageWriter<SpawnEnemyRequest>,
 ) {
-    for (portal_transform, portal, upgrades, portal_stats, mut spawn_timer) in
-        portal_query.iter_mut()
-    {
+    // Global cap check shortcut
+    let current_enemy_count = enemy_query.iter().count();
+
+    for (entity, mut spawn_timer, upgrades) in portal_query.iter_mut() {
         spawn_timer.0.tick(time.delta());
 
         if spawn_timer.0.just_finished() {
@@ -188,108 +183,136 @@ pub fn spawn_enemies(
                 continue;
             }
 
-            // Find Capacity and Lifetime upgrades
-            let capacity_entity = upgrades
-                .0
-                .get("Capacity")
-                .expect("Capacity upgrade not found in PortalUpgrades");
-            let lifetime_entity = upgrades
-                .0
-                .get("Lifetime")
-                .expect("Lifetime upgrade not found in PortalUpgrades");
-
-            let (_, capacity_stat) = upgrade_query
-                .get(*capacity_entity)
-                .expect("Capacity upgrade entity not found in world");
-            let (_, lifetime_stat) = upgrade_query
-                .get(*lifetime_entity)
-                .expect("Lifetime upgrade entity not found in world");
-
-            let capacity_val = capacity_stat.value;
-            let lifetime_bonus = lifetime_stat.value;
-
-            // Check Global Capacity (Current Logic: Global Count vs Local Capacity)
-            if enemy_query.iter().count() >= capacity_val as usize {
-                // Max enemies reached for this portal's capacity check
-                continue;
-            }
-
-            let Some(window) = window_query.iter().next() else {
+            // Check Capacity Upgrade
+            let Some(capacity_entity) = upgrades.0.get("Capacity") else {
+                error!("Portal missing Capacity upgrade slot");
                 continue;
             };
 
-            let enemy_config = &available_enemies.0[0];
+            let Ok(capacity_stat) = upgrade_query.get(*capacity_entity) else {
+                continue;
+            };
 
-            let half_width = window.width() / 2.0;
-            let half_height = window.height() / 2.0;
+            // Decision: Can we spawn?
+            if current_enemy_count < capacity_stat.value as usize {
+                // Yes -> Emit Intent
+                spawn_events.write(SpawnEnemyRequest {
+                    portal_entity: entity,
+                });
+            }
+        }
+    }
+}
 
-            // Dynamic stats calculation using PortalStats component and GrowthStrategy
-            // USES ACTIVE LEVEL
-            let health_multiplier = portal_stats
-                .stats
-                .enemy_health
-                .calculate(portal.active_level as f32);
-            let reward_multiplier = portal_stats
-                .stats
-                .void_shards_reward
-                .calculate(portal.active_level as f32);
-            let lifetime_multiplier = portal_stats
-                .stats
-                .base_enemy_lifetime
-                .calculate(portal.active_level as f32);
-            let base_speed = portal_stats
-                .stats
-                .base_enemy_speed
-                .calculate(portal.active_level as f32);
+// 2. EXECUTION SYSTEM: Calculates Stats & Spawns
+pub fn portal_spawn_logic(
+    mut commands: Commands,
+    mut events: MessageReader<SpawnEnemyRequest>,
+    // We re-query the portal to get the data needed for construction
+    portal_query: Query<(&Transform, &Portal, &PortalStats, &PortalUpgrades)>,
+    upgrade_query: Query<&UpgradeableStat>,
+    available_enemies: Res<AvailableEnemies>,
+    mut spawn_tracker: ResMut<PortalSpawnTracker>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+    portal_config: Res<PortalConfig>,
+) {
+    if events.is_empty() {
+        return;
+    }
 
-            let max_health = health_multiplier * enemy_config.health_coef;
-            let speed = base_speed * enemy_config.speed_coef;
-            let reward = reward_multiplier * enemy_config.reward_coef;
+    let Some(window) = window_query.iter().next() else {
+        return;
+    };
+    let half_width = window.width() / 2.0;
+    let half_height = window.height() / 2.0;
 
-            // Lifetime = (Base Scaled * Coef) + Bonus Independent
-            let lifetime_val = (lifetime_multiplier * enemy_config.lifetime_coef) + lifetime_bonus;
+    // Use the first config for now
+    let enemy_config = &available_enemies.0[0];
 
-            let mut rng = rand::rng();
-            let target_x = rng.random_range(-half_width..half_width);
-            let target_y = rng.random_range(-half_height..half_height);
-            let target_position = Vec2::new(target_x, target_y);
+    for request in events.read() {
+        let Ok((portal_tf, portal, portal_stats, upgrades)) =
+            portal_query.get(request.portal_entity)
+        else {
+            continue;
+        };
 
-            commands
-                .spawn((
-                    Sprite {
-                        color: Color::srgb(0.0, 0.0, 1.0), // Blue
-                        custom_size: Some(Vec2::new(24.0, 24.0)),
+        // Fetch Lifetime Upgrade
+        let Some(lifetime_entity) = upgrades.0.get("Lifetime") else {
+            continue;
+        };
+        let Ok(lifetime_stat) = upgrade_query.get(*lifetime_entity) else {
+            continue;
+        };
+
+        // --- Stat Calculation ---
+        let health_multiplier = portal_stats
+            .stats
+            .enemy_health
+            .calculate(portal.active_level as f32);
+        let reward_multiplier = portal_stats
+            .stats
+            .void_shards_reward
+            .calculate(portal.active_level as f32);
+        let lifetime_multiplier = portal_stats
+            .stats
+            .base_enemy_lifetime
+            .calculate(portal.active_level as f32);
+        let base_speed = portal_stats
+            .stats
+            .base_enemy_speed
+            .calculate(portal.active_level as f32);
+
+        let max_health = health_multiplier * enemy_config.health_coef;
+        let speed = base_speed * enemy_config.speed_coef;
+        let reward = reward_multiplier * enemy_config.reward_coef;
+
+        // Lifetime = (Base Scaled * Coef) + Bonus Independent
+        let lifetime_val = (lifetime_multiplier * enemy_config.lifetime_coef) + lifetime_stat.value;
+
+        // --- Spawning ---
+        let mut rng = rand::rng();
+        let target_x = rng.random_range(-half_width..half_width);
+        let target_y = rng.random_range(-half_height..half_height);
+        let target_position = Vec2::new(target_x, target_y);
+
+        commands
+            .spawn((
+                Sprite {
+                    color: Color::srgb(0.0, 0.0, 1.0), // Blue
+                    custom_size: Some(Vec2::new(24.0, 24.0)),
+                    ..default()
+                },
+                Transform::from_translation(portal_tf.translation),
+                Enemy { target_position },
+                SpawnIndex(spawn_tracker.0),
+                Health {
+                    current: max_health,
+                    max: max_health,
+                },
+                Lifetime {
+                    timer: Timer::from_seconds(lifetime_val, TimerMode::Once),
+                },
+                Reward(reward),
+                Speed(speed),
+                ScavengeModifier(portal_config.scavenger_penalty_coef),
+            ))
+            .with_children(|parent| {
+                parent.spawn((
+                    Text2d::new(format!("{:.0}", max_health)),
+                    TextFont {
+                        font_size: 10.0,
                         ..default()
                     },
-                    Transform::from_translation(portal_transform.translation),
-                    Enemy { target_position },
-                    SpawnIndex(spawn_tracker.0),
-                    Health {
-                        current: max_health,
-                        max: max_health,
-                    },
-                    Lifetime {
-                        timer: Timer::from_seconds(lifetime_val, TimerMode::Once),
-                    },
-                    Reward(reward),
-                    Speed(speed),
-                    ScavengeModifier(portal_config.scavenger_penalty_coef),
-                ))
-                .with_children(|parent| {
-                    parent.spawn((
-                        Text2d::new(format!("{:.0}", max_health)),
-                        TextFont {
-                            font_size: 10.0,
-                            ..default()
-                        },
-                        TextColor(Color::WHITE),
-                        Transform::from_translation(Vec3::new(0.0, 20.0, 1.0)),
-                    ));
-                });
+                    TextColor(Color::WHITE),
+                    Transform::from_translation(Vec3::new(0.0, 20.0, 1.0)),
+                ));
+            });
 
-            spawn_tracker.0 = spawn_tracker.0.wrapping_add(1);
-            info!("Enemy spawned! Target: {:?}", target_position);
-        }
+        spawn_tracker.0 = spawn_tracker.0.wrapping_add(1);
+        info!(
+            "Enemy spawned via Event Loop from Portal {:?}",
+            request.portal_entity
+        );
     }
 }
 
