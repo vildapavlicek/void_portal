@@ -1,8 +1,7 @@
 use {
     crate::{
         handle_generic_upgrades, handle_portal_upgrade, portal_spawn_logic, portal_tick_logic,
-        PortalLevel, PortalSpawner, UpgradeCost, EnemyScaling, UpgradeSlot,
-        PortalSpawnTracker,
+        EnemyScaling, PortalLevel, PortalSpawnTracker, PortalSpawner, UpgradeCost, UpgradeSlot,
     },
     bevy::{prelude::*, time::TimePlugin},
     common::{
@@ -14,47 +13,83 @@ use {
 
 // Helper to manually spawn the "Archetype" (Mocking the Scene)
 fn spawn_test_portal(commands: &mut Commands) -> Entity {
-    let portal_entity = commands.spawn((
-        PortalLevel { active: 0, max_unlocked: 0 },
-        UpgradeCost {
-            strategy: GrowthStrategy::Linear { base: 100.0, coefficient: 50.0 },
-            current_price: 100.0,
-        },
-        PortalSpawner {
-            timer: Timer::from_seconds(1.0, TimerMode::Repeating),
-            interval_strategy: GrowthStrategy::Linear { base: 1.0, coefficient: 0.1 },
-        },
-        EnemyScaling {
-            health_strategy: GrowthStrategy::Linear { base: 50.0, coefficient: 10.0 },
-            reward_strategy: GrowthStrategy::Linear { base: 10.0, coefficient: 0.0 },
-            speed_strategy: GrowthStrategy::Static(20.0),
-            lifetime_strategy: GrowthStrategy::Linear { base: 5.0, coefficient: 0.5 },
-        },
-    )).id();
+    let portal_entity = commands
+        .spawn((
+            PortalLevel {
+                active: 0,
+                max_unlocked: 0,
+            },
+            UpgradeCost {
+                strategy: GrowthStrategy::Linear {
+                    base: 100.0,
+                    coefficient: 50.0,
+                },
+                current_price: 100.0,
+            },
+            PortalSpawner {
+                timer: Timer::from_seconds(1.0, TimerMode::Repeating),
+                interval_strategy: GrowthStrategy::Linear {
+                    base: 1.0,
+                    coefficient: 0.1,
+                },
+            },
+            EnemyScaling {
+                health_strategy: GrowthStrategy::Linear {
+                    base: 50.0,
+                    coefficient: 10.0,
+                },
+                reward_strategy: GrowthStrategy::Linear {
+                    base: 10.0,
+                    coefficient: 0.0,
+                },
+                speed_strategy: GrowthStrategy::Static(20.0),
+                lifetime_strategy: GrowthStrategy::Linear {
+                    base: 5.0,
+                    coefficient: 0.5,
+                },
+            },
+        ))
+        .id();
 
     // Spawn Children (Upgrades)
     commands.entity(portal_entity).with_children(|parent| {
-         // Capacity Upgrade
+        // Capacity Upgrade
         parent.spawn((
-            UpgradeSlot { name: "Capacity".to_string() },
+            UpgradeSlot {
+                name: "Capacity".to_string(),
+            },
             UpgradeableStat {
                 level: 0.0,
                 value: 5.0,
                 price: 200.0,
-                value_strategy: GrowthStrategy::Incremental { base: 5.0, step: 1.0 },
-                price_strategy: GrowthStrategy::Exponential { base: 200.0, factor: 1.5 },
+                value_strategy: GrowthStrategy::Incremental {
+                    base: 5.0,
+                    step: 1.0,
+                },
+                price_strategy: GrowthStrategy::Exponential {
+                    base: 200.0,
+                    factor: 1.5,
+                },
             },
         ));
 
         // Lifetime Upgrade
         parent.spawn((
-            UpgradeSlot { name: "Lifetime".to_string() },
+            UpgradeSlot {
+                name: "Lifetime".to_string(),
+            },
             UpgradeableStat {
                 level: 0.0,
                 value: 0.0,
                 price: 100.0,
-                value_strategy: GrowthStrategy::Incremental { base: 0.0, step: 1.0 },
-                price_strategy: GrowthStrategy::Exponential { base: 100.0, factor: 1.5 },
+                value_strategy: GrowthStrategy::Incremental {
+                    base: 0.0,
+                    step: 1.0,
+                },
+                price_strategy: GrowthStrategy::Exponential {
+                    base: 100.0,
+                    factor: 1.5,
+                },
             },
         ));
     });
@@ -119,7 +154,10 @@ fn test_portal_initial_level() {
     app.update(); // Spawns portal
 
     let mut portal_query = app.world_mut().query::<(&PortalLevel, &UpgradeCost)>();
-    let (level, cost) = portal_query.iter(app.world()).next().expect("Portal not spawned");
+    let (level, cost) = portal_query
+        .iter(app.world())
+        .next()
+        .expect("Portal not spawned");
 
     assert_eq!(level.max_unlocked, 0);
     assert_eq!(level.active, 0);
