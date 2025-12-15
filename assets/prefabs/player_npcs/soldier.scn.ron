@@ -19,6 +19,10 @@
           2,
         ]),
         "player_npcs::Intent": Idle,
+        "bevy_picking::Pickable": (
+          should_block_lower: true,
+          is_hoverable: true,
+        ),
       },
     ),
     2: (
