@@ -4,8 +4,8 @@ use {
     bevy::prelude::*,
     bevy_common_assets::ron::RonAssetPlugin,
     common::{
-        events::DamageMessage, Dead, EnemyKilled, EnemyScavenged, Reward, ScavengeModifier,
-        VoidGameStage,
+        events::DamageMessage, Dead, EnemyKilled, EnemyScavenged, GameState, Reward,
+        ScavengeModifier, VoidGameStage,
     },
     serde::Deserialize,
 };
@@ -37,7 +37,8 @@ impl Plugin for EnemyPlugin {
                     update_enemy_health_ui,
                 )
                     .in_set(VoidGameStage::FrameEnd),
-            ),
+            )
+                .run_if(in_state(GameState::Playing)),
         );
     }
 }
