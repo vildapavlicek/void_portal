@@ -4,7 +4,7 @@
 use {
     assets::VoidAssetsPlugin,
     bevy::{asset::LoadedFolder, prelude::*},
-    common::{EnemyKilled, GameState, RequestUpgrade, UpgradePortal},
+    common::{EnemyKilled, GameState, RequestUpgrade, UpgradePortal, VoidGameStage},
     enemy::{AvailableEnemies, EnemyConfig, EnemyPlugin},
     items::ItemsPlugin,
     monster_factory::MonsterFactoryPlugin,
@@ -41,6 +41,18 @@ impl Plugin for VoidPortalPlugin {
         ));
 
         app.init_resource::<GameConfigHandles>();
+
+        app.configure_sets(
+            Update,
+            (
+                VoidGameStage::ResolveIntent,
+                VoidGameStage::Actions,
+                VoidGameStage::Effect,
+                VoidGameStage::FrameEnd,
+            )
+                .chain()
+                .run_if(in_state(GameState::Playing)),
+        );
 
         app.add_systems(Startup, (setup_camera, start_loading));
         app.add_systems(

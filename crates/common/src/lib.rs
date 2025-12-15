@@ -28,3 +28,15 @@ pub enum GameState {
     Loading,
     Playing,
 }
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum VoidGameStage {
+    /// Resolve intent: Resolves what the given entity will do at that frame (attack, move, idle, etc).
+    ResolveIntent,
+    /// Actions: Processes the intent (e.g., AttackIntent -> AttackAction).
+    Actions,
+    /// Effect: Applies effects (e.g., AttackAction -> DealDamageEffect).
+    Effect,
+    /// Frame-end: Maintenance stage (despawn dead, process rewards, etc.).
+    FrameEnd,
+}
