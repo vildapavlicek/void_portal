@@ -4,28 +4,19 @@
 use {
     bevy::prelude::*,
     common::{
-        ChangeActiveLevel, GameState, RequestUpgrade, SpawnEnemyRequest, UpgradePortal,
-        UpgradeableStat,
+        components::*, ChangeActiveLevel, GameState, RequestUpgrade, SpawnEnemyRequest,
+        UpgradePortal, UpgradeableStat,
     },
     enemy::{AvailableEnemies, Enemy},
-    monster_factory::{MonsterSpawnContext, SpawnMonsterEvent},
+    monster_factory::SpawnMonsterEvent,
     rand::Rng,
     std::collections::HashMap,
     wallet::Wallet,
 };
 
-mod components;
-pub use components::*;
-
-#[derive(Component, Reflect, Default, Clone)]
-#[reflect(Component)]
-pub struct UpgradeSlot {
-    pub name: String,
-}
-
-#[derive(Component, Default, Reflect)]
-#[reflect(Component)]
-pub struct PortalUpgrades(pub HashMap<String, Entity>);
+// No longer exporting local components
+// mod components;
+// pub use components::*;
 
 pub struct PortalPlugin;
 
@@ -151,53 +142,23 @@ pub fn portal_spawn_logic(
     let half_height = window.height() / 2.0;
 
     for request in events.read() {
-        let Ok((portal_tf, level, scaling, children, scav_penalty_opt)) =
-            portal_query.get(request.portal_entity)
-        else {
+        // Validation query to ensure portal components exist, but hydration logic moved to monster_factory.
+        if portal_query.get(request.portal_entity).is_err() {
             continue;
         };
 
-        let scavenger_penalty = scav_penalty_opt.map(|p| p.0).unwrap_or(1.0);
-
-        // Find Lifetime upgrade
-        let lifetime_upgrade = children
-            .iter()
-            .filter_map(|child| upgrade_query.get(child).ok())
-            .find(|(slot, _)| slot.name == "Lifetime");
-
-        let bonus_lifetime = if let Some((_, stat)) = lifetime_upgrade {
-            stat.value
-        } else {
-            0.0
-        };
-
-        // Calculate Stats (Base only, Coefficients applied by factory)
-        let base_health = scaling.health_strategy.calculate(level.active as f32);
-        let base_reward = scaling.reward_strategy.calculate(level.active as f32);
-        let base_speed = scaling.speed_strategy.calculate(level.active as f32);
-        let base_lifetime = scaling.lifetime_strategy.calculate(level.active as f32);
-
+        // Random target position calculation
         let mut rng = rand::rng();
         let target_x = rng.random_range(-half_width..half_width);
         let target_y = rng.random_range(-half_height..half_height);
         let target_position = Vec2::new(target_x, target_y);
 
-        let context = MonsterSpawnContext {
-            base_health,
-            base_speed,
-            base_reward,
-            base_lifetime,
-            bonus_lifetime,
-            scavenger_penalty,
-            spawn_index: spawn_tracker.0,
-            portal_level: level.active,
-            target_position,
-            spawn_position: portal_tf.translation.truncate(),
-        };
-
+        // Emit event with minimal data
         monster_events.write(SpawnMonsterEvent {
             asset_path: "prefabs/enemies/goblin.scn.ron".to_string(),
-            context,
+            portal_entity: request.portal_entity,
+            spawn_index: spawn_tracker.0,
+            target_position,
         });
 
         spawn_tracker.0 = spawn_tracker.0.wrapping_add(1);

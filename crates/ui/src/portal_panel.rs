@@ -1,7 +1,9 @@
 use {
     bevy::prelude::*,
-    common::{ChangeActiveLevel, GameState, RequestUpgrade, UpgradePortal, UpgradeableStat},
-    portal::{EnemyScaling, PortalLevel, UpgradeCost, UpgradeSlot},
+    common::{
+        components::{EnemyScaling, PortalLevel, UpgradeCost, UpgradeSlot},
+        ChangeActiveLevel, GameState, RequestUpgrade, UpgradePortal, UpgradeableStat,
+    },
     wallet::Wallet,
 };
 
