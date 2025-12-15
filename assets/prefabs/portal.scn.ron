@@ -12,22 +12,22 @@
         "common::components::PortalRoot": (),
 
         "common::components::PortalLevel": (
-            active: 1,
-            max_unlocked: 1,
+            active: 0,
+            max_unlocked: 0,
         ),
 
         "common::components::UpgradeCost": (
-            strategy: Linear(base: 500.0, coefficient: 250.0),
-            current_price: 500.0,
+            strategy: Exponential(base: 100.0, factor: 1.25),
+            current_price: 100.0,
         ),
 
         "common::components::PortalSpawner": (
             timer: (
-                stopwatch: ( elapsed: ( secs: 0, nanos: 0 ), is_paused: false ),
-                duration: ( secs: 1, nanos: 0 ),
+                stopwatch: ( elapsed: ( secs: 6, nanos: 0 ), is_paused: false ),
+                duration: ( secs: 5, nanos: 0 ),
                 mode: Repeating,
-                finished: false,
-                times_finished_this_tick: 0,
+                finished: true,
+                times_finished_this_tick: 1,
             ),
             interval_strategy: Static(2.0),
         ),
@@ -59,8 +59,8 @@
             level: 0.0,
             value: 5.0,
             price: 200.0,
-            value_strategy: Static(5.0),
-            price_strategy: Static(200.0),
+            value_strategy: Incremental(base: 5.0, step: 1.0),
+            price_strategy: Exponential(base: 200.0, factor: 1.5),
         ),
       }
     ),
