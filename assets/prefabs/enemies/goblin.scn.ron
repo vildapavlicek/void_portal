@@ -19,11 +19,12 @@
 
         // Marker from 'enemy' crate required for systems to target it
         "enemy::lib::Enemy": ( target_position: (0.0, 0.0) ),
+        "bevy_ecs::hierarchy::Children": ([1]),
       },
-      children: [1],
     ),
     1: (
         components: {
+            "bevy_ecs::hierarchy::ChildOf": (0),
             "bevy_transform::components::Transform": (
                 translation: (x: 0.0, y: 20.0, z: 1.0),
             ),
@@ -39,7 +40,6 @@
                 )
             ),
         },
-        parent: 0,
     )
   }
 )
