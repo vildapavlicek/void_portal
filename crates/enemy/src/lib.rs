@@ -31,8 +31,7 @@ impl Plugin for EnemyPlugin {
                 move_enemies.in_set(VoidGameStage::Actions),
                 apply_damage_logic.in_set(VoidGameStage::Effect),
                 (
-                    enemy_lifetime,
-                    handle_dying_enemies,
+                    manage_enemy_lifecycle,
                     despawn_dead_bodies,
                     update_enemy_health_ui,
                 )
@@ -84,7 +83,10 @@ pub struct SpawnIndex(pub u32);
 pub struct Speed(pub f32);
 
 // Systems
-pub fn move_enemies(time: Res<Time>, mut enemy_query: Query<(&mut Transform, &Enemy, &Speed)>) {
+pub fn move_enemies(
+    time: Res<Time>,
+    mut enemy_query: Query<(&mut Transform, &Enemy, &Speed), Without<Dead>>,
+) {
     for (mut transform, enemy, speed) in enemy_query.iter_mut() {
         let direction =
             (enemy.target_position - transform.translation.truncate()).normalize_or_zero();
@@ -110,50 +112,24 @@ pub fn apply_damage_logic(
         }
     }
 }
-
-pub fn enemy_lifetime(
+pub fn manage_enemy_lifecycle(
     mut commands: Commands,
     time: Res<Time>,
-    mut lifetime_query: Query<(
-        Entity,
-        &mut Lifetime,
-        &Health,
-        &Reward,
-        Option<&ScavengeModifier>,
-    )>,
-    mut events: MessageWriter<EnemyScavenged>,
+    mut query: Query<
+        (
+            Entity,
+            &mut Lifetime,
+            &Health,
+            &Reward,
+            Option<&ScavengeModifier>,
+        ),
+        (With<Enemy>, Without<Dead>),
+    >,
+    mut kill_events: MessageWriter<EnemyKilled>,
+    mut scavenge_events: MessageWriter<EnemyScavenged>,
 ) {
-    for (entity, mut lifetime, health, reward, modifier) in lifetime_query.iter_mut() {
-        lifetime.timer.tick(time.delta());
-        if lifetime.timer.is_finished() {
-            // Scavenger Logic
-            let damage_dealt = health.max - health.current;
-            if damage_dealt > 0.0 {
-                let percentage = damage_dealt / health.max;
-                // If modifier is missing, default to 0.0 (no scavenger reward without config) or maybe 0.5?
-                // The plan says we attach it, so it should be there. Let's default to 0.5 if missing as a fallback,
-                // or 0.0 to be safe. Since config drives it, if it's missing, it wasn't configured, so 0.0.
-                let penalty = modifier.map(|m| m.0).unwrap_or(0.0);
-                let amount = reward.0 * percentage * penalty;
-
-                if amount > 0.0 {
-                    events.write(EnemyScavenged { amount });
-                    info!("Enemy scavenged for {}", amount);
-                }
-            }
-
-            commands.entity(entity).despawn();
-            info!("Enemy despawned due to lifetime expiry");
-        }
-    }
-}
-
-pub fn handle_dying_enemies(
-    mut commands: Commands,
-    query: Query<(Entity, &Health), (With<Enemy>, Without<Dead>)>,
-    mut events: MessageWriter<EnemyKilled>,
-) {
-    for (entity, health) in query.iter() {
+    for (entity, mut lifetime, health, reward, modifier) in query.iter_mut() {
+        // 1. Priority Check: Is the enemy dead?
         if health.current <= 0.0 {
             commands
                 .entity(entity)
@@ -163,8 +139,31 @@ pub fn handle_dying_enemies(
                 })
                 .insert(Visibility::Hidden);
 
-            events.write(EnemyKilled { entity });
+            kill_events.write(EnemyKilled { entity });
             info!("Enemy died, hidden and scheduled for despawn");
+
+            // Critical: Continue to next entity so we don't process lifetime for a dead unit
+            continue;
+        }
+
+        // 2. Secondary Check: Has lifetime expired?
+        lifetime.timer.tick(time.delta());
+        if lifetime.timer.is_finished() {
+            // Scavenger Logic (only if unit wasn't killed)
+            let damage_dealt = health.max - health.current;
+            if damage_dealt > 0.0 {
+                let percentage = damage_dealt / health.max;
+                let penalty = modifier.map(|m| m.0).unwrap_or(0.0);
+                let amount = reward.0 * percentage * penalty;
+
+                if amount > 0.0 {
+                    scavenge_events.write(EnemyScavenged { amount });
+                    info!("Enemy scavenged for {}", amount);
+                }
+            }
+
+            commands.entity(entity).despawn();
+            info!("Enemy despawned due to lifetime expiry");
         }
     }
 }
