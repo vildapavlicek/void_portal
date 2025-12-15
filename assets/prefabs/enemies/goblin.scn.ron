@@ -1,6 +1,6 @@
 (
   entities: {
-    0: (
+    1: (
       components: {
         "bevy_transform::components::Transform": (
           translation: (x: 0.0, y: 0.0, z: 0.0),
@@ -19,12 +19,12 @@
 
         // Marker from 'enemy' crate required for systems to target it
         "enemy::lib::Enemy": ( target_position: (0.0, 0.0) ),
-        "bevy_ecs::hierarchy::Children": ([1]),
+        "bevy_ecs::hierarchy::Children": ([2]),
       },
     ),
-    1: (
+    2: (
         components: {
-            "bevy_ecs::hierarchy::ChildOf": (0),
+            "bevy_ecs::hierarchy::ChildOf": (1),
             "bevy_transform::components::Transform": (
                 translation: (x: 0.0, y: 20.0, z: 1.0),
             ),
