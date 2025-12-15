@@ -14,3 +14,4 @@ player_npcs = { path = "../player_npcs" }
 enemy = { path = "../enemy" }
 items = { path = "../items" }
 monster_factory = { path = "../monster_factory" }
+player_npcs_ui = { path = "../player_npcs_ui" }
