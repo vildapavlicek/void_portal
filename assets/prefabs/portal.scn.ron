@@ -6,41 +6,46 @@
           translation: (0.0, 0.0, 0.0), // Y-position handled by system
         ),
         "bevy_sprite::sprite::Sprite": (
-          color: Srgba(red: 0.5, green: 0.0, blue: 0.5, alpha: 1.0),
+          color: Srgba(Srgba(red: 0.5, green: 0.0, blue: 0.5, alpha: 1.0)),
           custom_size: Some((16.0, 32.0)),
         ),
-        "portal::components::PortalRoot": (),
+        "common::components::PortalRoot": (),
 
-        "portal::components::PortalLevel": (
+        "common::components::PortalLevel": (
             active: 1,
             max_unlocked: 1,
         ),
 
-        "portal::components::UpgradeCost": (
+        "common::components::UpgradeCost": (
             strategy: Linear(base: 500.0, coefficient: 250.0),
             current_price: 500.0,
         ),
 
-        "portal::components::PortalSpawner": (
+        "common::components::PortalSpawner": (
             timer: (
+                stopwatch: ( elapsed: ( secs: 0, nanos: 0 ), is_paused: false ),
+                duration: ( secs: 1, nanos: 0 ),
                 mode: Repeating,
-                duration: (secs: 2, nanos: 0),
-                elapsed: (secs: 0, nanos: 0),
+                finished: false,
+                times_finished_this_tick: 0,
             ),
             interval_strategy: Static(2.0),
         ),
 
-        "portal::components::EnemyScaling": (
+        "common::components::EnemyScaling": (
             reward_strategy: Linear(base: 10.0, coefficient: 7.5),
             health_strategy: Exponential(base: 5.0, factor: 1.5),
             speed_strategy: Static(150.0),
             lifetime_strategy: Incremental(base: 10.0, step: 1.1),
         ),
 
-        "portal::components::ScavengerPenalty": (1.0),
+        "common::components::ScavengerPenalty": (1.0),
 
         // Pickable for UI interaction
-        "ui::Pickable": (),
+        "bevy_picking::Pickable": (
+          should_block_lower: true,
+          is_hoverable: true,
+        ),
         "bevy_ecs::hierarchy::Children": ([2, 3]),
       },
     ),
@@ -49,7 +54,7 @@
     2: (
       components: {
         "bevy_ecs::hierarchy::ChildOf": (1),
-        "portal::UpgradeSlot": ( name: "Capacity" ),
+        "common::components::UpgradeSlot": ( name: "Capacity" ),
         "common::stats::UpgradeableStat": (
             level: 0.0,
             value: 5.0,
@@ -64,7 +69,7 @@
     3: (
       components: {
         "bevy_ecs::hierarchy::ChildOf": (1),
-        "portal::UpgradeSlot": ( name: "Lifetime" ),
+        "common::components::UpgradeSlot": ( name: "Lifetime" ),
         "common::stats::UpgradeableStat": (
             level: 0.0,
             value: 1.0,
@@ -74,5 +79,6 @@
         ),
       }
     ),
-  }
+  },
+  resources: {},
 )
