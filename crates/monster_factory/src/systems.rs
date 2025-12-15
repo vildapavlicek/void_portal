@@ -68,13 +68,13 @@ pub fn attach_monster_context(
             entities.iter().next().map(|entity| {
                 commands
                     .entity(*entity)
+                    .insert(*builder)
                     .insert(Transform::from_translation(spawn_translation));
             });
 
             for entity in entities {
                 commands
                     .entity(entity)
-                    .insert(*builder)
                     // Ensure visibility is correct if scene defaults are weird
                     .insert(Visibility::Inherited);
             }
