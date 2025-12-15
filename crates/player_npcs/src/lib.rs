@@ -2,7 +2,7 @@
 
 use {
     bevy::{prelude::*, scene::DynamicScene},
-    common::{events::DamageMessage, GameState},
+    common::{events::DamageMessage, GameState, VoidGameStage},
     enemy::{Enemy, SpawnIndex},
     items::{
         AttackRange as ItemAttackRange, BaseDamage, Melee, ProjectileStats as ItemProjectileStats,
@@ -28,15 +28,15 @@ impl Plugin for PlayerNpcsPlugin {
         app.add_systems(
             Update,
             (
-                player_npc_decision_logic,
+                player_npc_decision_logic.in_set(VoidGameStage::ResolveIntent),
                 (
                     player_npc_movement_logic,
                     melee_attack_emit,
                     ranged_attack_logic,
-                ),
-                (move_projectiles, projectile_collision),
+                    (move_projectiles, projectile_collision).chain(),
+                )
+                    .in_set(VoidGameStage::Actions),
             )
-                .chain()
                 .run_if(in_state(GameState::Playing)),
         );
     }
