@@ -1,0 +1,12 @@
+[package]
+name = "player_npcs_ui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy = { workspace = true }
+common = { path = "../common" }
+player_npcs = { path = "../player_npcs" }
+items = { path = "../items" }
+
+[dev-dependencies]

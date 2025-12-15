@@ -2431,6 +2431,7 @@ dependencies = [
  "items",
  "monster_factory",
  "player_npcs",
+ "player_npcs_ui",
  "portal",
  "ui",
  "wallet",
@@ -3685,6 +3686,16 @@ dependencies = [
  "items",
  "portal",
  "serde",
+]
+
+[[package]]
+name = "player_npcs_ui"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "common",
+ "items",
+ "player_npcs",
 ]
 
 [[package]]
