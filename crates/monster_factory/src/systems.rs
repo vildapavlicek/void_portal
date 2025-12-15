@@ -47,7 +47,7 @@ pub fn attach_monster_context(
     mut commands: Commands,
     scene_spawner: Res<SceneSpawner>,
     mut pending_spawns: ResMut<PendingMonsterSpawns>,
-    portal_query: Query<&GlobalTransform, With<PortalRoot>>,
+    portal_query: Query<&Transform, With<PortalRoot>>,
 ) {
     let mut to_remove = Vec::new();
 
@@ -58,16 +58,23 @@ pub fn attach_monster_context(
 
             // Determine spawn position from portal
             let spawn_translation = if let Ok(portal_tf) = portal_query.get(builder.portal_entity) {
-                portal_tf.translation()
+                portal_tf.translation
             } else {
                 Vec3::ZERO
             };
+
+            // Only parent needs updating of the transform
+            // as children's transform should be offset from the parent's
+            entities.iter().next().map(|entity| {
+                commands
+                    .entity(*entity)
+                    .insert(Transform::from_translation(spawn_translation));
+            });
 
             for entity in entities {
                 commands
                     .entity(entity)
                     .insert(*builder)
-                    .insert(Transform::from_translation(spawn_translation))
                     // Ensure visibility is correct if scene defaults are weird
                     .insert(Visibility::Inherited);
             }
