@@ -4,8 +4,8 @@ use {
     bevy::prelude::*,
     bevy_common_assets::ron::RonAssetPlugin,
     common::{
-        events::DamageMessage, Dead, EnemyKilled, EnemyScavenged, GameState, Reward,
-        ScavengeModifier,
+        events::DamageMessage, Dead, EnemyKilled, EnemyScavenged, Reward, ScavengeModifier,
+        VoidGameStage,
     },
     serde::Deserialize,
 };
@@ -28,14 +28,16 @@ impl Plugin for EnemyPlugin {
         app.add_systems(
             Update,
             (
-                move_enemies,
-                enemy_lifetime,
-                apply_damage_logic,
-                handle_dying_enemies,
-                despawn_dead_bodies,
-                update_enemy_health_ui,
-            )
-                .run_if(in_state(GameState::Playing)),
+                move_enemies.in_set(VoidGameStage::Actions),
+                apply_damage_logic.in_set(VoidGameStage::Effect),
+                (
+                    enemy_lifetime,
+                    handle_dying_enemies,
+                    despawn_dead_bodies,
+                    update_enemy_health_ui,
+                )
+                    .in_set(VoidGameStage::FrameEnd),
+            ),
         );
     }
 }
