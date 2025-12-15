@@ -10,7 +10,6 @@ use {
     enemy::{AvailableEnemies, Enemy},
     monster_factory::SpawnMonsterEvent,
     rand::Rng,
-    std::collections::HashMap,
     wallet::Wallet,
 };
 

@@ -148,7 +148,6 @@ pub fn player_npc_decision_logic(
                 .iter()
                 .max_by_key(|(_, index, _)| current_spawn_count.wrapping_sub(index.0))
                 .map(|(e, _, _)| e);
-            info!(?target_comp, "found valid target");
         }
 
         // Decision logic based on target
