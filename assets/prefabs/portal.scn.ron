@@ -41,14 +41,14 @@
 
         // Pickable for UI interaction
         "ui::Pickable": (),
+        "bevy_ecs::hierarchy::Children": ([2, 3]),
       },
-      children: [2, 3],
     ),
 
     // Child: Capacity Upgrade
     2: (
-      parent: 1,
       components: {
+        "bevy_ecs::hierarchy::ChildOf": (1),
         "portal::UpgradeSlot": ( name: "Capacity" ),
         "common::stats::UpgradeableStat": (
             level: 0.0,
@@ -62,8 +62,8 @@
 
     // Child: Lifetime Upgrade
     3: (
-      parent: 1,
       components: {
+        "bevy_ecs::hierarchy::ChildOf": (1),
         "portal::UpgradeSlot": ( name: "Lifetime" ),
         "common::stats::UpgradeableStat": (
             level: 0.0,
