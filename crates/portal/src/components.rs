@@ -1,5 +1,4 @@
-use bevy::prelude::*;
-use common::GrowthStrategy;
+use {bevy::prelude::*, common::GrowthStrategy};
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]

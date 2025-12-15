@@ -108,7 +108,7 @@ pub fn portal_tick_logic(
 
             // Iterate children to find "Capacity"
             let capacity = children.iter()
-                .filter_map(|child| upgrade_query.get(*child).ok())
+                .filter_map(|child| upgrade_query.get(child).ok())
                 .find(|(slot, _)| slot.name == "Capacity");
 
             if let Some((_, cap_stat)) = capacity {
@@ -149,7 +149,7 @@ pub fn portal_spawn_logic(
 
         // Find Lifetime upgrade
         let lifetime_upgrade = children.iter()
-            .filter_map(|child| upgrade_query.get(*child).ok())
+            .filter_map(|child| upgrade_query.get(child).ok())
             .find(|(slot, _)| slot.name == "Lifetime");
 
         let bonus_lifetime = if let Some((_, stat)) = lifetime_upgrade {
