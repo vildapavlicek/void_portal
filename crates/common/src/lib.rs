@@ -8,6 +8,9 @@ pub use events::*;
 pub mod stats;
 pub use stats::*;
 
+pub mod components;
+pub use components::*;
+
 #[derive(Component, Debug, Clone, Reflect)]
 pub struct Reward(pub f32);
 

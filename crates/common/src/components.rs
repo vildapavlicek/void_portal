@@ -1,4 +1,4 @@
-use {bevy::prelude::*, common::GrowthStrategy};
+use {crate::GrowthStrategy, bevy::prelude::*, std::collections::HashMap};
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
@@ -37,3 +37,13 @@ pub struct EnemyScaling {
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
 pub struct ScavengerPenalty(pub f32);
+
+#[derive(Component, Reflect, Default, Clone)]
+#[reflect(Component)]
+pub struct UpgradeSlot {
+    pub name: String,
+}
+
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
+pub struct PortalUpgrades(pub HashMap<String, Entity>);

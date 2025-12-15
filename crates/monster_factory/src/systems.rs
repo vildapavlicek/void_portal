@@ -2,7 +2,10 @@
 use {
     crate::components::*,
     bevy::prelude::*,
-    common::{Reward, ScavengeModifier},
+    common::{
+        components::{EnemyScaling, PortalLevel, PortalRoot, PortalUpgrades, ScavengerPenalty},
+        Reward, ScavengeModifier, UpgradeableStat,
+    },
     enemy::{Enemy, Health, Lifetime, SpawnIndex, Speed},
     std::collections::HashMap,
 };
@@ -11,12 +14,14 @@ use {
 #[derive(Message, Clone)]
 pub struct SpawnMonsterEvent {
     pub asset_path: String,
-    pub context: MonsterSpawnContext,
+    pub portal_entity: Entity,
+    pub spawn_index: u32,
+    pub target_position: Vec2,
 }
 
 /// Resource to track pending spawns from the SceneSpawner
 #[derive(Resource, Default)]
-pub struct PendingMonsterSpawns(HashMap<bevy::scene::InstanceId, MonsterSpawnContext>);
+pub struct PendingMonsterSpawns(HashMap<bevy::scene::InstanceId, MonsterBuilder>);
 
 /// 1. The Listener: Starts the spawn process
 pub fn spawn_monster_listener(
@@ -28,30 +33,41 @@ pub fn spawn_monster_listener(
     for event in events.read() {
         let scene_handle = asset_server.load(&event.asset_path);
         let instance_id = scene_spawner.spawn_dynamic(scene_handle);
-        pending_spawns.0.insert(instance_id, event.context);
+        let builder = MonsterBuilder {
+            portal_entity: event.portal_entity,
+            spawn_index: event.spawn_index,
+            target_position: event.target_position,
+        };
+        pending_spawns.0.insert(instance_id, builder);
     }
 }
 
-/// 2. The Attacher: Waits for instances to be ready and attaches context/transform
+/// 2. The Attacher: Waits for instances to be ready and attaches builder/transform
 pub fn attach_monster_context(
     mut commands: Commands,
     scene_spawner: Res<SceneSpawner>,
     mut pending_spawns: ResMut<PendingMonsterSpawns>,
+    portal_query: Query<&GlobalTransform, With<PortalRoot>>,
 ) {
     let mut to_remove = Vec::new();
 
-    for (instance_id, context) in pending_spawns.0.iter() {
+    for (instance_id, builder) in pending_spawns.0.iter() {
         if scene_spawner.instance_is_ready(*instance_id) {
             let entities: Vec<Entity> =
                 scene_spawner.iter_instance_entities(*instance_id).collect();
 
+            // Determine spawn position from portal
+            let spawn_translation = if let Ok(portal_tf) = portal_query.get(builder.portal_entity) {
+                portal_tf.translation()
+            } else {
+                Vec3::ZERO
+            };
+
             for entity in entities {
                 commands
                     .entity(entity)
-                    .insert(*context)
-                    .insert(Transform::from_translation(
-                        context.spawn_position.extend(0.0),
-                    ))
+                    .insert(*builder)
+                    .insert(Transform::from_translation(spawn_translation))
                     // Ensure visibility is correct if scene defaults are weird
                     .insert(Visibility::Inherited);
             }
@@ -64,67 +80,118 @@ pub fn attach_monster_context(
     }
 }
 
-/// 3. The Hydrator: Reacts to entities with Context and Coefs
+/// 3. The Hydrator: Reacts to entities with Builder and Coefs
 pub fn hydrate_monster_stats(
     mut commands: Commands,
-    query: Query<
+    monster_query: Query<(
+        Entity,
+        &MonsterBuilder,
+        Option<&HpCoef>,
+        Option<&SpeedCoef>,
+        Option<&RewardCoef>,
+        Option<&LifetimeCoef>,
+    )>,
+    // Query components from the Portal (Source of Truth)
+    portal_query: Query<
         (
-            Entity,
-            &MonsterSpawnContext,
-            Option<&HpCoef>,
-            Option<&SpeedCoef>,
-            Option<&RewardCoef>,
-            Option<&LifetimeCoef>,
+            &PortalLevel,
+            &EnemyScaling,
+            Option<&ScavengerPenalty>,
+            Option<&PortalUpgrades>,
         ),
-        (Without<Health>, With<HpCoef>),
+        With<PortalRoot>,
     >,
+    // Query generic stats for the "Lifetime" upgrade
+    upgrade_stat_query: Query<&UpgradeableStat>,
 ) {
-    for (entity, context, hp_coef, speed_coef, reward_coef, lifetime_coef) in query.iter() {
+    for (entity, builder, hp_coef, speed_coef, reward_coef, lifetime_coef) in monster_query.iter() {
         let mut entity_cmds = commands.entity(entity);
 
-        // 1. Health
-        if let Some(coef) = hp_coef {
-            let final_hp = context.base_health * coef.val;
-            entity_cmds.insert(Health {
-                current: final_hp,
-                max: final_hp,
-            });
-            entity_cmds.remove::<HpCoef>();
+        // 1. Fetch Portal Data
+        let Ok((level, scaling, scav_penalty_opt, upgrades)) =
+            portal_query.get(builder.portal_entity)
+        else {
+            warn!(
+                "Portal entity {:?} missing for monster hydration",
+                builder.portal_entity
+            );
+            // If portal is gone, maybe just despawn the pending monster or spawn with defaults?
+            // Despawning is safer to avoid zombie state.
+            entity_cmds.despawn();
+            continue;
+        };
+
+        let scavenger_penalty = scav_penalty_opt.map(|p| p.0).unwrap_or(1.0);
+
+        // 2. Fetch Bonus Lifetime from Upgrades
+        let mut bonus_lifetime = 0.0;
+        if let Some(portal_upgrades) = upgrades {
+            if let Some(upgrade_entity) = portal_upgrades.0.get("Lifetime") {
+                if let Ok(stat) = upgrade_stat_query.get(*upgrade_entity) {
+                    bonus_lifetime = stat.value;
+                }
+            }
         }
 
-        // 2. Speed
-        if let Some(coef) = speed_coef {
-            let final_speed = context.base_speed * coef.val;
-            entity_cmds.insert(Speed(final_speed));
-            entity_cmds.remove::<SpeedCoef>();
-        }
+        // 3. Calculate Base Stats
+        let base_health = scaling.health_strategy.calculate(level.active as f32);
+        let base_speed = scaling.speed_strategy.calculate(level.active as f32);
+        let base_reward = scaling.reward_strategy.calculate(level.active as f32);
+        let base_lifetime = scaling.lifetime_strategy.calculate(level.active as f32);
 
-        // 3. Reward
-        if let Some(coef) = reward_coef {
-            let final_reward = context.base_reward * coef.val;
-            entity_cmds.insert(Reward(final_reward));
-            entity_cmds.remove::<RewardCoef>();
-        }
+        // 4. Apply Coefficients and Insert Components
 
-        // 4. Lifetime
-        if let Some(coef) = lifetime_coef {
-            let final_lifetime = (context.base_lifetime * coef.val) + context.bonus_lifetime;
-            entity_cmds.insert(Lifetime {
-                timer: Timer::from_seconds(final_lifetime, TimerMode::Once),
-            });
-            entity_cmds.remove::<LifetimeCoef>();
-        }
+        // Health
+        let final_hp = if let Some(coef) = hp_coef {
+            base_health * coef.val
+        } else {
+            base_health
+        };
+        entity_cmds.insert(Health {
+            current: final_hp,
+            max: final_hp,
+        });
+        entity_cmds.remove::<HpCoef>();
 
-        // 5. Scavenge Modifier
-        entity_cmds.insert(ScavengeModifier(context.scavenger_penalty));
+        // Speed
+        let final_speed = if let Some(coef) = speed_coef {
+            base_speed * coef.val
+        } else {
+            base_speed
+        };
+        entity_cmds.insert(Speed(final_speed));
+        entity_cmds.remove::<SpeedCoef>();
 
-        // 6. Spawn Index & Enemy Marker
-        entity_cmds.insert(SpawnIndex(context.spawn_index));
+        // Reward
+        let final_reward = if let Some(coef) = reward_coef {
+            base_reward * coef.val
+        } else {
+            base_reward
+        };
+        entity_cmds.insert(Reward(final_reward));
+        entity_cmds.remove::<RewardCoef>();
+
+        // Lifetime
+        let final_lifetime = if let Some(coef) = lifetime_coef {
+            (base_lifetime * coef.val) + bonus_lifetime
+        } else {
+            base_lifetime + bonus_lifetime
+        };
+        entity_cmds.insert(Lifetime {
+            timer: Timer::from_seconds(final_lifetime, TimerMode::Once),
+        });
+        entity_cmds.remove::<LifetimeCoef>();
+
+        // Scavenge Modifier
+        entity_cmds.insert(ScavengeModifier(scavenger_penalty));
+
+        // Spawn Index & Enemy Marker
+        entity_cmds.insert(SpawnIndex(builder.spawn_index));
         entity_cmds.insert(Enemy {
-            target_position: context.target_position,
+            target_position: builder.target_position,
         });
 
-        // 7. Cleanup
-        entity_cmds.remove::<MonsterSpawnContext>();
+        // Cleanup
+        entity_cmds.remove::<MonsterBuilder>();
     }
 }

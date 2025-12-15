@@ -14,7 +14,7 @@ impl Plugin for MonsterFactoryPlugin {
             .register_type::<SpeedCoef>()
             .register_type::<RewardCoef>()
             .register_type::<LifetimeCoef>()
-            .register_type::<MonsterSpawnContext>();
+            .register_type::<MonsterBuilder>();
 
         app.add_message::<SpawnMonsterEvent>();
 
