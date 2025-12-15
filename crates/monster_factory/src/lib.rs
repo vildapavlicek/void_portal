@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use {bevy::prelude::*, common::VoidGameStage};
 
 mod components;
 mod systems;
@@ -23,9 +23,13 @@ impl Plugin for MonsterFactoryPlugin {
         app.add_systems(
             Update,
             (
-                systems::spawn_monster_listener,
-                systems::attach_monster_context,
-                systems::hydrate_monster_stats,
+                systems::spawn_monster_listener.in_set(VoidGameStage::Actions),
+                (
+                    systems::attach_monster_context,
+                    systems::hydrate_monster_stats,
+                )
+                    .chain()
+                    .in_set(VoidGameStage::Effect),
             ),
         );
     }
