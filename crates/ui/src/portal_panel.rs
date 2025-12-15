@@ -1,7 +1,7 @@
 use {
     bevy::prelude::*,
     common::{ChangeActiveLevel, GameState, RequestUpgrade, UpgradePortal, UpgradeableStat},
-    portal::{PortalLevel, UpgradeCost, EnemyScaling, UpgradeSlot},
+    portal::{EnemyScaling, PortalLevel, UpgradeCost, UpgradeSlot},
     wallet::Wallet,
 };
 
@@ -106,9 +106,7 @@ fn spawn_portal_ui(
     portal_entity: Entity,
     upgrades: Vec<(Entity, UpgradeSlot, UpgradeableStat)>,
 ) {
-    let current_reward = scaling
-        .reward_strategy
-        .calculate(level.active as f32);
+    let current_reward = scaling.reward_strategy.calculate(level.active as f32);
 
     commands
         .spawn((
@@ -463,17 +461,12 @@ fn update_portal_ui_stats(
         match stat_type {
             PortalUiStat::Level => {
                 if let Ok((level, _)) = portal_query.get(link.0) {
-                    **text = format!(
-                        "Level {} / {}",
-                        level.active, level.max_unlocked
-                    );
+                    **text = format!("Level {} / {}", level.active, level.max_unlocked);
                 }
             }
             PortalUiStat::Reward => {
                 if let Ok((level, scaling)) = portal_query.get(link.0) {
-                    let current_reward = scaling
-                        .reward_strategy
-                        .calculate(level.active as f32);
+                    let current_reward = scaling.reward_strategy.calculate(level.active as f32);
                     **text = format!("Reward: {:.2}", current_reward);
                 }
             }
@@ -525,13 +518,11 @@ fn close_portal_ui_actions(
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, bevy::state::app::StatesPlugin, common::GrowthStrategy,
-    };
+    use {super::*, bevy::state::app::StatesPlugin, common::GrowthStrategy};
 
     #[test]
     fn test_portal_ui_lifecycle() {
-        use portal::{PortalLevel, UpgradeCost, EnemyScaling};
+        use portal::{EnemyScaling, PortalLevel, UpgradeCost};
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_plugins(StatesPlugin)
@@ -559,10 +550,16 @@ mod tests {
         let portal_ent = app
             .world_mut()
             .spawn((
-                PortalLevel { active: 1, max_unlocked: 1 },
+                PortalLevel {
+                    active: 1,
+                    max_unlocked: 1,
+                },
                 UpgradeCost {
-                    strategy: GrowthStrategy::Linear { base: 100.0, coefficient: 1.5 },
-                    current_price: 100.0
+                    strategy: GrowthStrategy::Linear {
+                        base: 100.0,
+                        coefficient: 1.5,
+                    },
+                    current_price: 100.0,
                 },
                 EnemyScaling::default(), // Can populate if needed
             ))
