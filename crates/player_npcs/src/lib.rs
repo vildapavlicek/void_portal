@@ -21,7 +21,9 @@ impl Plugin for PlayerNpcsPlugin {
             .register_type::<Target>()
             .register_type::<Weapon>()
             .register_type::<WeaponCooldown>()
-            .register_type::<Projectile>();
+            .register_type::<Projectile>()
+            .register_type::<MasteryTrack>()
+            .register_type::<WeaponProficiency>();
 
         app.add_systems(OnEnter(GameState::Playing), spawn_player_npc);
 
@@ -82,6 +84,42 @@ pub struct Projectile {
     pub damage: f32,
     pub lifetime: Timer,
     pub source: Entity,
+}
+
+#[derive(Debug, Clone, Reflect, Default)]
+#[reflect(Default)]
+pub struct MasteryTrack {
+    pub level: u32,
+    pub current_xp: f32,
+}
+
+impl MasteryTrack {
+    /// Returns the damage multiplier (e.g., Level 5 = 1.5x damage)
+    pub fn get_damage_bonus(&self) -> f32 {
+        1.0 + (self.level as f32 * 0.10)
+    }
+
+    /// Adds XP and returns true if leveled up
+    pub fn add_xp(&mut self, amount: f32) -> bool {
+        self.current_xp += amount;
+
+        // Curve: Level 1 needs 100, Level 2 needs 200, etc.
+        let xp_needed = 100.0 * (self.level as f32 + 1.0);
+
+        if self.current_xp >= xp_needed {
+            self.current_xp -= xp_needed;
+            self.level += 1;
+            return true;
+        }
+        false
+    }
+}
+
+#[derive(Component, Reflect, Default)]
+#[reflect(Component)]
+pub struct WeaponProficiency {
+    pub melee: MasteryTrack,
+    pub ranged: MasteryTrack,
 }
 
 // Systems
@@ -188,25 +226,41 @@ pub fn player_npc_movement_logic(
 
 pub fn melee_attack_emit(
     time: Res<Time>,
-    player_npc_query: Query<(Entity, &Intent, &Children), With<PlayerNpc>>,
+    mut player_npc_query: Query<
+        (Entity, &Intent, &Children, &mut WeaponProficiency),
+        With<PlayerNpc>,
+    >,
     mut weapon_query: Query<
         (&mut WeaponCooldown, &ItemAttackRange, &BaseDamage),
         (With<Weapon>, With<Melee>),
     >,
     mut damage_events: MessageWriter<DamageMessage>,
 ) {
-    for (npc_entity, intent, children) in player_npc_query.iter() {
+    for (npc_entity, intent, children, mut proficiency) in player_npc_query.iter_mut() {
         if let Intent::Attack(target_entity) = intent {
             for child in children.iter() {
                 if let Ok((mut cooldown, _range, damage)) = weapon_query.get_mut(child) {
                     cooldown.timer.tick(time.delta());
 
                     if cooldown.timer.just_finished() {
+                        // 1. Add XP
+                        let leveled_up = proficiency.melee.add_xp(5.0);
+                        if leveled_up {
+                            info!(
+                                "Soldier {:?} reached Melee Level {}",
+                                npc_entity, proficiency.melee.level
+                            );
+                        }
+
+                        // 2. Calculate Bonus
+                        let multiplier = proficiency.melee.get_damage_bonus();
+                        let final_damage = damage.0 * multiplier;
+
                         // EMIT MESSAGE
                         damage_events.write(DamageMessage {
                             source: npc_entity,
                             target: *target_entity,
-                            amount: damage.0,
+                            amount: final_damage,
                             damage_type: common::events::DamageType::Physical,
                         });
                     }
@@ -219,7 +273,16 @@ pub fn melee_attack_emit(
 pub fn ranged_attack_logic(
     mut commands: Commands,
     time: Res<Time>,
-    player_npc_query: Query<(Entity, &Transform, &Intent, &Children), With<PlayerNpc>>,
+    mut player_npc_query: Query<
+        (
+            Entity,
+            &Transform,
+            &Intent,
+            &Children,
+            &mut WeaponProficiency,
+        ),
+        With<PlayerNpc>,
+    >,
     mut weapon_query: Query<
         (
             &mut WeaponCooldown,
@@ -231,7 +294,7 @@ pub fn ranged_attack_logic(
     >,
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
-    for (npc_entity, npc_tf, intent, children) in player_npc_query.iter() {
+    for (npc_entity, npc_tf, intent, children, mut proficiency) in player_npc_query.iter_mut() {
         let Intent::Attack(target_entity) = intent else {
             continue;
         };
@@ -248,6 +311,13 @@ pub fn ranged_attack_logic(
                     let direction =
                         (target_tf.translation - npc_tf.translation).normalize_or_zero();
 
+                    // 1. Add XP
+                    proficiency.ranged.add_xp(5.0);
+
+                    // 2. Calculate Bonus
+                    let multiplier = proficiency.ranged.get_damage_bonus();
+                    let final_damage = damage.0 * multiplier;
+
                     // Spawn Projectile
                     commands.spawn((
                         Sprite {
@@ -258,7 +328,7 @@ pub fn ranged_attack_logic(
                         Transform::from_translation(npc_tf.translation),
                         Projectile {
                             velocity: direction * proj_stats.speed,
-                            damage: damage.0,
+                            damage: final_damage,
                             lifetime: Timer::from_seconds(proj_stats.lifetime, TimerMode::Once),
                             source: npc_entity,
                         },

@@ -19,6 +19,10 @@
           2,
         ]),
         "player_npcs::Intent": Idle,
+        "player_npcs::WeaponProficiency": (
+            melee: ( level: 0, current_xp: 0.0 ),
+            ranged: ( level: 0, current_xp: 0.0 ),
+        ),
         "bevy_picking::Pickable": (
           should_block_lower: true,
           is_hoverable: true,
