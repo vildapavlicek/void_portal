@@ -65,12 +65,12 @@ pub fn attach_monster_context(
 
             // Only parent needs updating of the transform
             // as children's transform should be offset from the parent's
-            entities.iter().next().map(|entity| {
+            if let Some(entity) = entities.first() {
                 commands
                     .entity(*entity)
                     .insert(*builder)
                     .insert(Transform::from_translation(spawn_translation));
-            });
+            }
 
             for entity in entities {
                 commands

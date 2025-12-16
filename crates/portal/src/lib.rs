@@ -126,7 +126,6 @@ pub fn portal_spawn_logic(
         &Children,
         Option<&ScavengerPenalty>,
     )>,
-    upgrade_query: Query<(&UpgradeSlot, &UpgradeableStat)>,
     mut spawn_tracker: ResMut<PortalSpawnTracker>,
     window_query: Query<&Window, With<bevy::window::PrimaryWindow>>,
 ) {
