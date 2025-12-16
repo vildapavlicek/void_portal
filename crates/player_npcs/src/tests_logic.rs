@@ -4,7 +4,7 @@ use {
     common::{events::DamageMessage, EnemyKilled},
     enemy::{apply_damage_logic, Enemy, Health, SpawnIndex},
     items::{AttackRange as ItemAttackRange, BaseDamage, Melee, ProjectileStats, Ranged},
-    portal::{Portal, PortalSpawnTracker},
+    portal::PortalSpawnTracker,
 };
 
 // --- Test Utilities ---
@@ -34,8 +34,7 @@ fn create_app_with_minimal_plugins() -> App {
 
 fn spawn_portal_and_tracker(app: &mut App) {
     app.insert_resource(PortalSpawnTracker(0));
-    app.world_mut()
-        .spawn((Portal::default(), Transform::default()));
+    app.world_mut().spawn((Transform::default(),));
 }
 
 #[test]

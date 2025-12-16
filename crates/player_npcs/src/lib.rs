@@ -99,12 +99,17 @@ impl MasteryTrack {
         1.0 + (self.level as f32 * 0.10)
     }
 
+    /// Returns the XP needed for the NEXT level
+    pub fn xp_for_next_level(&self) -> f32 {
+        100.0 * (self.level as f32 + 1.0)
+    }
+
     /// Adds XP and returns true if leveled up
     pub fn add_xp(&mut self, amount: f32) -> bool {
         self.current_xp += amount;
 
         // Curve: Level 1 needs 100, Level 2 needs 200, etc.
-        let xp_needed = 100.0 * (self.level as f32 + 1.0);
+        let xp_needed = self.xp_for_next_level();
 
         if self.current_xp >= xp_needed {
             self.current_xp -= xp_needed;
@@ -227,7 +232,7 @@ pub fn player_npc_movement_logic(
 pub fn melee_attack_emit(
     time: Res<Time>,
     mut player_npc_query: Query<
-        (Entity, &Intent, &Children, &mut WeaponProficiency),
+        (Entity, &Intent, &Children, Option<&mut WeaponProficiency>),
         With<PlayerNpc>,
     >,
     mut weapon_query: Query<
@@ -243,17 +248,21 @@ pub fn melee_attack_emit(
                     cooldown.timer.tick(time.delta());
 
                     if cooldown.timer.just_finished() {
-                        // 1. Add XP
-                        let leveled_up = proficiency.melee.add_xp(5.0);
-                        if leveled_up {
-                            info!(
-                                "Soldier {:?} reached Melee Level {}",
-                                npc_entity, proficiency.melee.level
-                            );
+                        let mut multiplier = 1.0;
+
+                        if let Some(ref mut prof) = proficiency {
+                            // 1. Add XP
+                            let leveled_up = prof.melee.add_xp(5.0);
+                            if leveled_up {
+                                info!(
+                                    "Soldier {:?} reached Melee Level {}",
+                                    npc_entity, prof.melee.level
+                                );
+                            }
+                            // 2. Calculate Bonus
+                            multiplier = prof.melee.get_damage_bonus();
                         }
 
-                        // 2. Calculate Bonus
-                        let multiplier = proficiency.melee.get_damage_bonus();
                         let final_damage = damage.0 * multiplier;
 
                         // EMIT MESSAGE
@@ -279,7 +288,7 @@ pub fn ranged_attack_logic(
             &Transform,
             &Intent,
             &Children,
-            &mut WeaponProficiency,
+            Option<&mut WeaponProficiency>,
         ),
         With<PlayerNpc>,
     >,
@@ -311,11 +320,14 @@ pub fn ranged_attack_logic(
                     let direction =
                         (target_tf.translation - npc_tf.translation).normalize_or_zero();
 
-                    // 1. Add XP
-                    proficiency.ranged.add_xp(5.0);
+                    let mut multiplier = 1.0;
+                    if let Some(ref mut prof) = proficiency {
+                        // 1. Add XP
+                        prof.ranged.add_xp(5.0);
+                        // 2. Calculate Bonus
+                        multiplier = prof.ranged.get_damage_bonus();
+                    }
 
-                    // 2. Calculate Bonus
-                    let multiplier = proficiency.ranged.get_damage_bonus();
                     let final_damage = damage.0 * multiplier;
 
                     // Spawn Projectile
