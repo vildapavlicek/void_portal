@@ -4,7 +4,7 @@ use {
     bevy::prelude::*,
     common::GameState,
     items::{AttackRange as ItemAttackRange, BaseDamage, Item, Melee, Ranged},
-    player_npcs::{MovementSpeed, PlayerNpc, Weapon, WeaponCooldown},
+    player_npcs::{MovementSpeed, PlayerNpc, Weapon, WeaponCooldown, WeaponProficiency},
 };
 
 pub struct PlayerNpcsUiPlugin;
@@ -45,7 +45,7 @@ fn attach_soldier_ui_observer(
 fn on_soldier_click(
     trigger: On<Pointer<Click>>,
     mut commands: Commands,
-    soldier_query: Query<(&MovementSpeed, &Children)>,
+    soldier_query: Query<(&MovementSpeed, &Children, Option<&WeaponProficiency>)>,
     weapon_query: Query<
         (
             &Item,
@@ -65,7 +65,7 @@ fn on_soldier_click(
     }
 
     let entity = trigger.entity;
-    if let Ok((speed, children)) = soldier_query.get(entity) {
+    if let Ok((speed, children, proficiency)) = soldier_query.get(entity) {
         // Find Weapon
         let mut weapon_info = None;
         for &child in children {
@@ -88,7 +88,7 @@ fn on_soldier_click(
             }
         }
 
-        spawn_soldier_ui(&mut commands, speed.0, weapon_info);
+        spawn_soldier_ui(&mut commands, speed.0, weapon_info, proficiency);
     }
 }
 
@@ -96,6 +96,7 @@ fn spawn_soldier_ui(
     commands: &mut Commands,
     movement_speed: f32,
     weapon_info: Option<(String, &str, f32, f32, f32)>, // Name, Type, Damage, Range, Cooldown
+    proficiency: Option<&WeaponProficiency>,
 ) {
     commands
         .spawn((
@@ -218,6 +219,79 @@ fn spawn_soldier_ui(
                             TextFont::default(),
                             TextColor(Color::srgb(0.7, 0.7, 0.7)),
                         ));
+                    }
+
+                    // Proficiency Section
+                    if let Some(prof) = proficiency {
+                        p.spawn((
+                            Node {
+                                width: Val::Percent(100.0),
+                                height: Val::Px(1.0),
+                                margin: UiRect::axes(Val::Px(0.0), Val::Px(10.0)),
+                                ..default()
+                            },
+                            BackgroundColor(Color::WHITE),
+                        ));
+
+                        p.spawn((
+                            Text::new("Weapon Proficiency"),
+                            TextFont {
+                                font_size: 18.0,
+                                ..default()
+                            },
+                            TextColor(Color::srgb(0.9, 0.9, 0.5)),
+                        ));
+
+                        let tracks = [("Melee", &prof.melee), ("Ranged", &prof.ranged)];
+
+                        for (name, track) in tracks {
+                            let xp_needed = track.xp_for_next_level();
+                            let bonus_percent = (track.get_damage_bonus() - 1.0) * 100.0;
+
+                            // Track Name
+                            p.spawn((
+                                Text::new(name),
+                                TextFont {
+                                    font_size: 16.0,
+                                    ..default()
+                                },
+                                TextColor(Color::srgb(0.7, 0.7, 1.0)),
+                            ));
+
+                            // Level/XP
+                            p.spawn((Node {
+                                width: Val::Percent(100.0),
+                                flex_direction: FlexDirection::Row,
+                                justify_content: JustifyContent::SpaceBetween,
+                                ..default()
+                            },))
+                                .with_children(|row| {
+                                    row.spawn((
+                                        Text::new(format!(
+                                            "Level {} ({:.0}/{:.0} XP)",
+                                            track.level, track.current_xp, xp_needed
+                                        )),
+                                        TextFont::default(),
+                                        TextColor(Color::WHITE),
+                                    ));
+                                });
+
+                            // Bonus
+                            p.spawn((Node {
+                                width: Val::Percent(100.0),
+                                flex_direction: FlexDirection::Row,
+                                justify_content: JustifyContent::SpaceBetween,
+                                margin: UiRect::bottom(Val::Px(5.0)),
+                                ..default()
+                            },))
+                                .with_children(|row| {
+                                    row.spawn((
+                                        Text::new(format!("Damage Bonus: +{:.0}%", bonus_percent)),
+                                        TextFont::default(),
+                                        TextColor(Color::srgb(0.5, 1.0, 0.5)),
+                                    ));
+                                });
+                        }
                     }
 
                     // Close Button
@@ -345,6 +419,7 @@ mod tests {
             &mut app.world_mut().commands(),
             100.0,
             Some(("Test Sword".to_string(), "Melee", 10.0, 30.0, 1.0)),
+            Some(&WeaponProficiency::default()),
         );
         app.update();
 
