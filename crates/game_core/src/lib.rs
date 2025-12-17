@@ -21,7 +21,7 @@ pub struct VoidPortalPlugin;
 #[derive(Resource, Default)]
 struct GameConfigHandles {
     portal_scene: Handle<DynamicScene>,
-    enemies_folder: Handle<LoadedFolder>,
+    monsters_folder: Handle<LoadedFolder>,
 }
 
 impl Plugin for VoidPortalPlugin {
@@ -80,7 +80,7 @@ fn start_loading(
     mut handles: ResMut<GameConfigHandles>,
 ) {
     handles.portal_scene = asset_server.load("prefabs/portal.scn.ron");
-    handles.enemies_folder = asset_server.load_folder("configs/enemies");
+    handles.monsters_folder = asset_server.load_folder("configs/monsters");
 
     commands.spawn((
         Text2d::new("Loading..."),
@@ -103,17 +103,17 @@ fn check_assets_ready(
     // We don't need to check for PortalConfig asset anymore, just that the scene handle is "ready" (which load returns immediately,
     // but to follow the pattern we might want to check load state.
     // However, for DynamicScene, usually we just spawn it.
-    // We DO need to wait for enemies folder to be loaded to populate AvailableEnemies.
+    // We DO need to wait for monsters folder to be loaded to populate AvailableEnemies.
     loaded_folders: Res<Assets<LoadedFolder>>,
-    enemy_assets: Res<Assets<MonsterConfig>>,
-    mut available_enemies: ResMut<AvailableEnemies>,
+    monster_config_asset: Res<Assets<MonsterConfig>>,
+    mut available_monsters: ResMut<AvailableEnemies>,
     mut next_state: ResMut<NextState<GameState>>,
     loading_text_query: Query<Entity, With<LoadingText>>,
     asset_server: Res<AssetServer>,
     mut scene_spawner: ResMut<SceneSpawner>,
 ) {
-    // Check if enemies are loaded
-    if let Some(enemies_folder) = loaded_folders.get(&handles.enemies_folder) {
+    // Check if monsters are loaded
+    if let Some(monsters_folder) = loaded_folders.get(&handles.monsters_folder) {
         // Also check if portal scene is loaded?
         // Not strictly required to access its content here (since we just spawn it),
         // but good for ensuring smooth transition.
@@ -122,18 +122,18 @@ fn check_assets_ready(
             return;
         }
 
-        available_enemies.0.clear();
-        for handle in &enemies_folder.handles {
+        available_monsters.0.clear();
+        for handle in &monsters_folder.handles {
             let typed_handle: Handle<MonsterConfig> = handle.clone().typed();
-            if let Some(config) = enemy_assets.get(&typed_handle) {
-                available_enemies.0.push(config.clone());
+            if let Some(config) = monster_config_asset.get(&typed_handle) {
+                available_monsters.0.push(config.clone());
             }
         }
 
-        if available_enemies.0.is_empty() {
-            warn!("No enemies loaded from configs/enemies/");
+        if available_monsters.0.is_empty() {
+            warn!("No monsters loaded from configs/monsters/");
         } else {
-            info!("Loaded {} enemy configs", available_enemies.0.len());
+            info!("Loaded {} monster configs", available_monsters.0.len());
         }
 
         // Spawn the Portal Scene

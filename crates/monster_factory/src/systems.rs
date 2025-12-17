@@ -192,7 +192,7 @@ pub fn hydrate_monster_stats(
         // Scavenge Modifier
         entity_cmds.insert(ScavengeModifier(scavenger_penalty));
 
-        // Spawn Index & Enemy Marker
+        // Spawn Index & Monster Marker
         entity_cmds.insert(SpawnIndex(builder.spawn_index));
         entity_cmds.insert(Monster {
             target_position: builder.target_position,

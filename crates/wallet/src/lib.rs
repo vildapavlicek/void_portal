@@ -13,7 +13,10 @@ impl Plugin for VoidWalletPlugin {
             .add_message::<common::MonsterScavenged>()
             .add_systems(
                 Update,
-                (update_wallet_from_enemy_killed, update_wallet_from_scavenge),
+                (
+                    update_wallet_from_monster_killed,
+                    update_wallet_from_scavenge,
+                ),
             );
     }
 }
@@ -23,7 +26,7 @@ pub struct Wallet {
     pub void_shards: f32,
 }
 
-fn update_wallet_from_enemy_killed(
+fn update_wallet_from_monster_killed(
     mut events: MessageReader<MonsterKilled>,
     mut wallet: ResMut<Wallet>,
     reward_query: Query<(&Reward, &Transform)>,
@@ -44,7 +47,7 @@ fn update_wallet_from_enemy_killed(
             );
         } else {
             warn!(
-                "EnemyKilled event received for entity {:?} but no Reward/Dead component found",
+                "MonsterKilled event received for entity {:?} but no Reward/Dead component found",
                 event.entity
             );
         }
@@ -80,7 +83,7 @@ mod tests {
         // Check initial state
         assert_eq!(app.world().resource::<Wallet>().void_shards, 0.0);
 
-        // Spawn a dead enemy with reward
+        // Spawn a dead monster with reward
         let entity1 = app
             .world_mut()
             .spawn((
@@ -102,7 +105,7 @@ mod tests {
         // Check updated state
         assert_eq!(app.world().resource::<Wallet>().void_shards, 10.0);
 
-        // Spawn another dead enemy
+        // Spawn another dead monster
         let entity2 = app
             .world_mut()
             .spawn((
@@ -128,11 +131,11 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_plugins(VoidWalletPlugin);
-        // Note: VoidWalletPlugin already adds EnemyScavenged message, but NOT EnemyKilled
-        // So when Update runs, `update_wallet_from_enemy_killed` panics because `EnemyKilled` is missing.
+        // Note: VoidWalletPlugin already adds MonsterScavenged message, but NOT MonsterKilled
+        // So when Update runs, `update_wallet_from_monster_killed` panics because `MonsterKilled` is missing.
         // We must add it for the system to not panic, or disable the system for this test.
         app.add_message::<MonsterKilled>()
-           .add_message::<SpawnFloatingText>();
+            .add_message::<SpawnFloatingText>();
 
         assert_eq!(app.world().resource::<Wallet>().void_shards, 0.0);
 

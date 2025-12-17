@@ -5,7 +5,7 @@ use {
 };
 
 #[test]
-fn test_enemy_death_lifecycle() {
+fn test_monster_death_lifecycle() {
     let mut app = App::new();
 
     app.add_plugins(MinimalPlugins.build().disable::<TimePlugin>());
@@ -29,14 +29,14 @@ fn test_enemy_death_lifecycle() {
     );
 
     // Add death systems
-    // manage_enemy_lifecycle runs, emits event, modifies entity.
+    // manage_monster_lifecycle runs, emits event, modifies entity.
     // event reader runs (order undefined unless explicit, but next frame definitely catches it).
     // despawn_dead_bodies runs.
     app.add_systems(Update, (manage_monster_lifecycle, despawn_dead_bodies));
 
-    // Spawn an enemy with 0 health
+    // Spawn an monster with 0 health
     let reward_amount = 10.0;
-    let enemy_entity = app
+    let monster_entity = app
         .world_mut()
         .spawn((
             Monster {
@@ -68,27 +68,27 @@ fn test_enemy_death_lifecycle() {
     assert_eq!(
         captured.0.len(),
         1,
-        "Should emit exactly one EnemyKilled event"
+        "Should emit exactly one MonsterKilled event"
     );
-    assert_eq!(captured.0[0].entity, enemy_entity);
+    assert_eq!(captured.0[0].entity, monster_entity);
 
     // 2. Verify Entity still exists
-    assert!(app.world().get_entity(enemy_entity).is_ok());
+    assert!(app.world().get_entity(monster_entity).is_ok());
 
-    // 3. Verify Enemy component removed
+    // 3. Verify Monster component removed
     assert!(
-        app.world().get::<Monster>(enemy_entity).is_none(),
-        "Enemy component should be removed"
+        app.world().get::<Monster>(monster_entity).is_none(),
+        "Monster component should be removed"
     );
 
     // 4. Verify Dead component added
     assert!(
-        app.world().get::<Dead>(enemy_entity).is_some(),
+        app.world().get::<Dead>(monster_entity).is_some(),
         "Dead component should be added"
     );
 
     // 5. Verify Hidden
-    let visibility = app.world().get::<Visibility>(enemy_entity).unwrap();
+    let visibility = app.world().get::<Visibility>(monster_entity).unwrap();
     assert_eq!(
         *visibility,
         Visibility::Hidden,
@@ -104,7 +104,7 @@ fn test_enemy_death_lifecycle() {
 
     // Verify still exists
     assert!(
-        app.world().get_entity(enemy_entity).is_ok(),
+        app.world().get_entity(monster_entity).is_ok(),
         "Entity should still exist after 0.9s"
     );
 
@@ -117,7 +117,7 @@ fn test_enemy_death_lifecycle() {
 
     // Verify Despawned
     assert!(
-        app.world().get_entity(enemy_entity).is_err(),
+        app.world().get_entity(monster_entity).is_err(),
         "Entity should be despawned after 1.1s"
     );
 }

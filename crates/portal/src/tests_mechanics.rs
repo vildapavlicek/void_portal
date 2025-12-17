@@ -5,7 +5,7 @@ use {
     },
     bevy::{prelude::*, time::TimePlugin},
     common::{
-        GrowthStrategy, RequestUpgrade, Reward, SpawnEnemyRequest, UpgradePortal, UpgradeableStat,
+        GrowthStrategy, RequestUpgrade, Reward, SpawnMonsterRequest, UpgradePortal, UpgradeableStat,
     },
     monsters::{AvailableEnemies, Health, Lifetime, Monster, MonsterConfig},
     wallet::Wallet,
@@ -110,7 +110,7 @@ fn setup_app() -> App {
 
     app.add_message::<UpgradePortal>();
     app.add_message::<RequestUpgrade>();
-    app.add_message::<SpawnEnemyRequest>();
+    app.add_message::<SpawnMonsterRequest>();
 
     // Mock Window
     app.world_mut().spawn((
@@ -165,7 +165,7 @@ fn test_portal_initial_level() {
 }
 
 #[test]
-fn test_enemy_stats_at_level_0() {
+fn test_monster_stats_at_level_0() {
     let mut app = setup_app();
     app.update(); // Spawns portal
 
@@ -175,15 +175,15 @@ fn test_enemy_stats_at_level_0() {
         // Spawn timer base is 1.0 + 0*0.1 = 1.0
         time.advance_by(std::time::Duration::from_secs_f32(1.1));
     }
-    app.update(); // Spawns enemy (timer finished)
+    app.update(); // Spawns monster (timer finished)
 
-    let mut enemy_query = app
+    let mut monster_query = app
         .world_mut()
         .query::<(&Monster, &Health, &Reward, &Lifetime)>();
-    let enemy = enemy_query.iter(app.world()).next();
+    let monster = monster_query.iter(app.world()).next();
 
-    assert!(enemy.is_some(), "Enemy should be spawned at level 0");
-    let (_, health, reward, lifetime) = enemy.unwrap();
+    assert!(monster.is_some(), "Monster should be spawned at level 0");
+    let (_, health, reward, lifetime) = monster.unwrap();
 
     // Level 0:
     // Health: base 50 + 0*10 = 50

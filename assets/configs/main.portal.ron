@@ -14,12 +14,12 @@
             coefficient: 7.5,
         ),
         spawn_timer: Static(2.0),
-        enemy_health: Exponential(
+        monster_health: Exponential(
             base: 5.0,
             factor: 1.5,
         ),
-        base_enemy_speed: Static(150.0),
-        base_enemy_lifetime: Incremental(
+        base_monster_speed: Static(150.0),
+        base_monster_lifetime: Incremental(
             base: 10.0,
             step: 1.1,
         ),

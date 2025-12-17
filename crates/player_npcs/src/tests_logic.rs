@@ -3,7 +3,7 @@ use {
     bevy::time::{Time, TimePlugin},
     common::{events::DamageMessage, MonsterKilled},
     items::{AttackRange as ItemAttackRange, BaseDamage, Melee, ProjectileStats, Ranged},
-    monsters::{apply_damage_logic, Monster, Health, SpawnIndex},
+    monsters::{apply_damage_logic, Health, Monster, SpawnIndex},
     portal::PortalSpawnTracker,
 };
 
@@ -13,7 +13,7 @@ fn create_app_with_minimal_plugins() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins.build().disable::<TimePlugin>()); // Manually inserting Time to control it
     app.insert_resource(Time::<()>::default());
-    app.add_message::<MonsterKilled>(); // Register EnemyKilled message
+    app.add_message::<MonsterKilled>(); // Register MonsterKilled message
     app.add_message::<DamageMessage>(); // Register DamageMessage
 
     // Register types
@@ -50,8 +50,8 @@ fn test_npc_acquires_target() {
         .spawn((PlayerNpc, Target(None), Transform::default(), Intent::Idle))
         .id();
 
-    // Spawn Enemy
-    let enemy = app
+    // Spawn Monster
+    let monster = app
         .world_mut()
         .spawn((
             Monster {
@@ -72,7 +72,7 @@ fn test_npc_acquires_target() {
     app.update();
 
     let target = app.world().get::<Target>(npc).unwrap();
-    assert_eq!(target.0, Some(enemy), "NPC should target the enemy");
+    assert_eq!(target.0, Some(monster), "NPC should target the monster");
 }
 
 #[test]
@@ -101,8 +101,8 @@ fn test_npc_moves_to_target() {
     let child = app.world_mut().spawn((Weapon, ItemAttackRange(20.0))).id();
     app.world_mut().entity_mut(npc).add_child(child);
 
-    // Spawn Enemy (Distance 100.0)
-    let _enemy = app
+    // Spawn Monster (Distance 100.0)
+    let _monster = app
         .world_mut()
         .spawn((
             Monster {
@@ -167,7 +167,7 @@ fn test_npc_stops_in_range() {
     let child = app.world_mut().spawn((Weapon, ItemAttackRange(30.0))).id();
     app.world_mut().entity_mut(npc).add_child(child);
 
-    // Spawn Enemy at 100.0. Distance = 20.0. Range = 30.0. Should NOT move.
+    // Spawn Monster at 100.0. Distance = 20.0. Range = 30.0. Should NOT move.
     app.world_mut().spawn((
         Monster {
             target_position: Vec2::ZERO,
@@ -233,8 +233,8 @@ fn test_melee_attack() {
         .id();
     app.world_mut().entity_mut(npc).add_child(child);
 
-    // Spawn Enemy at 100.0. Distance 10.0 <= Range 20.0.
-    let enemy = app
+    // Spawn Monster at 100.0. Distance 10.0 <= Range 20.0.
+    let monster = app
         .world_mut()
         .spawn((
             Monster {
@@ -262,8 +262,8 @@ fn test_melee_attack() {
     }
     app.update(); // Attack logic
 
-    let health = app.world().get::<Health>(enemy).unwrap();
-    assert_eq!(health.current, 40.0, "Enemy should take 10 damage");
+    let health = app.world().get::<Health>(monster).unwrap();
+    assert_eq!(health.current, 40.0, "Monster should take 10 damage");
 }
 
 #[test]
@@ -313,8 +313,8 @@ fn test_ranged_attack_spawns_projectile() {
         .id();
     app.world_mut().entity_mut(npc).add_child(child);
 
-    // Spawn Enemy at 50.0
-    let _enemy = app
+    // Spawn Monster at 50.0
+    let _monster = app
         .world_mut()
         .spawn((
             Monster {

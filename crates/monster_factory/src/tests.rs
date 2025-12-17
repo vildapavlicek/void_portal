@@ -116,9 +116,9 @@ fn test_hydrate_monster_stats() {
     assert!(scav.is_some(), "ScavengeModifier component missing");
     assert_eq!(scav.unwrap().0, 0.5);
 
-    let enemy = app.world().get::<Monster>(entity);
-    assert!(enemy.is_some(), "Enemy component missing");
-    assert_eq!(enemy.unwrap().target_position, target_pos);
+    let monster = app.world().get::<Monster>(entity);
+    assert!(monster.is_some(), "Monster component missing");
+    assert_eq!(monster.unwrap().target_position, target_pos);
 
     // Ensure builder and coefs are removed
     assert!(

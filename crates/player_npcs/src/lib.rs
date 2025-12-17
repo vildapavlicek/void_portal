@@ -172,7 +172,7 @@ pub fn player_npc_decision_logic(
         With<PlayerNpc>,
     >,
     weapon_query: Query<&ItemAttackRange, With<Weapon>>,
-    enemy_query: Query<(Entity, &SpawnIndex, &Transform), With<Monster>>,
+    monster_query: Query<(Entity, &SpawnIndex, &Transform), With<Monster>>,
     portal_tracker: Res<PortalSpawnTracker>,
 ) {
     let current_spawn_count = portal_tracker.0;
@@ -194,13 +194,13 @@ pub fn player_npc_decision_logic(
 
         let mut target_valid = false;
         if let Some(target) = target_comp.0 {
-            if enemy_query.get(target).is_ok() {
+            if monster_query.get(target).is_ok() {
                 target_valid = true;
             }
         }
 
         if !target_valid {
-            target_comp.0 = enemy_query
+            target_comp.0 = monster_query
                 .iter()
                 .max_by_key(|(_, index, _)| current_spawn_count.wrapping_sub(index.0))
                 .map(|(e, _, _)| e);
@@ -212,7 +212,7 @@ pub fn player_npc_decision_logic(
             continue;
         };
 
-        if let Ok((_, _, target_transform)) = enemy_query.get(target_entity) {
+        if let Ok((_, _, target_transform)) = monster_query.get(target_entity) {
             let distance = npc_transform
                 .translation
                 .distance(target_transform.translation);
@@ -314,14 +314,14 @@ pub fn ranged_attack_logic(
         ),
         (With<Weapon>, With<Ranged>),
     >,
-    enemy_query: Query<&Transform, With<Monster>>,
+    monster_query: Query<&Transform, With<Monster>>,
 ) {
     for (npc_entity, npc_tf, intent, children, mut proficiency) in player_npc_query.iter_mut() {
         let Intent::Attack(target_entity) = intent else {
             continue;
         };
 
-        let Ok(target_tf) = enemy_query.get(*target_entity) else {
+        let Ok(target_tf) = monster_query.get(*target_entity) else {
             continue;
         };
 
@@ -383,20 +383,20 @@ pub fn move_projectiles(
 pub fn projectile_collision(
     mut commands: Commands,
     projectile_query: Query<(Entity, &Transform, &Projectile)>,
-    enemy_query: Query<(Entity, &Transform), With<Monster>>,
+    monster_query: Query<(Entity, &Transform), With<Monster>>,
     mut damage_events: MessageWriter<DamageMessage>,
 ) {
     for (proj_entity, proj_transform, projectile) in projectile_query.iter() {
         let mut hit = false;
-        for (enemy_entity, enemy_transform) in enemy_query.iter() {
+        for (monster_entity, monster_transform) in monster_query.iter() {
             let distance = proj_transform
                 .translation
-                .distance(enemy_transform.translation);
-            // Enemy size is 24, Projectile 8. Radius approx 12 + 4 = 16. Use 20 for buffer.
+                .distance(monster_transform.translation);
+            // Monster size is 24, Projectile 8. Radius approx 12 + 4 = 16. Use 20 for buffer.
             if distance < 20.0 {
                 damage_events.write(DamageMessage {
                     source: projectile.source,
-                    target: enemy_entity,
+                    target: monster_entity,
                     amount: projectile.damage,
                     damage_type: common::events::DamageType::Physical,
                 });

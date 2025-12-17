@@ -5,7 +5,7 @@ pub use common::components::*;
 use {
     bevy::prelude::*,
     common::{
-        ChangeActiveLevel, GameState, RequestUpgrade, SpawnEnemyRequest, UpgradePortal,
+        ChangeActiveLevel, GameState, RequestUpgrade, SpawnMonsterRequest, UpgradePortal,
         UpgradeableStat,
     },
     monster_factory::SpawnMonsterEvent,
@@ -36,7 +36,7 @@ impl Plugin for PortalPlugin {
 
         app.init_resource::<PortalSpawnTracker>();
 
-        app.add_message::<SpawnEnemyRequest>();
+        app.add_message::<SpawnMonsterRequest>();
 
         app.add_systems(
             Update,
@@ -83,18 +83,18 @@ pub fn portal_tick_logic(
     time: Res<Time>,
     mut portal_query: Query<(Entity, &mut PortalSpawner, &Children)>,
     upgrade_query: Query<(&UpgradeSlot, &UpgradeableStat)>,
-    enemy_query: Query<(), With<Monster>>,
-    available_enemies: Res<AvailableEnemies>,
-    mut spawn_events: MessageWriter<SpawnEnemyRequest>,
+    monster_query: Query<(), With<Monster>>,
+    available_monsters: Res<AvailableEnemies>,
+    mut spawn_events: MessageWriter<SpawnMonsterRequest>,
 ) {
-    let current_enemy_count = enemy_query.iter().count();
+    let current_monster_count = monster_query.iter().count();
 
     for (entity, mut spawner, children) in portal_query.iter_mut() {
         spawner.timer.tick(time.delta());
 
         if spawner.timer.just_finished() {
-            if available_enemies.0.is_empty() {
-                warn!("No enemies available to spawn!");
+            if available_monsters.0.is_empty() {
+                warn!("No monsters available to spawn!");
                 continue;
             }
 
@@ -106,8 +106,8 @@ pub fn portal_tick_logic(
                 .find(|(slot, _)| slot.name == "Capacity");
 
             if let Some((_, cap_stat)) = capacity {
-                if current_enemy_count < cap_stat.value as usize {
-                    spawn_events.write(SpawnEnemyRequest {
+                if current_monster_count < cap_stat.value as usize {
+                    spawn_events.write(SpawnMonsterRequest {
                         portal_entity: entity,
                     });
                 }
@@ -118,7 +118,7 @@ pub fn portal_tick_logic(
 
 // C. Spawn Logic
 pub fn portal_spawn_logic(
-    mut events: MessageReader<SpawnEnemyRequest>,
+    mut events: MessageReader<SpawnMonsterRequest>,
     mut monster_events: MessageWriter<SpawnMonsterEvent>,
     portal_query: Query<(
         &Transform,
@@ -154,7 +154,7 @@ pub fn portal_spawn_logic(
 
         // Emit event with minimal data
         monster_events.write(SpawnMonsterEvent {
-            asset_path: "prefabs/enemies/goblin.scn.ron".to_string(),
+            asset_path: "prefabs/monsters/goblin.scn.ron".to_string(),
             portal_entity: request.portal_entity,
             spawn_index: spawn_tracker.0,
             target_position,

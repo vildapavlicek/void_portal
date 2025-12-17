@@ -4,12 +4,12 @@ use {
         components::{
             MonsterScaling, PortalLevel, PortalRoot, PortalSpawner, UpgradeCost, UpgradeSlot,
         },
-        MonsterKilled, GrowthStrategy, Reward, SpawnEnemyRequest, UpgradeableStat,
+        GrowthStrategy, MonsterKilled, Reward, SpawnMonsterRequest, UpgradeableStat,
     },
     monster_factory::SpawnMonsterEvent,
     monsters::{
         despawn_dead_bodies, manage_monster_lifecycle, move_monsters, update_monster_health_ui,
-        AvailableEnemies, Monster, MonsterConfig, Health, Lifetime, Speed,
+        AvailableEnemies, Health, Lifetime, Monster, MonsterConfig, Speed,
     },
     player_npcs::{move_projectiles, projectile_collision},
     portal::{portal_spawn_logic, portal_tick_logic, PortalSpawnTracker},
@@ -20,7 +20,7 @@ fn setup_app() -> App {
     app.add_plugins(MinimalPlugins.build().disable::<TimePlugin>());
     app.insert_resource(Time::<()>::default());
     app.add_message::<MonsterKilled>();
-    app.add_message::<SpawnEnemyRequest>();
+    app.add_message::<SpawnMonsterRequest>();
     app.add_message::<SpawnMonsterEvent>();
 
     // Mock Window
@@ -128,7 +128,7 @@ fn test_initial_portal_spawn() {
 }
 
 #[test]
-fn test_enemy_spawning() {
+fn test_monster_spawning() {
     let mut app = setup_app();
     app.update();
 
@@ -158,11 +158,11 @@ fn test_enemy_spawning() {
 }
 
 #[test]
-fn test_enemy_movement() {
+fn test_monster_movement() {
     let mut app = setup_app();
     app.update();
 
-    // Spawn enemy manually
+    // Spawn monster manually
     let start_pos = Vec3::new(0.0, 0.0, 0.0);
     let target_pos = Vec2::new(100.0, 0.0);
     let entity = app

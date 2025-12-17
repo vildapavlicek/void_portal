@@ -14,7 +14,7 @@ pub struct MonsterPlugin;
 
 impl Plugin for MonsterPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(RonAssetPlugin::<MonsterConfig>::new(&["enemy.ron"]));
+        app.add_plugins(RonAssetPlugin::<MonsterConfig>::new(&["monster.ron"]));
 
         app.register_type::<Monster>()
             .register_type::<Health>()
@@ -91,15 +91,15 @@ pub struct LifetimeText;
 // Systems
 pub fn move_monsters(
     time: Res<Time>,
-    mut enemy_query: Query<(&mut Transform, &Monster, &Speed), Without<Dead>>,
+    mut monster_query: Query<(&mut Transform, &Monster, &Speed), Without<Dead>>,
 ) {
-    for (mut transform, enemy, speed) in enemy_query.iter_mut() {
+    for (mut transform, monster, speed) in monster_query.iter_mut() {
         let direction =
-            (enemy.target_position - transform.translation.truncate()).normalize_or_zero();
+            (monster.target_position - transform.translation.truncate()).normalize_or_zero();
         let distance = transform
             .translation
             .truncate()
-            .distance(enemy.target_position);
+            .distance(monster.target_position);
 
         if distance > 1.0 {
             transform.translation += (direction * speed.0 * time.delta_secs()).extend(0.0);
@@ -109,10 +109,10 @@ pub fn move_monsters(
 
 pub fn apply_damage_logic(
     mut messages: MessageReader<DamageMessage>,
-    mut enemy_query: Query<(Entity, &mut Health), With<Monster>>,
+    mut monster_query: Query<(Entity, &mut Health), With<Monster>>,
 ) {
     for msg in messages.read() {
-        if let Ok((entity, mut health)) = enemy_query.get_mut(msg.target) {
+        if let Ok((entity, mut health)) = monster_query.get_mut(msg.target) {
             health.current -= msg.amount;
             debug!("Unit {:?} took {} damage", entity, msg.amount);
         }
@@ -135,7 +135,7 @@ pub fn manage_monster_lifecycle(
     mut scavenge_events: MessageWriter<MonsterScavenged>,
 ) {
     for (entity, mut lifetime, health, reward, modifier) in query.iter_mut() {
-        // 1. Priority Check: Is the enemy dead?
+        // 1. Priority Check: Is the monster dead?
         if health.current <= 0.0 {
             commands
                 .entity(entity)
@@ -146,7 +146,7 @@ pub fn manage_monster_lifecycle(
                 .insert(Visibility::Hidden);
 
             kill_events.write(MonsterKilled { entity });
-            info!("Enemy died, hidden and scheduled for despawn");
+            info!("Monster died, hidden and scheduled for despawn");
 
             // Critical: Continue to next entity so we don't process lifetime for a dead unit
             continue;
@@ -164,12 +164,12 @@ pub fn manage_monster_lifecycle(
 
                 if amount > 0.0 {
                     scavenge_events.write(MonsterScavenged { amount });
-                    info!("Enemy scavenged for {}", amount);
+                    info!("Monster scavenged for {}", amount);
                 }
             }
 
             commands.entity(entity).despawn();
-            info!("Enemy despawned due to lifetime expiry");
+            info!("Monster despawned due to lifetime expiry");
         }
     }
 }
@@ -183,16 +183,16 @@ pub fn despawn_dead_bodies(
         dead.despawn_timer.tick(time.delta());
         if dead.despawn_timer.is_finished() {
             commands.entity(entity).despawn();
-            info!("Dead enemy body despawned");
+            info!("Dead monster body despawned");
         }
     }
 }
 
 pub fn update_monster_health_ui(
-    enemy_query: Query<(&Health, &Children), (With<Monster>, Changed<Health>)>,
+    monster_query: Query<(&Health, &Children), (With<Monster>, Changed<Health>)>,
     mut text_query: Query<&mut Text2d, Without<LifetimeText>>,
 ) {
-    for (health, children) in enemy_query.iter() {
+    for (health, children) in monster_query.iter() {
         for child in children.iter() {
             if let Ok(mut text) = text_query.get_mut(child) {
                 text.0 = format!("{:.0}", health.current);
@@ -202,10 +202,10 @@ pub fn update_monster_health_ui(
 }
 
 pub fn update_lifetime_text(
-    enemy_query: Query<(&Lifetime, &Children), With<Monster>>,
+    monster_query: Query<(&Lifetime, &Children), With<Monster>>,
     mut text_query: Query<&mut Text2d, With<LifetimeText>>,
 ) {
-    for (lifetime, children) in enemy_query.iter() {
+    for (lifetime, children) in monster_query.iter() {
         for child in children.iter() {
             if let Ok(mut text) = text_query.get_mut(child) {
                 text.0 = format!("{:.1}s", lifetime.timer.remaining_secs());

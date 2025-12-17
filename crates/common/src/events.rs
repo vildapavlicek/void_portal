@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 #[derive(Message, Debug, Clone)]
-pub struct SpawnEnemyRequest {
+pub struct SpawnMonsterRequest {
     pub portal_entity: Entity,
 }
 

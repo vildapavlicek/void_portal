@@ -1,19 +1,19 @@
 use {
     crate::{
-        player_npc_attack_logic, player_npc_decision_logic, Soldier,
-        SoldierConfig, AttackRange, CombatStats, Equipment,
+        player_npc_attack_logic, player_npc_decision_logic, AttackRange, CombatStats, Equipment,
+        Soldier, SoldierConfig,
     },
     bevy::{prelude::*, time::TimePlugin, window::PrimaryWindow},
-    common::{EnemyKilled, Reward},
-    enemy::{Enemy, Health, SpawnIndex, Speed},
-    portal::{EnemySpawnTimer, Portal, PortalConfig, PortalSpawnTracker},
+    common::{MonsterKilled, Reward},
+    monster::{Health, Monster, SpawnIndex, Speed},
+    portal::{MonsterSpawnTimer, Portal, PortalConfig, PortalSpawnTracker},
 };
 
 fn setup_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins.build().disable::<TimePlugin>());
     app.insert_resource(Time::<()>::default());
-    app.add_message::<EnemyKilled>();
+    app.add_message::<MonsterKilled>();
 
     app.world_mut().spawn((
         Window {
@@ -29,19 +29,19 @@ fn setup_app() -> App {
         base_upgrade_price: 500.0,
         upgrade_price_increase_coef: 1.5,
         portal_top_offset: 100.0,
-        base_enemy_health: 100.0,
-        base_enemy_speed: 150.0,
-        base_enemy_lifetime: 10.0,
-        base_enemy_reward: 10.0,
-        enemy_health_growth_factor: 1.0,
-        enemy_reward_growth_factor: 1.0,
+        base_monster_health: 100.0,
+        base_monster_speed: 150.0,
+        base_monster_lifetime: 10.0,
+        base_monster_reward: 10.0,
+        monster_health_growth_factor: 1.0,
+        monster_reward_growth_factor: 1.0,
     });
 
     // Spawn Portal for reference
     app.world_mut().spawn((Transform::default(), Portal));
 
     app.insert_resource(PortalSpawnTracker(0));
-    app.insert_resource(EnemySpawnTimer(Timer::from_seconds(1.0, TimerMode::Once)));
+    app.insert_resource(MonsterSpawnTimer(Timer::from_seconds(1.0, TimerMode::Once)));
 
     // Soldier Config: Attack Timer 1.0s
     let soldier_config = SoldierConfig {
@@ -71,33 +71,36 @@ fn test_soldier_attack_timer_reset_on_retarget() {
 
     // Manually spawn soldier instead of relying on spawn_player_npc (which uses asset loader)
     let soldier_config = app.world().resource::<SoldierConfig>().clone();
-    let soldier_entity = app.world_mut().spawn((
-        Soldier {
-            attack_timer: Timer::from_seconds(
-                soldier_config.attack_timer,
-                TimerMode::Repeating,
-            ),
-            target: None,
-        },
-        AttackRange(soldier_config.attack_range),
-        Equipment::default(),
-        CombatStats {
-            damage: soldier_config.projectile_damage,
-            attack_range: soldier_config.attack_range,
-            attack_cooldown: soldier_config.attack_timer,
-            projectile_speed: soldier_config.projectile_speed,
-            projectile_lifetime: soldier_config.projectile_lifetime,
-            move_speed: soldier_config.move_speed,
-        },
-        Transform::default(),
-    )).id();
+    let soldier_entity = app
+        .world_mut()
+        .spawn((
+            Soldier {
+                attack_timer: Timer::from_seconds(
+                    soldier_config.attack_timer,
+                    TimerMode::Repeating,
+                ),
+                target: None,
+            },
+            AttackRange(soldier_config.attack_range),
+            Equipment::default(),
+            CombatStats {
+                damage: soldier_config.projectile_damage,
+                attack_range: soldier_config.attack_range,
+                attack_cooldown: soldier_config.attack_timer,
+                projectile_speed: soldier_config.projectile_speed,
+                projectile_lifetime: soldier_config.projectile_lifetime,
+                move_speed: soldier_config.move_speed,
+            },
+            Transform::default(),
+        ))
+        .id();
 
-    // 1. Spawn Enemy A
-    let enemy_a = app
+    // 1. Spawn Monster A
+    let monster_a = app
         .world_mut()
         .spawn((
             Transform::default(),
-            Enemy {
+            Monster {
                 target_position: Vec2::ZERO,
             },
             SpawnIndex(0),
@@ -115,7 +118,7 @@ fn test_soldier_attack_timer_reset_on_retarget() {
     // Verify targeting A
     {
         let soldier = app.world().get::<Soldier>(soldier_entity).unwrap();
-        assert_eq!(soldier.target, Some(enemy_a));
+        assert_eq!(soldier.target, Some(monster_a));
     }
 
     // 2. Advance time by 0.5s.
@@ -125,15 +128,15 @@ fn test_soldier_attack_timer_reset_on_retarget() {
     }
     app.update();
 
-    // 3. Spawn Enemy B (Older -> SpawnIndex -1 for example? Or just despawn A).
+    // 3. Spawn Monster B (Older -> SpawnIndex -1 for example? Or just despawn A).
     // Let's despawn A to force retarget.
-    app.world_mut().entity_mut(enemy_a).despawn();
+    app.world_mut().entity_mut(monster_a).despawn();
 
-    let _enemy_b = app
+    let _monster_b = app
         .world_mut()
         .spawn((
             Transform::default(),
-            Enemy {
+            Monster {
                 target_position: Vec2::ZERO,
             },
             SpawnIndex(1),
@@ -154,7 +157,7 @@ fn test_soldier_attack_timer_reset_on_retarget() {
     /*
     {
         let soldier = app.world().get::<Soldier>(soldier_entity).unwrap();
-        assert_eq!(soldier.target, Some(enemy_b));
+        assert_eq!(soldier.target, Some(monster_b));
     }
 
     let projectile_count = app
