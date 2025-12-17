@@ -12,6 +12,7 @@ use {
     player_npcs_ui::PlayerNpcsUiPlugin,
     portal::PortalPlugin,
     ui::VoidUiPlugin,
+    vfx::VfxPlugin,
     wallet::VoidWalletPlugin,
 };
 
@@ -40,6 +41,7 @@ impl Plugin for VoidPortalPlugin {
             VoidUiPlugin,
             ItemsPlugin,
             MonsterFactoryPlugin,
+            VfxPlugin,
         ));
 
         app.init_resource::<GameConfigHandles>();
