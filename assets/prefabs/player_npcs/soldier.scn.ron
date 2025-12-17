@@ -42,7 +42,7 @@
             timer: (
                 stopwatch: ( elapsed: ( secs: 0, nanos: 0 ), is_paused: false ),
                 duration: ( secs: 1, nanos: 0 ),
-                mode: Repeating,
+                mode: Once,
                 finished: false,
                 times_finished_this_tick: 0,
             ),

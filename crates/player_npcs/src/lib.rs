@@ -32,6 +32,8 @@ impl Plugin for PlayerNpcsPlugin {
             Update,
             (
                 player_npc_decision_logic.in_set(VoidGameStage::ResolveIntent),
+                // Tick cooldowns
+                tick_weapon_cooldowns.in_set(VoidGameStage::Actions),
                 (
                     player_npc_movement_logic,
                     melee_attack_emit,
@@ -43,6 +45,12 @@ impl Plugin for PlayerNpcsPlugin {
             )
                 .run_if(in_state(GameState::Playing)),
         );
+    }
+}
+
+pub fn tick_weapon_cooldowns(time: Res<Time>, mut weapon_query: Query<&mut WeaponCooldown>) {
+    for mut cooldown in weapon_query.iter_mut() {
+        cooldown.timer.tick(time.delta());
     }
 }
 
@@ -236,7 +244,7 @@ pub fn player_npc_movement_logic(
 }
 
 pub fn melee_attack_emit(
-    time: Res<Time>,
+    // time: Res<Time>, // Removed
     mut player_npc_query: Query<
         (Entity, &Intent, &Children, Option<&mut WeaponProficiency>),
         With<PlayerNpc>,
@@ -251,9 +259,7 @@ pub fn melee_attack_emit(
         if let Intent::Attack(target_entity) = intent {
             for child in children.iter() {
                 if let Ok((mut cooldown, _range, damage)) = weapon_query.get_mut(child) {
-                    cooldown.timer.tick(time.delta());
-
-                    if cooldown.timer.just_finished() {
+                    if cooldown.timer.is_finished() {
                         let mut multiplier = 1.0;
 
                         if let Some(ref mut prof) = proficiency {
@@ -278,6 +284,8 @@ pub fn melee_attack_emit(
                             amount: final_damage,
                             damage_type: common::events::DamageType::Physical,
                         });
+
+                        cooldown.timer.reset();
                     }
                 }
             }
@@ -287,7 +295,7 @@ pub fn melee_attack_emit(
 
 pub fn ranged_attack_logic(
     mut commands: Commands,
-    time: Res<Time>,
+    // time: Res<Time>, // Removed
     mut player_npc_query: Query<
         (
             Entity,
@@ -320,9 +328,7 @@ pub fn ranged_attack_logic(
 
         for child in children.iter() {
             if let Ok((mut cooldown, _range, damage, proj_stats)) = weapon_query.get_mut(child) {
-                cooldown.timer.tick(time.delta());
-
-                if cooldown.timer.just_finished() {
+                if cooldown.timer.is_finished() {
                     let direction =
                         (target_tf.translation - npc_tf.translation).normalize_or_zero();
 
@@ -351,6 +357,8 @@ pub fn ranged_attack_logic(
                             source: npc_entity,
                         },
                     ));
+
+                    cooldown.timer.reset();
                 }
             }
         }
