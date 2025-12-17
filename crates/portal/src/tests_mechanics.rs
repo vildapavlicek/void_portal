@@ -220,7 +220,8 @@ fn test_portal_upgrade() {
         let (level, cost) = app
             .world_mut()
             .query::<(&PortalLevel, &UpgradeCost)>()
-            .single(app.world());
+            .single(app.world())
+            .unwrap();
 
         // Level 1
         assert_eq!(level.max_unlocked, 1);

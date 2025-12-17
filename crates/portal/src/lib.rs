@@ -1,11 +1,12 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::too_many_arguments)]
 
+pub use common::components::*;
 use {
     bevy::prelude::*,
     common::{
-        components::*, ChangeActiveLevel, GameState, RequestUpgrade, SpawnEnemyRequest,
-        UpgradePortal, UpgradeableStat,
+        ChangeActiveLevel, GameState, RequestUpgrade, SpawnEnemyRequest, UpgradePortal,
+        UpgradeableStat,
     },
     enemy::{AvailableEnemies, Enemy},
     monster_factory::SpawnMonsterEvent,
