@@ -64,11 +64,11 @@ impl SpawnFloatingText {
 
     pub fn damage(amount: f32, location: Vec3) -> Self {
         let text = format!("{:.0}", amount);
-        
+
         Self {
             text,
             location,
-            bevy::color::palettes::basic::RED,
+            color: bevy::color::palettes::basic::RED.into(),
             size: 24.0,
         }
     }
