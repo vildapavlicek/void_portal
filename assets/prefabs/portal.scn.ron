@@ -36,7 +36,7 @@
             reward_strategy: Linear(base: 10.0, coefficient: 7.5),
             health_strategy: Exponential(base: 5.0, factor: 1.5),
             speed_strategy: Static(150.0),
-            lifetime_strategy: Incremental(base: 10.0, step: 1.1),
+            lifetime_strategy: Static(10.0),
         ),
 
         "common::components::ScavengerPenalty": (1.0),
