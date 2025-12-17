@@ -73,9 +73,9 @@
         "common::stats::UpgradeableStat": (
             level: 0.0,
             value: 1.0,
-            price: 500.0,
-            value_strategy: Static(1.0),
-            price_strategy: Static(500.0),
+            price: 100.0,
+            value_strategy: Linear(base: 1.0, coefficient: 0.75),
+            price_strategy: Exponential(base: 100.0, factor: 2.5),
         ),
       }
     ),

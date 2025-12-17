@@ -3,8 +3,8 @@ use {
     crate::components::*,
     bevy::prelude::*,
     common::{
-        components::{MonsterScaling, PortalLevel, PortalRoot, PortalUpgrades, ScavengerPenalty},
-        Reward, ScavengeModifier, UpgradeableStat,
+        components::{MonsterScaling, PortalLevel, PortalRoot, ScavengerPenalty},
+        Reward, ScavengeModifier, UpgradeSlot, UpgradeableStat,
     },
     monsters::{Health, Lifetime, Monster, SpawnIndex, Speed},
     std::collections::HashMap,
@@ -103,19 +103,19 @@ pub fn hydrate_monster_stats(
         (
             &PortalLevel,
             &MonsterScaling,
+            &Children,
             Option<&ScavengerPenalty>,
-            Option<&PortalUpgrades>,
         ),
         With<PortalRoot>,
     >,
     // Query generic stats for the "Lifetime" upgrade
-    upgrade_stat_query: Query<&UpgradeableStat>,
+    upgrade_stat_query: Query<(&UpgradeSlot, &UpgradeableStat)>,
 ) {
     for (entity, builder, hp_coef, speed_coef, reward_coef, lifetime_coef) in monster_query.iter() {
         let mut entity_cmds = commands.entity(entity);
 
         // 1. Fetch Portal Data
-        let Ok((level, scaling, scav_penalty_opt, upgrades)) =
+        let Ok((level, scaling, children, scav_penalty_opt)) =
             portal_query.get(builder.portal_entity)
         else {
             warn!(
@@ -130,15 +130,11 @@ pub fn hydrate_monster_stats(
 
         let scavenger_penalty = scav_penalty_opt.map(|p| p.0).unwrap_or(1.0);
 
-        // 2. Fetch Bonus Lifetime from Upgrades
-        let mut bonus_lifetime = 0.0;
-        if let Some(portal_upgrades) = upgrades {
-            if let Some(upgrade_entity) = portal_upgrades.0.get("Lifetime") {
-                if let Ok(stat) = upgrade_stat_query.get(*upgrade_entity) {
-                    bonus_lifetime = stat.value;
-                }
-            }
-        }
+        let bonus_lifetime = children
+            .iter()
+            .filter_map(|child| upgrade_stat_query.get(child).ok())
+            .find_map(|(slot, stat)| (slot.name == "Lifetime").then_some(stat.value))
+            .unwrap_or_default();
 
         // 3. Calculate Base Stats
         let base_health = scaling.health_strategy.calculate(level.active as f32);
@@ -184,6 +180,7 @@ pub fn hydrate_monster_stats(
         } else {
             base_lifetime + bonus_lifetime
         };
+
         entity_cmds.insert(Lifetime {
             timer: Timer::from_seconds(final_lifetime, TimerMode::Once),
         });
