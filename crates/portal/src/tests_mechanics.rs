@@ -7,7 +7,7 @@ use {
     common::{
         GrowthStrategy, RequestUpgrade, Reward, SpawnEnemyRequest, UpgradePortal, UpgradeableStat,
     },
-    enemy::{AvailableEnemies, Enemy, EnemyConfig, Health, Lifetime},
+    monsters::{AvailableEnemies, Enemy, EnemyConfig, Health, Lifetime},
     wallet::Wallet,
 };
 

@@ -6,11 +6,11 @@ use {
         },
         EnemyKilled, GrowthStrategy, Reward, SpawnEnemyRequest, UpgradeableStat,
     },
-    enemy::{
+    monster_factory::SpawnMonsterEvent,
+    monsters::{
         despawn_dead_bodies, manage_enemy_lifecycle, move_enemies, update_enemy_health_ui,
         AvailableEnemies, Enemy, EnemyConfig, Health, Lifetime, Speed,
     },
-    monster_factory::SpawnMonsterEvent,
     player_npcs::{move_projectiles, projectile_collision},
     portal::{portal_spawn_logic, portal_tick_logic, PortalSpawnTracker},
 };

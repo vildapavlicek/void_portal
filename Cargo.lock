@@ -2205,17 +2205,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "enemy"
-version = "0.1.0"
-dependencies = [
- "assets",
- "bevy",
- "bevy_common_assets",
- "common",
- "serde",
-]
-
-[[package]]
 name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2427,9 +2416,9 @@ dependencies = [
  "assets",
  "bevy",
  "common",
- "enemy",
  "items",
  "monster_factory",
+ "monsters",
  "player_npcs",
  "player_npcs_ui",
  "portal",
@@ -3064,7 +3053,18 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "common",
- "enemy",
+ "monsters",
+]
+
+[[package]]
+name = "monsters"
+version = "0.1.0"
+dependencies = [
+ "assets",
+ "bevy",
+ "bevy_common_assets",
+ "common",
+ "serde",
 ]
 
 [[package]]
@@ -3682,8 +3682,8 @@ dependencies = [
  "bevy",
  "bevy_common_assets",
  "common",
- "enemy",
  "items",
+ "monsters",
  "portal",
  "serde",
 ]
@@ -3747,8 +3747,8 @@ dependencies = [
  "bevy",
  "bevy_common_assets",
  "common",
- "enemy",
  "monster_factory",
+ "monsters",
  "rand",
  "serde",
  "wallet",

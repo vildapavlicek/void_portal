@@ -2,8 +2,8 @@ use {
     crate::*,
     bevy::time::{Time, TimePlugin},
     common::{events::DamageMessage, EnemyKilled},
-    enemy::{apply_damage_logic, Enemy, Health, SpawnIndex},
     items::{AttackRange as ItemAttackRange, BaseDamage, Melee, ProjectileStats, Ranged},
+    monsters::{apply_damage_logic, Enemy, Health, SpawnIndex},
     portal::PortalSpawnTracker,
 };
 

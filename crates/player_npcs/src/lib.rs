@@ -3,11 +3,11 @@
 use {
     bevy::{prelude::*, scene::DynamicScene},
     common::{events::DamageMessage, GameState, VoidGameStage},
-    enemy::{Enemy, SpawnIndex},
     items::{
         AttackRange as ItemAttackRange, BaseDamage, Melee, ProjectileStats as ItemProjectileStats,
         Ranged,
     },
+    monsters::{Enemy, SpawnIndex},
     portal::PortalSpawnTracker,
 };
 

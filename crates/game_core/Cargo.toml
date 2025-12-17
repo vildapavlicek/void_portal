@@ -11,7 +11,7 @@ wallet = { path = "../wallet" }
 ui = { path = "../ui" }
 portal = { path = "../portal" }
 player_npcs = { path = "../player_npcs" }
-enemy = { path = "../enemy" }
+monsters = { path = "../monsters" }
 items = { path = "../items" }
 monster_factory = { path = "../monster_factory" }
 player_npcs_ui = { path = "../player_npcs_ui" }

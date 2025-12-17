@@ -6,4 +6,4 @@ edition = "2021"
 [dependencies]
 bevy = { workspace = true }
 common = { path = "../common" }
-enemy = { path = "../enemy" }
+monsters = { path = "../monsters" }

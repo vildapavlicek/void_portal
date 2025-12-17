@@ -6,7 +6,7 @@ use {
         components::{EnemyScaling, PortalLevel, PortalRoot, PortalUpgrades, ScavengerPenalty},
         GrowthStrategy, Reward, ScavengeModifier,
     },
-    enemy::{Enemy, Health, Lifetime, Speed},
+    monsters::{Enemy, Health, Lifetime, Speed},
     std::collections::HashMap,
 };
 

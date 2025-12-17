@@ -8,8 +8,8 @@ use {
         ChangeActiveLevel, GameState, RequestUpgrade, SpawnEnemyRequest, UpgradePortal,
         UpgradeableStat,
     },
-    enemy::{AvailableEnemies, Enemy},
     monster_factory::SpawnMonsterEvent,
+    monsters::{AvailableEnemies, Enemy},
     rand::Rng,
     wallet::Wallet,
 };
