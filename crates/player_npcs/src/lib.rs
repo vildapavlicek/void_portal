@@ -23,7 +23,8 @@ impl Plugin for PlayerNpcsPlugin {
             .register_type::<WeaponCooldown>()
             .register_type::<Projectile>()
             .register_type::<MasteryTrack>()
-            .register_type::<WeaponProficiency>();
+            .register_type::<WeaponProficiency>()
+            .register_type::<CooldownText>();
 
         app.add_systems(OnEnter(GameState::Playing), spawn_player_npc);
 
@@ -38,6 +39,7 @@ impl Plugin for PlayerNpcsPlugin {
                     (move_projectiles, projectile_collision).chain(),
                 )
                     .in_set(VoidGameStage::Actions),
+                update_cooldown_text.in_set(VoidGameStage::FrameEnd),
             )
                 .run_if(in_state(GameState::Playing)),
         );
@@ -126,6 +128,10 @@ pub struct WeaponProficiency {
     pub melee: MasteryTrack,
     pub ranged: MasteryTrack,
 }
+
+#[derive(Component, Reflect, Default)]
+#[reflect(Component)]
+pub struct CooldownText;
 
 // Systems
 
@@ -394,6 +400,31 @@ pub fn projectile_collision(
 
         if hit {
             commands.entity(proj_entity).despawn();
+        }
+    }
+}
+
+pub fn update_cooldown_text(
+    player_npc_query: Query<(Entity, &Children), With<PlayerNpc>>,
+    weapon_query: Query<&WeaponCooldown, With<Weapon>>,
+    mut text_query: Query<&mut Text2d, With<CooldownText>>,
+) {
+    for (_npc, children) in player_npc_query.iter() {
+        // Find WeaponCooldown
+        let Some(rem_secs) = children.iter().find_map(|child| {
+            weapon_query
+                .get(child)
+                .ok()
+                .map(|cooldown| cooldown.timer.remaining_secs())
+        }) else {
+            continue;
+        };
+
+        // Find CooldownText and update it
+        for child in children.iter() {
+            if let Ok(mut text) = text_query.get_mut(child) {
+                text.0 = format!("{:.1}", rem_secs);
+            }
         }
     }
 }
