@@ -57,9 +57,18 @@ fn update_wallet_from_monster_killed(
 fn update_wallet_from_scavenge(
     mut events: MessageReader<MonsterScavenged>,
     mut wallet: ResMut<Wallet>,
+    mut vfx_events: MessageWriter<SpawnFloatingText>,
 ) {
     for event in events.read() {
         wallet.void_shards += event.amount;
+        
+        vfx_events.write(SpawnFloatingText {
+            text: format!("+{:.0}", event.amount),
+            location: event.location,
+            color: Color::srgb(0.7, 0.7, 0.7), // Scavenge color
+            size: 18.0,
+        });
+
         info!(
             "Wallet scavenge update: +{}. Total: {}",
             event.amount, wallet.void_shards
@@ -140,7 +149,10 @@ mod tests {
         assert_eq!(app.world().resource::<Wallet>().void_shards, 0.0);
 
         let mut messages = app.world_mut().resource_mut::<Messages<MonsterScavenged>>();
-        messages.write(MonsterScavenged { amount: 12.5 });
+        messages.write(MonsterScavenged {
+            amount: 12.5,
+            location: Vec3::ZERO,
+        });
 
         app.update();
 

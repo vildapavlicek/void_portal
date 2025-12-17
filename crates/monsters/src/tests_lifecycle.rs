@@ -47,6 +47,7 @@ fn test_monster_death_lifecycle() {
                 max: 100.0,
             },
             Lifetime::default(),
+            Transform::default(),
             Reward(reward_amount),
             // Ensure Visibility is present to test Hidden
             Visibility::Visible,

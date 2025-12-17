@@ -27,6 +27,7 @@ pub struct ChangeActiveLevel {
 #[derive(Message, Debug, Clone)]
 pub struct MonsterScavenged {
     pub amount: f32,
+    pub location: Vec3,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Reflect)]

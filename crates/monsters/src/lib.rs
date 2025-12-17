@@ -127,6 +127,7 @@ pub fn manage_monster_lifecycle(
             &mut Lifetime,
             &Health,
             &Reward,
+            &Transform,
             Option<&ScavengeModifier>,
         ),
         (With<Monster>, Without<Dead>),
@@ -134,7 +135,7 @@ pub fn manage_monster_lifecycle(
     mut kill_events: MessageWriter<MonsterKilled>,
     mut scavenge_events: MessageWriter<MonsterScavenged>,
 ) {
-    for (entity, mut lifetime, health, reward, modifier) in query.iter_mut() {
+    for (entity, mut lifetime, health, reward, transform, modifier) in query.iter_mut() {
         // 1. Priority Check: Is the monster dead?
         if health.current <= 0.0 {
             commands
@@ -163,7 +164,10 @@ pub fn manage_monster_lifecycle(
                 let amount = reward.0 * percentage * penalty;
 
                 if amount > 0.0 {
-                    scavenge_events.write(MonsterScavenged { amount });
+                    scavenge_events.write(MonsterScavenged {
+                        amount,
+                        location: transform.translation,
+                    });
                     info!("Monster scavenged for {}", amount);
                 }
             }
