@@ -4,10 +4,10 @@
 use {
     assets::VoidAssetsPlugin,
     bevy::{asset::LoadedFolder, prelude::*},
-    common::{EnemyKilled, GameState, RequestUpgrade, UpgradePortal, VoidGameStage},
+    common::{GameState, MonsterKilled, RequestUpgrade, UpgradePortal, VoidGameStage},
     items::ItemsPlugin,
     monster_factory::MonsterFactoryPlugin,
-    monsters::{AvailableEnemies, EnemyConfig, EnemyPlugin},
+    monsters::{AvailableEnemies, MonsterConfig, MonsterPlugin},
     player_npcs::PlayerNpcsPlugin,
     player_npcs_ui::PlayerNpcsUiPlugin,
     portal::PortalPlugin,
@@ -26,14 +26,14 @@ struct GameConfigHandles {
 impl Plugin for VoidPortalPlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<GameState>();
-        app.add_message::<EnemyKilled>();
+        app.add_message::<MonsterKilled>();
         app.add_message::<UpgradePortal>();
         app.add_message::<RequestUpgrade>();
 
         app.add_plugins((
             VoidAssetsPlugin,
             VoidWalletPlugin,
-            EnemyPlugin,
+            MonsterPlugin,
             PortalPlugin,
             PlayerNpcsPlugin,
             PlayerNpcsUiPlugin,
@@ -102,7 +102,7 @@ fn check_assets_ready(
     // However, for DynamicScene, usually we just spawn it.
     // We DO need to wait for enemies folder to be loaded to populate AvailableEnemies.
     loaded_folders: Res<Assets<LoadedFolder>>,
-    enemy_assets: Res<Assets<EnemyConfig>>,
+    enemy_assets: Res<Assets<MonsterConfig>>,
     mut available_enemies: ResMut<AvailableEnemies>,
     mut next_state: ResMut<NextState<GameState>>,
     loading_text_query: Query<Entity, With<LoadingText>>,
@@ -121,7 +121,7 @@ fn check_assets_ready(
 
         available_enemies.0.clear();
         for handle in &enemies_folder.handles {
-            let typed_handle: Handle<EnemyConfig> = handle.clone().typed();
+            let typed_handle: Handle<MonsterConfig> = handle.clone().typed();
             if let Some(config) = enemy_assets.get(&typed_handle) {
                 available_enemies.0.push(config.clone());
             }

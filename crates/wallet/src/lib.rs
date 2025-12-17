@@ -2,7 +2,7 @@
 
 use {
     bevy::prelude::*,
-    common::{EnemyKilled, EnemyScavenged, Reward},
+    common::{MonsterKilled, MonsterScavenged, Reward},
 };
 
 pub struct VoidWalletPlugin;
@@ -10,7 +10,7 @@ pub struct VoidWalletPlugin;
 impl Plugin for VoidWalletPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Wallet>()
-            .add_message::<common::EnemyScavenged>()
+            .add_message::<common::MonsterScavenged>()
             .add_systems(
                 Update,
                 (update_wallet_from_enemy_killed, update_wallet_from_scavenge),
@@ -24,7 +24,7 @@ pub struct Wallet {
 }
 
 fn update_wallet_from_enemy_killed(
-    mut events: MessageReader<EnemyKilled>,
+    mut events: MessageReader<MonsterKilled>,
     mut wallet: ResMut<Wallet>,
     reward_query: Query<&Reward>,
 ) {
@@ -45,7 +45,7 @@ fn update_wallet_from_enemy_killed(
 }
 
 fn update_wallet_from_scavenge(
-    mut events: MessageReader<EnemyScavenged>,
+    mut events: MessageReader<MonsterScavenged>,
     mut wallet: ResMut<Wallet>,
 ) {
     for event in events.read() {
@@ -67,7 +67,7 @@ mod tests {
         // Add minimal plugins required for the test
         app.add_plugins(MinimalPlugins)
             .add_plugins(VoidWalletPlugin)
-            .add_message::<EnemyKilled>();
+            .add_message::<MonsterKilled>();
 
         // Check initial state
         assert_eq!(app.world().resource::<Wallet>().void_shards, 0.0);
@@ -84,8 +84,8 @@ mod tests {
             .id();
 
         // Send message
-        let mut messages = app.world_mut().resource_mut::<Messages<EnemyKilled>>();
-        messages.write(EnemyKilled { entity: entity1 });
+        let mut messages = app.world_mut().resource_mut::<Messages<MonsterKilled>>();
+        messages.write(MonsterKilled { entity: entity1 });
 
         // Run systems
         app.update();
@@ -105,8 +105,8 @@ mod tests {
             .id();
 
         // Send another
-        let mut messages = app.world_mut().resource_mut::<Messages<EnemyKilled>>();
-        messages.write(EnemyKilled { entity: entity2 });
+        let mut messages = app.world_mut().resource_mut::<Messages<MonsterKilled>>();
+        messages.write(MonsterKilled { entity: entity2 });
 
         app.update();
 
@@ -121,12 +121,12 @@ mod tests {
         // Note: VoidWalletPlugin already adds EnemyScavenged message, but NOT EnemyKilled
         // So when Update runs, `update_wallet_from_enemy_killed` panics because `EnemyKilled` is missing.
         // We must add it for the system to not panic, or disable the system for this test.
-        app.add_message::<EnemyKilled>();
+        app.add_message::<MonsterKilled>();
 
         assert_eq!(app.world().resource::<Wallet>().void_shards, 0.0);
 
-        let mut messages = app.world_mut().resource_mut::<Messages<EnemyScavenged>>();
-        messages.write(EnemyScavenged { amount: 12.5 });
+        let mut messages = app.world_mut().resource_mut::<Messages<MonsterScavenged>>();
+        messages.write(MonsterScavenged { amount: 12.5 });
 
         app.update();
 

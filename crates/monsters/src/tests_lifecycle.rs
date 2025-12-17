@@ -1,7 +1,7 @@
 use {
-    crate::{despawn_dead_bodies, manage_enemy_lifecycle, Enemy, Health, Lifetime},
+    crate::{despawn_dead_bodies, manage_monster_lifecycle, Health, Lifetime, Monster},
     bevy::{prelude::*, time::TimePlugin},
-    common::{Dead, EnemyKilled, EnemyScavenged, Reward},
+    common::{Dead, MonsterKilled, MonsterScavenged, Reward},
 };
 
 #[test]
@@ -10,18 +10,18 @@ fn test_enemy_death_lifecycle() {
 
     app.add_plugins(MinimalPlugins.build().disable::<TimePlugin>());
     app.insert_resource(Time::<()>::default());
-    app.add_message::<EnemyKilled>();
-    app.add_message::<EnemyScavenged>();
+    app.add_message::<MonsterKilled>();
+    app.add_message::<MonsterScavenged>();
 
     // Helper to capture events
     #[derive(Resource, Default)]
-    struct CapturedEvents(Vec<EnemyKilled>);
+    struct CapturedEvents(Vec<MonsterKilled>);
 
     app.init_resource::<CapturedEvents>();
 
     app.add_systems(
         Update,
-        |mut events: MessageReader<EnemyKilled>, mut captured: ResMut<CapturedEvents>| {
+        |mut events: MessageReader<MonsterKilled>, mut captured: ResMut<CapturedEvents>| {
             for event in events.read() {
                 captured.0.push(event.clone());
             }
@@ -32,14 +32,14 @@ fn test_enemy_death_lifecycle() {
     // manage_enemy_lifecycle runs, emits event, modifies entity.
     // event reader runs (order undefined unless explicit, but next frame definitely catches it).
     // despawn_dead_bodies runs.
-    app.add_systems(Update, (manage_enemy_lifecycle, despawn_dead_bodies));
+    app.add_systems(Update, (manage_monster_lifecycle, despawn_dead_bodies));
 
     // Spawn an enemy with 0 health
     let reward_amount = 10.0;
     let enemy_entity = app
         .world_mut()
         .spawn((
-            Enemy {
+            Monster {
                 target_position: Vec2::ZERO,
             },
             Health {
@@ -77,7 +77,7 @@ fn test_enemy_death_lifecycle() {
 
     // 3. Verify Enemy component removed
     assert!(
-        app.world().get::<Enemy>(enemy_entity).is_none(),
+        app.world().get::<Monster>(enemy_entity).is_none(),
         "Enemy component should be removed"
     );
 

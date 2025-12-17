@@ -6,7 +6,7 @@ use {
         components::{EnemyScaling, PortalLevel, PortalRoot, PortalUpgrades, ScavengerPenalty},
         Reward, ScavengeModifier, UpgradeableStat,
     },
-    monsters::{Enemy, Health, Lifetime, SpawnIndex, Speed},
+    monsters::{Monster, Health, Lifetime, SpawnIndex, Speed},
     std::collections::HashMap,
 };
 
@@ -194,7 +194,7 @@ pub fn hydrate_monster_stats(
 
         // Spawn Index & Enemy Marker
         entity_cmds.insert(SpawnIndex(builder.spawn_index));
-        entity_cmds.insert(Enemy {
+        entity_cmds.insert(Monster {
             target_position: builder.target_position,
         });
 

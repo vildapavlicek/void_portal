@@ -17,7 +17,7 @@
         ),
 
         "common::components::UpgradeCost": (
-            strategy: Exponential(base: 100.0, factor: 1.25),
+            strategy: Exponential(base: 100.0, factor: 3.25),
             current_price: 100.0,
         ),
 

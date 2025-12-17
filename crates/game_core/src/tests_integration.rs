@@ -4,12 +4,12 @@ use {
         components::{
             EnemyScaling, PortalLevel, PortalRoot, PortalSpawner, UpgradeCost, UpgradeSlot,
         },
-        EnemyKilled, GrowthStrategy, Reward, SpawnEnemyRequest, UpgradeableStat,
+        MonsterKilled, GrowthStrategy, Reward, SpawnEnemyRequest, UpgradeableStat,
     },
     monster_factory::SpawnMonsterEvent,
     monsters::{
-        despawn_dead_bodies, manage_enemy_lifecycle, move_enemies, update_enemy_health_ui,
-        AvailableEnemies, Enemy, EnemyConfig, Health, Lifetime, Speed,
+        despawn_dead_bodies, manage_monster_lifecycle, move_monsters, update_monster_health_ui,
+        AvailableEnemies, Monster, MonsterConfig, Health, Lifetime, Speed,
     },
     player_npcs::{move_projectiles, projectile_collision},
     portal::{portal_spawn_logic, portal_tick_logic, PortalSpawnTracker},
@@ -19,7 +19,7 @@ fn setup_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins.build().disable::<TimePlugin>());
     app.insert_resource(Time::<()>::default());
-    app.add_message::<EnemyKilled>();
+    app.add_message::<MonsterKilled>();
     app.add_message::<SpawnEnemyRequest>();
     app.add_message::<SpawnMonsterEvent>();
 
@@ -32,7 +32,7 @@ fn setup_app() -> App {
         bevy::window::PrimaryWindow,
     ));
 
-    app.insert_resource(AvailableEnemies(vec![EnemyConfig {
+    app.insert_resource(AvailableEnemies(vec![MonsterConfig {
         health_coef: 1.0,
         lifetime_coef: 1.0,
         speed_coef: 1.0,
@@ -46,9 +46,9 @@ fn setup_app() -> App {
         Update,
         (
             (portal_tick_logic, portal_spawn_logic).chain(),
-            move_enemies,
-            (manage_enemy_lifecycle, despawn_dead_bodies),
-            update_enemy_health_ui,
+            move_monsters,
+            (manage_monster_lifecycle, despawn_dead_bodies),
+            update_monster_health_ui,
             move_projectiles,
             projectile_collision,
         ),
@@ -170,7 +170,7 @@ fn test_enemy_movement() {
         .spawn((
             Sprite::default(),
             Transform::from_translation(start_pos),
-            Enemy {
+            Monster {
                 target_position: target_pos,
             },
             Health {

@@ -4,36 +4,36 @@ use {
     bevy::prelude::*,
     bevy_common_assets::ron::RonAssetPlugin,
     common::{
-        events::DamageMessage, Dead, EnemyKilled, EnemyScavenged, GameState, Reward,
+        events::DamageMessage, Dead, GameState, MonsterKilled, MonsterScavenged, Reward,
         ScavengeModifier, VoidGameStage,
     },
     serde::Deserialize,
 };
 
-pub struct EnemyPlugin;
+pub struct MonsterPlugin;
 
-impl Plugin for EnemyPlugin {
+impl Plugin for MonsterPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(RonAssetPlugin::<EnemyConfig>::new(&["enemy.ron"]));
+        app.add_plugins(RonAssetPlugin::<MonsterConfig>::new(&["enemy.ron"]));
 
-        app.register_type::<Enemy>()
+        app.register_type::<Monster>()
             .register_type::<Health>()
             .register_type::<Lifetime>()
             .register_type::<SpawnIndex>()
             .register_type::<Speed>()
-            .register_type::<EnemyConfig>();
+            .register_type::<MonsterConfig>();
 
         app.init_resource::<AvailableEnemies>();
 
         app.add_systems(
             Update,
             (
-                move_enemies.in_set(VoidGameStage::Actions),
+                move_monsters.in_set(VoidGameStage::Actions),
                 apply_damage_logic.in_set(VoidGameStage::Effect),
                 (
-                    manage_enemy_lifecycle,
+                    manage_monster_lifecycle,
                     despawn_dead_bodies,
-                    update_enemy_health_ui,
+                    update_monster_health_ui,
                 )
                     .in_set(VoidGameStage::FrameEnd),
             )
@@ -44,7 +44,7 @@ impl Plugin for EnemyPlugin {
 
 // Configs
 #[derive(Deserialize, Asset, Clone, Debug, Resource, Reflect)]
-pub struct EnemyConfig {
+pub struct MonsterConfig {
     pub health_coef: f32,
     pub lifetime_coef: f32,
     pub speed_coef: f32,
@@ -52,12 +52,12 @@ pub struct EnemyConfig {
 }
 
 #[derive(Resource, Default)]
-pub struct AvailableEnemies(pub Vec<EnemyConfig>);
+pub struct AvailableEnemies(pub Vec<MonsterConfig>);
 
 // Components
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
-pub struct Enemy {
+pub struct Monster {
     pub target_position: Vec2,
 }
 
@@ -83,9 +83,9 @@ pub struct SpawnIndex(pub u32);
 pub struct Speed(pub f32);
 
 // Systems
-pub fn move_enemies(
+pub fn move_monsters(
     time: Res<Time>,
-    mut enemy_query: Query<(&mut Transform, &Enemy, &Speed), Without<Dead>>,
+    mut enemy_query: Query<(&mut Transform, &Monster, &Speed), Without<Dead>>,
 ) {
     for (mut transform, enemy, speed) in enemy_query.iter_mut() {
         let direction =
@@ -103,7 +103,7 @@ pub fn move_enemies(
 
 pub fn apply_damage_logic(
     mut messages: MessageReader<DamageMessage>,
-    mut enemy_query: Query<(Entity, &mut Health), With<Enemy>>,
+    mut enemy_query: Query<(Entity, &mut Health), With<Monster>>,
 ) {
     for msg in messages.read() {
         if let Ok((entity, mut health)) = enemy_query.get_mut(msg.target) {
@@ -112,7 +112,7 @@ pub fn apply_damage_logic(
         }
     }
 }
-pub fn manage_enemy_lifecycle(
+pub fn manage_monster_lifecycle(
     mut commands: Commands,
     time: Res<Time>,
     mut query: Query<
@@ -123,23 +123,23 @@ pub fn manage_enemy_lifecycle(
             &Reward,
             Option<&ScavengeModifier>,
         ),
-        (With<Enemy>, Without<Dead>),
+        (With<Monster>, Without<Dead>),
     >,
-    mut kill_events: MessageWriter<EnemyKilled>,
-    mut scavenge_events: MessageWriter<EnemyScavenged>,
+    mut kill_events: MessageWriter<MonsterKilled>,
+    mut scavenge_events: MessageWriter<MonsterScavenged>,
 ) {
     for (entity, mut lifetime, health, reward, modifier) in query.iter_mut() {
         // 1. Priority Check: Is the enemy dead?
         if health.current <= 0.0 {
             commands
                 .entity(entity)
-                .remove::<Enemy>()
+                .remove::<Monster>()
                 .insert(Dead {
                     despawn_timer: Timer::from_seconds(1.0, TimerMode::Once),
                 })
                 .insert(Visibility::Hidden);
 
-            kill_events.write(EnemyKilled { entity });
+            kill_events.write(MonsterKilled { entity });
             info!("Enemy died, hidden and scheduled for despawn");
 
             // Critical: Continue to next entity so we don't process lifetime for a dead unit
@@ -157,7 +157,7 @@ pub fn manage_enemy_lifecycle(
                 let amount = reward.0 * percentage * penalty;
 
                 if amount > 0.0 {
-                    scavenge_events.write(EnemyScavenged { amount });
+                    scavenge_events.write(MonsterScavenged { amount });
                     info!("Enemy scavenged for {}", amount);
                 }
             }
@@ -182,8 +182,8 @@ pub fn despawn_dead_bodies(
     }
 }
 
-pub fn update_enemy_health_ui(
-    enemy_query: Query<(&Health, &Children), (With<Enemy>, Changed<Health>)>,
+pub fn update_monster_health_ui(
+    enemy_query: Query<(&Health, &Children), (With<Monster>, Changed<Health>)>,
     mut text_query: Query<&mut Text2d>,
 ) {
     for (health, children) in enemy_query.iter() {

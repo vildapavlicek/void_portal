@@ -6,7 +6,7 @@ pub struct SpawnEnemyRequest {
 }
 
 #[derive(Message, Debug, Clone)]
-pub struct EnemyKilled {
+pub struct MonsterKilled {
     pub entity: Entity,
 }
 
@@ -25,7 +25,7 @@ pub struct ChangeActiveLevel {
 }
 
 #[derive(Message, Debug, Clone)]
-pub struct EnemyScavenged {
+pub struct MonsterScavenged {
     pub amount: f32,
 }
 

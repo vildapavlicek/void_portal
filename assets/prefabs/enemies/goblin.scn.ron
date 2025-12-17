@@ -14,7 +14,7 @@
         "monster_factory::components::SpeedCoef": ( val: 1.5 ),
         "monster_factory::components::RewardCoef": ( val: 1.0 ),
         "monster_factory::components::LifetimeCoef": ( val: 1.0 ),
-        "enemy::Enemy": ( target_position: (0.0, 0.0) ),
+        "monsters::Monster": ( target_position: (0.0, 0.0) ),
         "bevy_ecs::hierarchy::Children": ([2]),
         "bevy_camera::visibility::Visibility": Hidden,
       },

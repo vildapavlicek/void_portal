@@ -7,7 +7,7 @@ use {
     common::{
         GrowthStrategy, RequestUpgrade, Reward, SpawnEnemyRequest, UpgradePortal, UpgradeableStat,
     },
-    monsters::{AvailableEnemies, Enemy, EnemyConfig, Health, Lifetime},
+    monsters::{AvailableEnemies, Health, Lifetime, Monster, MonsterConfig},
     wallet::Wallet,
 };
 
@@ -121,7 +121,7 @@ fn setup_app() -> App {
         bevy::window::PrimaryWindow,
     ));
 
-    app.insert_resource(AvailableEnemies(vec![EnemyConfig {
+    app.insert_resource(AvailableEnemies(vec![MonsterConfig {
         health_coef: 1.0,
         lifetime_coef: 1.0,
         speed_coef: 1.0,
@@ -179,7 +179,7 @@ fn test_enemy_stats_at_level_0() {
 
     let mut enemy_query = app
         .world_mut()
-        .query::<(&Enemy, &Health, &Reward, &Lifetime)>();
+        .query::<(&Monster, &Health, &Reward, &Lifetime)>();
     let enemy = enemy_query.iter(app.world()).next();
 
     assert!(enemy.is_some(), "Enemy should be spawned at level 0");

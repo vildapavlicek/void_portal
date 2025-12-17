@@ -6,7 +6,7 @@ use {
         components::{EnemyScaling, PortalLevel, PortalRoot, PortalUpgrades, ScavengerPenalty},
         GrowthStrategy, Reward, ScavengeModifier,
     },
-    monsters::{Enemy, Health, Lifetime, Speed},
+    monsters::{Monster, Health, Lifetime, Speed},
     std::collections::HashMap,
 };
 
@@ -28,7 +28,7 @@ fn test_hydrate_monster_stats() {
         .register_type::<Reward>()
         .register_type::<Lifetime>()
         .register_type::<ScavengeModifier>()
-        .register_type::<Enemy>();
+        .register_type::<Monster>();
 
     // Register Portal components
     app.register_type::<PortalLevel>()
@@ -116,7 +116,7 @@ fn test_hydrate_monster_stats() {
     assert!(scav.is_some(), "ScavengeModifier component missing");
     assert_eq!(scav.unwrap().0, 0.5);
 
-    let enemy = app.world().get::<Enemy>(entity);
+    let enemy = app.world().get::<Monster>(entity);
     assert!(enemy.is_some(), "Enemy component missing");
     assert_eq!(enemy.unwrap().target_position, target_pos);
 

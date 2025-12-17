@@ -7,7 +7,7 @@ use {
         AttackRange as ItemAttackRange, BaseDamage, Melee, ProjectileStats as ItemProjectileStats,
         Ranged,
     },
-    monsters::{Enemy, SpawnIndex},
+    monsters::{Monster, SpawnIndex},
     portal::PortalSpawnTracker,
 };
 
@@ -159,7 +159,7 @@ pub fn player_npc_decision_logic(
         With<PlayerNpc>,
     >,
     weapon_query: Query<&ItemAttackRange, With<Weapon>>,
-    enemy_query: Query<(Entity, &SpawnIndex, &Transform), With<Enemy>>,
+    enemy_query: Query<(Entity, &SpawnIndex, &Transform), With<Monster>>,
     portal_tracker: Res<PortalSpawnTracker>,
 ) {
     let current_spawn_count = portal_tracker.0;
@@ -301,7 +301,7 @@ pub fn ranged_attack_logic(
         ),
         (With<Weapon>, With<Ranged>),
     >,
-    enemy_query: Query<&Transform, With<Enemy>>,
+    enemy_query: Query<&Transform, With<Monster>>,
 ) {
     for (npc_entity, npc_tf, intent, children, mut proficiency) in player_npc_query.iter_mut() {
         let Intent::Attack(target_entity) = intent else {
@@ -370,7 +370,7 @@ pub fn move_projectiles(
 pub fn projectile_collision(
     mut commands: Commands,
     projectile_query: Query<(Entity, &Transform, &Projectile)>,
-    enemy_query: Query<(Entity, &Transform), With<Enemy>>,
+    enemy_query: Query<(Entity, &Transform), With<Monster>>,
     mut damage_events: MessageWriter<DamageMessage>,
 ) {
     for (proj_entity, proj_transform, projectile) in projectile_query.iter() {

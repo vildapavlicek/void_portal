@@ -1,9 +1,9 @@
 use {
     crate::*,
     bevy::time::{Time, TimePlugin},
-    common::{events::DamageMessage, EnemyKilled},
+    common::{events::DamageMessage, MonsterKilled},
     items::{AttackRange as ItemAttackRange, BaseDamage, Melee, ProjectileStats, Ranged},
-    monsters::{apply_damage_logic, Enemy, Health, SpawnIndex},
+    monsters::{apply_damage_logic, Monster, Health, SpawnIndex},
     portal::PortalSpawnTracker,
 };
 
@@ -13,7 +13,7 @@ fn create_app_with_minimal_plugins() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins.build().disable::<TimePlugin>()); // Manually inserting Time to control it
     app.insert_resource(Time::<()>::default());
-    app.add_message::<EnemyKilled>(); // Register EnemyKilled message
+    app.add_message::<MonsterKilled>(); // Register EnemyKilled message
     app.add_message::<DamageMessage>(); // Register DamageMessage
 
     // Register types
@@ -54,7 +54,7 @@ fn test_npc_acquires_target() {
     let enemy = app
         .world_mut()
         .spawn((
-            Enemy {
+            Monster {
                 target_position: Vec2::ZERO,
             },
             Health {
@@ -105,7 +105,7 @@ fn test_npc_moves_to_target() {
     let _enemy = app
         .world_mut()
         .spawn((
-            Enemy {
+            Monster {
                 target_position: Vec2::ZERO,
             },
             Health {
@@ -169,7 +169,7 @@ fn test_npc_stops_in_range() {
 
     // Spawn Enemy at 100.0. Distance = 20.0. Range = 30.0. Should NOT move.
     app.world_mut().spawn((
-        Enemy {
+        Monster {
             target_position: Vec2::ZERO,
         },
         Health {
@@ -237,7 +237,7 @@ fn test_melee_attack() {
     let enemy = app
         .world_mut()
         .spawn((
-            Enemy {
+            Monster {
                 target_position: Vec2::ZERO,
             },
             Health {
@@ -317,7 +317,7 @@ fn test_ranged_attack_spawns_projectile() {
     let _enemy = app
         .world_mut()
         .spawn((
-            Enemy {
+            Monster {
                 target_position: Vec2::ZERO,
             },
             Health {

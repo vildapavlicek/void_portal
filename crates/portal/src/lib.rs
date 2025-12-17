@@ -9,7 +9,7 @@ use {
         UpgradeableStat,
     },
     monster_factory::SpawnMonsterEvent,
-    monsters::{AvailableEnemies, Enemy},
+    monsters::{AvailableEnemies, Monster},
     rand::Rng,
     wallet::Wallet,
 };
@@ -83,7 +83,7 @@ pub fn portal_tick_logic(
     time: Res<Time>,
     mut portal_query: Query<(Entity, &mut PortalSpawner, &Children)>,
     upgrade_query: Query<(&UpgradeSlot, &UpgradeableStat)>,
-    enemy_query: Query<(), With<Enemy>>,
+    enemy_query: Query<(), With<Monster>>,
     available_enemies: Res<AvailableEnemies>,
     mut spawn_events: MessageWriter<SpawnEnemyRequest>,
 ) {
