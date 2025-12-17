@@ -31,6 +31,9 @@ pub enum GameState {
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 pub enum VoidGameStage {
+    /// Run as first state on new frame. Things that need to be processed
+    /// before we resolve intents and actions should be processed here
+    FrameStart,
     /// Resolve intent: Resolves what the given entity will do at that frame (attack, move, idle, etc).
     ResolveIntent,
     /// Actions: Processes the intent (e.g., AttackIntent -> AttackAction).

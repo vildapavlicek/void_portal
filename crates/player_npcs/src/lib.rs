@@ -31,9 +31,8 @@ impl Plugin for PlayerNpcsPlugin {
         app.add_systems(
             Update,
             (
+                tick_weapon_cooldowns.in_set(VoidGameStage::FrameStart),
                 player_npc_decision_logic.in_set(VoidGameStage::ResolveIntent),
-                // Tick cooldowns
-                tick_weapon_cooldowns.in_set(VoidGameStage::Actions),
                 (
                     player_npc_movement_logic,
                     melee_attack_emit,

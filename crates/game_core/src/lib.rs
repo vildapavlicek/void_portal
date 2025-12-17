@@ -49,6 +49,7 @@ impl Plugin for VoidPortalPlugin {
         app.configure_sets(
             Update,
             (
+                VoidGameStage::FrameStart,
                 VoidGameStage::ResolveIntent,
                 VoidGameStage::Actions,
                 VoidGameStage::Effect,
