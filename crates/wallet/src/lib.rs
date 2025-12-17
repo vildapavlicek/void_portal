@@ -2,7 +2,7 @@
 
 use {
     bevy::prelude::*,
-    common::{MonsterKilled, MonsterScavenged, Reward},
+    common::{MonsterKilled, MonsterScavenged, Reward, SpawnFloatingText},
 };
 
 pub struct VoidWalletPlugin;
@@ -26,11 +26,18 @@ pub struct Wallet {
 fn update_wallet_from_enemy_killed(
     mut events: MessageReader<MonsterKilled>,
     mut wallet: ResMut<Wallet>,
-    reward_query: Query<&Reward>,
+    reward_query: Query<(&Reward, &Transform)>,
+    mut vfx_events: MessageWriter<SpawnFloatingText>,
 ) {
     for event in events.read() {
-        if let Ok(reward) = reward_query.get(event.entity) {
+        if let Ok((reward, transform)) = reward_query.get(event.entity) {
             wallet.void_shards += reward.0;
+
+            vfx_events.write(SpawnFloatingText::void_shards_reward(
+                reward.0,
+                transform.translation,
+            ));
+
             info!(
                 "Wallet updated: +{} void shards. Total: {}",
                 reward.0, wallet.void_shards
@@ -67,7 +74,8 @@ mod tests {
         // Add minimal plugins required for the test
         app.add_plugins(MinimalPlugins)
             .add_plugins(VoidWalletPlugin)
-            .add_message::<MonsterKilled>();
+            .add_message::<MonsterKilled>()
+            .add_message::<SpawnFloatingText>();
 
         // Check initial state
         assert_eq!(app.world().resource::<Wallet>().void_shards, 0.0);
@@ -77,6 +85,7 @@ mod tests {
             .world_mut()
             .spawn((
                 Reward(10.0),
+                Transform::default(),
                 Dead {
                     despawn_timer: Timer::from_seconds(1.0, TimerMode::Once),
                 },
@@ -98,6 +107,7 @@ mod tests {
             .world_mut()
             .spawn((
                 Reward(5.5),
+                Transform::default(),
                 Dead {
                     despawn_timer: Timer::from_seconds(1.0, TimerMode::Once),
                 },
@@ -121,7 +131,8 @@ mod tests {
         // Note: VoidWalletPlugin already adds EnemyScavenged message, but NOT EnemyKilled
         // So when Update runs, `update_wallet_from_enemy_killed` panics because `EnemyKilled` is missing.
         // We must add it for the system to not panic, or disable the system for this test.
-        app.add_message::<MonsterKilled>();
+        app.add_message::<MonsterKilled>()
+           .add_message::<SpawnFloatingText>();
 
         assert_eq!(app.world().resource::<Wallet>().void_shards, 0.0);
 
