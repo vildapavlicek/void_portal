@@ -43,3 +43,42 @@ pub struct DamageMessage {
     pub amount: f32,
     pub damage_type: DamageType,
 }
+
+#[derive(Message, Debug, Clone)]
+pub struct SpawnFloatingText {
+    pub text: String,
+    pub location: Vec3,
+    pub color: Color,
+    pub size: f32,
+}
+
+impl SpawnFloatingText {
+    pub fn create(text: impl Into<String>, location: Vec3, color: Color) -> Self {
+        Self {
+            text: text.into(),
+            location,
+            color,
+            size: 20.0,
+        }
+    }
+
+    pub fn damage(amount: f32, location: Vec3) -> Self {
+        let text = format!("{:.0}", amount);
+        
+        Self {
+            text,
+            location,
+            bevy::color::palettes::basic::RED,
+            size: 24.0,
+        }
+    }
+
+    pub fn void_shards_reward(amount: f32, location: Vec3) -> Self {
+        Self {
+            text: format!("+{:.0}", amount),
+            location,
+            color: Color::srgb(0.5, 0.0, 0.5),
+            size: 20.0,
+        }
+    }
+}
