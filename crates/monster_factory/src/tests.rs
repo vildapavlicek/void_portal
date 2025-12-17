@@ -3,10 +3,10 @@ use {
     crate::*,
     bevy::prelude::{App, MinimalPlugins, Transform, Update, Vec2, Visibility},
     common::{
-        components::{EnemyScaling, PortalLevel, PortalRoot, PortalUpgrades, ScavengerPenalty},
+        components::{MonsterScaling, PortalLevel, PortalRoot, PortalUpgrades, ScavengerPenalty},
         GrowthStrategy, Reward, ScavengeModifier,
     },
-    monsters::{Monster, Health, Lifetime, Speed},
+    monsters::{Health, Lifetime, Monster, Speed},
     std::collections::HashMap,
 };
 
@@ -32,7 +32,7 @@ fn test_hydrate_monster_stats() {
 
     // Register Portal components
     app.register_type::<PortalLevel>()
-        .register_type::<EnemyScaling>()
+        .register_type::<MonsterScaling>()
         .register_type::<PortalRoot>()
         .register_type::<PortalUpgrades>()
         .register_type::<ScavengerPenalty>();
@@ -48,7 +48,7 @@ fn test_hydrate_monster_stats() {
                 active: 1,
                 max_unlocked: 1,
             },
-            EnemyScaling {
+            MonsterScaling {
                 health_strategy: GrowthStrategy::Linear {
                     base: 100.0,
                     coefficient: 0.0,

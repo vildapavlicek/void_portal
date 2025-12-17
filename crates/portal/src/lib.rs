@@ -28,7 +28,7 @@ impl Plugin for PortalPlugin {
             .register_type::<PortalLevel>()
             .register_type::<UpgradeCost>()
             .register_type::<PortalSpawner>()
-            .register_type::<EnemyScaling>()
+            .register_type::<MonsterScaling>()
             .register_type::<ScavengerPenalty>()
             .register_type::<UpgradeSlot>()
             .register_type::<UpgradeableStat>()
@@ -123,7 +123,7 @@ pub fn portal_spawn_logic(
     portal_query: Query<(
         &Transform,
         &PortalLevel,
-        &EnemyScaling,
+        &MonsterScaling,
         &Children,
         Option<&ScavengerPenalty>,
     )>,

@@ -27,7 +27,7 @@ pub struct PortalSpawner {
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
-pub struct EnemyScaling {
+pub struct MonsterScaling {
     pub health_strategy: GrowthStrategy,
     pub reward_strategy: GrowthStrategy,
     pub speed_strategy: GrowthStrategy,

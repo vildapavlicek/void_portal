@@ -1,7 +1,7 @@
 use {
     bevy::prelude::*,
     common::{
-        components::{EnemyScaling, PortalLevel, UpgradeCost, UpgradeSlot},
+        components::{MonsterScaling, PortalLevel, UpgradeCost, UpgradeSlot},
         ChangeActiveLevel, GameState, RequestUpgrade, UpgradePortal, UpgradeableStat,
     },
     wallet::Wallet,
@@ -78,7 +78,7 @@ fn attach_portal_observer(
 fn on_portal_click(
     trigger: On<Pointer<Click>>,
     mut commands: Commands,
-    portal_query: Query<(&PortalLevel, &UpgradeCost, &EnemyScaling, &Children)>,
+    portal_query: Query<(&PortalLevel, &UpgradeCost, &MonsterScaling, &Children)>,
     upgrade_query: Query<(&UpgradeSlot, &UpgradeableStat)>,
     ui_query: Query<Entity, With<PortalUiRoot>>,
 ) {
@@ -104,7 +104,7 @@ fn spawn_portal_ui(
     commands: &mut Commands,
     level: &PortalLevel,
     cost: &UpgradeCost,
-    scaling: &EnemyScaling,
+    scaling: &MonsterScaling,
     portal_entity: Entity,
     upgrades: Vec<(Entity, UpgradeSlot, UpgradeableStat)>,
 ) {
@@ -456,7 +456,7 @@ fn update_upgrade_button_state(
 // Update Stat Texts
 fn update_portal_ui_stats(
     mut query: Query<(&PortalUiLink, &PortalUiStat, &mut Text)>,
-    portal_query: Query<(&PortalLevel, &EnemyScaling)>,
+    portal_query: Query<(&PortalLevel, &MonsterScaling)>,
     upgrade_query: Query<(&UpgradeSlot, &UpgradeableStat)>,
 ) {
     for (link, stat_type, mut text) in &mut query {
@@ -524,7 +524,7 @@ mod tests {
 
     #[test]
     fn test_portal_ui_lifecycle() {
-        use portal::{EnemyScaling, PortalLevel, UpgradeCost};
+        use portal::{MonsterScaling, PortalLevel, UpgradeCost};
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_plugins(StatesPlugin)
@@ -563,7 +563,7 @@ mod tests {
                     },
                     current_price: 100.0,
                 },
-                EnemyScaling::default(), // Can populate if needed
+                MonsterScaling::default(), // Can populate if needed
             ))
             .id();
 

@@ -1,7 +1,7 @@
 use {
     crate::{
         handle_generic_upgrades, handle_portal_upgrade, portal_spawn_logic, portal_tick_logic,
-        EnemyScaling, PortalLevel, PortalSpawnTracker, PortalSpawner, UpgradeCost, UpgradeSlot,
+        MonsterScaling, PortalLevel, PortalSpawnTracker, PortalSpawner, UpgradeCost, UpgradeSlot,
     },
     bevy::{prelude::*, time::TimePlugin},
     common::{
@@ -33,7 +33,7 @@ fn spawn_test_portal(commands: &mut Commands) -> Entity {
                     coefficient: 0.1,
                 },
             },
-            EnemyScaling {
+            MonsterScaling {
                 health_strategy: GrowthStrategy::Linear {
                     base: 50.0,
                     coefficient: 10.0,

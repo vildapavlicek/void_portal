@@ -2,7 +2,7 @@ use {
     bevy::{prelude::*, time::TimePlugin},
     common::{
         components::{
-            EnemyScaling, PortalLevel, PortalRoot, PortalSpawner, UpgradeCost, UpgradeSlot,
+            MonsterScaling, PortalLevel, PortalRoot, PortalSpawner, UpgradeCost, UpgradeSlot,
         },
         MonsterKilled, GrowthStrategy, Reward, SpawnEnemyRequest, UpgradeableStat,
     },
@@ -77,7 +77,7 @@ fn setup_app() -> App {
                     coefficient: 0.1,
                 },
             },
-            EnemyScaling {
+            MonsterScaling {
                 health_strategy: GrowthStrategy::Linear {
                     base: 50.0,
                     coefficient: 10.0,

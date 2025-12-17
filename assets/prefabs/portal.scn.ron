@@ -32,7 +32,7 @@
             interval_strategy: Static(2.0),
         ),
 
-        "common::components::EnemyScaling": (
+        "common::components::MonsterScaling": (
             reward_strategy: Linear(base: 10.0, coefficient: 7.5),
             health_strategy: Exponential(base: 5.0, factor: 1.5),
             speed_strategy: Static(150.0),

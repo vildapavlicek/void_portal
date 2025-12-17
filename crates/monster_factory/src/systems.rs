@@ -3,10 +3,10 @@ use {
     crate::components::*,
     bevy::prelude::*,
     common::{
-        components::{EnemyScaling, PortalLevel, PortalRoot, PortalUpgrades, ScavengerPenalty},
+        components::{MonsterScaling, PortalLevel, PortalRoot, PortalUpgrades, ScavengerPenalty},
         Reward, ScavengeModifier, UpgradeableStat,
     },
-    monsters::{Monster, Health, Lifetime, SpawnIndex, Speed},
+    monsters::{Health, Lifetime, Monster, SpawnIndex, Speed},
     std::collections::HashMap,
 };
 
@@ -102,7 +102,7 @@ pub fn hydrate_monster_stats(
     portal_query: Query<
         (
             &PortalLevel,
-            &EnemyScaling,
+            &MonsterScaling,
             Option<&ScavengerPenalty>,
             Option<&PortalUpgrades>,
         ),
