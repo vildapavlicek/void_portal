@@ -1,7 +1,7 @@
 use {
-    crate::{despawn_dead_bodies, handle_dying_enemies, Enemy, Health},
+    crate::{despawn_dead_bodies, manage_enemy_lifecycle, Enemy, Health, Lifetime},
     bevy::{prelude::*, time::TimePlugin},
-    common::{Dead, EnemyKilled, Reward},
+    common::{Dead, EnemyKilled, EnemyScavenged, Reward},
 };
 
 #[test]
@@ -11,6 +11,7 @@ fn test_enemy_death_lifecycle() {
     app.add_plugins(MinimalPlugins.build().disable::<TimePlugin>());
     app.insert_resource(Time::<()>::default());
     app.add_message::<EnemyKilled>();
+    app.add_message::<EnemyScavenged>();
 
     // Helper to capture events
     #[derive(Resource, Default)]
@@ -28,10 +29,10 @@ fn test_enemy_death_lifecycle() {
     );
 
     // Add death systems
-    // handle_dying_enemies runs, emits event, modifies entity.
+    // manage_enemy_lifecycle runs, emits event, modifies entity.
     // event reader runs (order undefined unless explicit, but next frame definitely catches it).
     // despawn_dead_bodies runs.
-    app.add_systems(Update, (handle_dying_enemies, despawn_dead_bodies));
+    app.add_systems(Update, (manage_enemy_lifecycle, despawn_dead_bodies));
 
     // Spawn an enemy with 0 health
     let reward_amount = 10.0;
@@ -45,6 +46,7 @@ fn test_enemy_death_lifecycle() {
                 current: 0.0,
                 max: 100.0,
             },
+            Lifetime::default(),
             Reward(reward_amount),
             // Ensure Visibility is present to test Hidden
             Visibility::Visible,
