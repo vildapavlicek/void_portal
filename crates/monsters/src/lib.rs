@@ -21,7 +21,8 @@ impl Plugin for MonsterPlugin {
             .register_type::<Lifetime>()
             .register_type::<SpawnIndex>()
             .register_type::<Speed>()
-            .register_type::<MonsterConfig>();
+            .register_type::<MonsterConfig>()
+            .register_type::<LifetimeText>();
 
         app.init_resource::<AvailableEnemies>();
 
@@ -34,6 +35,7 @@ impl Plugin for MonsterPlugin {
                     manage_monster_lifecycle,
                     despawn_dead_bodies,
                     update_monster_health_ui,
+                    update_lifetime_text,
                 )
                     .in_set(VoidGameStage::FrameEnd),
             )
@@ -81,6 +83,10 @@ pub struct SpawnIndex(pub u32);
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
 pub struct Speed(pub f32);
+
+#[derive(Component, Reflect, Default)]
+#[reflect(Component)]
+pub struct LifetimeText;
 
 // Systems
 pub fn move_monsters(
@@ -184,12 +190,25 @@ pub fn despawn_dead_bodies(
 
 pub fn update_monster_health_ui(
     enemy_query: Query<(&Health, &Children), (With<Monster>, Changed<Health>)>,
-    mut text_query: Query<&mut Text2d>,
+    mut text_query: Query<&mut Text2d, Without<LifetimeText>>,
 ) {
     for (health, children) in enemy_query.iter() {
         for child in children.iter() {
             if let Ok(mut text) = text_query.get_mut(child) {
                 text.0 = format!("{:.0}", health.current);
+            }
+        }
+    }
+}
+
+pub fn update_lifetime_text(
+    enemy_query: Query<(&Lifetime, &Children), With<Monster>>,
+    mut text_query: Query<&mut Text2d, With<LifetimeText>>,
+) {
+    for (lifetime, children) in enemy_query.iter() {
+        for child in children.iter() {
+            if let Ok(mut text) = text_query.get_mut(child) {
+                text.0 = format!("{:.1}s", lifetime.timer.remaining_secs());
             }
         }
     }
