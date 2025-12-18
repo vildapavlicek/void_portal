@@ -28,7 +28,10 @@ impl Plugin for PortalPlugin {
             .register_type::<PortalLevel>()
             .register_type::<UpgradeCost>()
             .register_type::<PortalSpawner>()
-            .register_type::<MonsterScaling>()
+            .register_type::<BaseMonsterHealth>()
+            .register_type::<BaseMonsterReward>()
+            .register_type::<BaseMonsterSpeed>()
+            .register_type::<BaseMonsterLifetime>()
             .register_type::<ScavengerPenalty>()
             .register_type::<UpgradeSlot>()
             .register_type::<UpgradeableStat>()
@@ -99,7 +102,6 @@ pub fn portal_tick_logic(
             }
 
             // Iterate children to find "Capacity"
-            // Assuming child is Entity or &Entity based on compiler error context (removed deref)
             let capacity = children
                 .iter()
                 .filter_map(|child| upgrade_query.get(child).ok())
@@ -123,7 +125,10 @@ pub fn portal_spawn_logic(
     portal_query: Query<(
         &Transform,
         &PortalLevel,
-        &MonsterScaling,
+        &BaseMonsterHealth,
+        &BaseMonsterReward,
+        &BaseMonsterSpeed,
+        &BaseMonsterLifetime,
         &Children,
         Option<&ScavengerPenalty>,
     )>,

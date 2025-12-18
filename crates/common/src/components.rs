@@ -4,14 +4,14 @@ use {crate::GrowthStrategy, bevy::prelude::*, std::collections::HashMap};
 #[reflect(Component)]
 pub struct PortalRoot; // Marker for querying
 
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Reflect, Default, Debug)]
 #[reflect(Component)]
 pub struct PortalLevel {
     pub active: u32,
     pub max_unlocked: u32,
 }
 
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Reflect, Default, Debug)]
 #[reflect(Component)]
 pub struct UpgradeCost {
     pub strategy: GrowthStrategy,
@@ -25,14 +25,21 @@ pub struct PortalSpawner {
     pub interval_strategy: GrowthStrategy,
 }
 
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Reflect, Default, Debug)]
 #[reflect(Component)]
-pub struct MonsterScaling {
-    pub health_strategy: GrowthStrategy,
-    pub reward_strategy: GrowthStrategy,
-    pub speed_strategy: GrowthStrategy,
-    pub lifetime_strategy: GrowthStrategy,
-}
+pub struct BaseMonsterHealth(pub GrowthStrategy);
+
+#[derive(Component, Reflect, Default, Debug)]
+#[reflect(Component)]
+pub struct BaseMonsterReward(pub GrowthStrategy);
+
+#[derive(Component, Reflect, Default, Debug)]
+#[reflect(Component)]
+pub struct BaseMonsterSpeed(pub GrowthStrategy);
+
+#[derive(Component, Reflect, Default, Debug)]
+#[reflect(Component)]
+pub struct BaseMonsterLifetime(pub GrowthStrategy);
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]

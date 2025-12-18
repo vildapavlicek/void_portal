@@ -3,7 +3,10 @@ use {
     crate::components::*,
     bevy::prelude::*,
     common::{
-        components::{MonsterScaling, PortalLevel, PortalRoot, ScavengerPenalty},
+        components::{
+            BaseMonsterHealth, BaseMonsterLifetime, BaseMonsterReward, BaseMonsterSpeed,
+            PortalLevel, PortalRoot, ScavengerPenalty,
+        },
         Reward, ScavengeModifier, UpgradeSlot, UpgradeableStat,
     },
     monsters::{Health, Lifetime, Monster, SpawnIndex, Speed},
@@ -102,7 +105,10 @@ pub fn hydrate_monster_stats(
     portal_query: Query<
         (
             &PortalLevel,
-            &MonsterScaling,
+            &BaseMonsterHealth,
+            &BaseMonsterReward,
+            &BaseMonsterSpeed,
+            &BaseMonsterLifetime,
             &Children,
             Option<&ScavengerPenalty>,
         ),
@@ -115,8 +121,15 @@ pub fn hydrate_monster_stats(
         let mut entity_cmds = commands.entity(entity);
 
         // 1. Fetch Portal Data
-        let Ok((level, scaling, children, scav_penalty_opt)) =
-            portal_query.get(builder.portal_entity)
+        let Ok((
+            level,
+            health_scaling,
+            reward_scaling,
+            speed_scaling,
+            lifetime_scaling,
+            children,
+            scav_penalty_opt,
+        )) = portal_query.get(builder.portal_entity)
         else {
             warn!(
                 "Portal entity {:?} missing for monster hydration",
@@ -137,10 +150,10 @@ pub fn hydrate_monster_stats(
             .unwrap_or_default();
 
         // 3. Calculate Base Stats
-        let base_health = scaling.health_strategy.calculate(level.active as f32);
-        let base_speed = scaling.speed_strategy.calculate(level.active as f32);
-        let base_reward = scaling.reward_strategy.calculate(level.active as f32);
-        let base_lifetime = scaling.lifetime_strategy.calculate(level.active as f32);
+        let base_health = health_scaling.0.calculate(level.active as f32);
+        let base_speed = speed_scaling.0.calculate(level.active as f32);
+        let base_reward = reward_scaling.0.calculate(level.active as f32);
+        let base_lifetime = lifetime_scaling.0.calculate(level.active as f32);
 
         // 4. Apply Coefficients and Insert Components
 

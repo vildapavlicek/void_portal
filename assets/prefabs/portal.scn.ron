@@ -32,12 +32,10 @@
             interval_strategy: Static(2.0),
         ),
 
-        "common::components::MonsterScaling": (
-            reward_strategy: Linear(base: 10.0, coefficient: 7.5),
-            health_strategy: Exponential(base: 5.0, factor: 1.5),
-            speed_strategy: Static(150.0),
-            lifetime_strategy: Static(10.0),
-        ),
+        "common::components::BaseMonsterReward": (Linear(base: 10.0, coefficient: 7.5)),
+        "common::components::BaseMonsterHealth": (Exponential(base: 5.0, factor: 1.5)),
+        "common::components::BaseMonsterSpeed": (Static(150.0)),
+        "common::components::BaseMonsterLifetime": (Static(10.0)),
 
         "common::components::ScavengerPenalty": (1.0),
 

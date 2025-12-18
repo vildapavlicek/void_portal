@@ -3,7 +3,10 @@ use {
     crate::*,
     bevy::prelude::{App, MinimalPlugins, Transform, Update, Vec2, Visibility},
     common::{
-        components::{MonsterScaling, PortalLevel, PortalRoot, PortalUpgrades, ScavengerPenalty},
+        components::{
+            BaseMonsterHealth, BaseMonsterLifetime, BaseMonsterReward, BaseMonsterSpeed,
+            PortalLevel, PortalRoot, PortalUpgrades, ScavengerPenalty,
+        },
         GrowthStrategy, Reward, ScavengeModifier,
     },
     monsters::{Health, Lifetime, Monster, Speed},
@@ -32,7 +35,10 @@ fn test_hydrate_monster_stats() {
 
     // Register Portal components
     app.register_type::<PortalLevel>()
-        .register_type::<MonsterScaling>()
+        .register_type::<BaseMonsterHealth>()
+        .register_type::<BaseMonsterReward>()
+        .register_type::<BaseMonsterSpeed>()
+        .register_type::<BaseMonsterLifetime>()
         .register_type::<PortalRoot>()
         .register_type::<PortalUpgrades>()
         .register_type::<ScavengerPenalty>();
@@ -48,26 +54,25 @@ fn test_hydrate_monster_stats() {
                 active: 1,
                 max_unlocked: 1,
             },
-            MonsterScaling {
-                health_strategy: GrowthStrategy::Linear {
-                    base: 100.0,
-                    coefficient: 0.0,
-                },
-                speed_strategy: GrowthStrategy::Linear {
-                    base: 10.0,
-                    coefficient: 0.0,
-                },
-                reward_strategy: GrowthStrategy::Linear {
-                    base: 50.0,
-                    coefficient: 0.0,
-                },
-                lifetime_strategy: GrowthStrategy::Linear {
-                    base: 20.0,
-                    coefficient: 0.0,
-                },
-            },
+            BaseMonsterHealth(GrowthStrategy::Linear {
+                base: 100.0,
+                coefficient: 0.0,
+            }),
+            BaseMonsterSpeed(GrowthStrategy::Linear {
+                base: 10.0,
+                coefficient: 0.0,
+            }),
+            BaseMonsterReward(GrowthStrategy::Linear {
+                base: 50.0,
+                coefficient: 0.0,
+            }),
+            BaseMonsterLifetime(GrowthStrategy::Linear {
+                base: 20.0,
+                coefficient: 0.0,
+            }),
             ScavengerPenalty(0.5),
             PortalUpgrades(HashMap::new()), // No upgrades for simplicity
+            bevy::ecs::hierarchy::Children::default(),
         ))
         .id();
 

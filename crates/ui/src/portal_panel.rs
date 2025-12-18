@@ -1,7 +1,7 @@
 use {
     bevy::prelude::*,
     common::{
-        components::{MonsterScaling, PortalLevel, UpgradeCost, UpgradeSlot},
+        components::{BaseMonsterReward, PortalLevel, UpgradeCost, UpgradeSlot},
         ChangeActiveLevel, GameState, RequestUpgrade, UpgradePortal, UpgradeableStat,
     },
     wallet::Wallet,
@@ -78,7 +78,7 @@ fn attach_portal_observer(
 fn on_portal_click(
     trigger: On<Pointer<Click>>,
     mut commands: Commands,
-    portal_query: Query<(&PortalLevel, &UpgradeCost, &MonsterScaling, &Children)>,
+    portal_query: Query<(&PortalLevel, &UpgradeCost, &BaseMonsterReward, &Children)>,
     upgrade_query: Query<(&UpgradeSlot, &UpgradeableStat)>,
     ui_query: Query<Entity, With<PortalUiRoot>>,
 ) {
@@ -88,15 +88,14 @@ fn on_portal_click(
     }
 
     let entity = trigger.entity;
-    if let Ok((level, cost, scaling, children)) = portal_query.get(entity) {
+    if let Ok((level, cost, reward_scaling, children)) = portal_query.get(entity) {
         let mut upgrades = Vec::new();
         for &child in children {
             if let Ok((slot, stat)) = upgrade_query.get(child) {
                 upgrades.push((child, slot.clone(), stat.clone()));
             }
         }
-
-        spawn_portal_ui(&mut commands, level, cost, scaling, entity, upgrades);
+        spawn_portal_ui(&mut commands, level, cost, reward_scaling, entity, upgrades);
     }
 }
 
@@ -104,11 +103,11 @@ fn spawn_portal_ui(
     commands: &mut Commands,
     level: &PortalLevel,
     cost: &UpgradeCost,
-    scaling: &MonsterScaling,
+    reward_scaling: &BaseMonsterReward,
     portal_entity: Entity,
     upgrades: Vec<(Entity, UpgradeSlot, UpgradeableStat)>,
 ) {
-    let current_reward = scaling.reward_strategy.calculate(level.active as f32);
+    let current_reward = reward_scaling.0.calculate(level.active as f32);
 
     commands
         .spawn((
@@ -456,7 +455,7 @@ fn update_upgrade_button_state(
 // Update Stat Texts
 fn update_portal_ui_stats(
     mut query: Query<(&PortalUiLink, &PortalUiStat, &mut Text)>,
-    portal_query: Query<(&PortalLevel, &MonsterScaling)>,
+    portal_query: Query<(&PortalLevel, &BaseMonsterReward)>,
     upgrade_query: Query<(&UpgradeSlot, &UpgradeableStat)>,
 ) {
     for (link, stat_type, mut text) in &mut query {
@@ -467,8 +466,8 @@ fn update_portal_ui_stats(
                 }
             }
             PortalUiStat::Reward => {
-                if let Ok((level, scaling)) = portal_query.get(link.0) {
-                    let current_reward = scaling.reward_strategy.calculate(level.active as f32);
+                if let Ok((level, reward_scaling)) = portal_query.get(link.0) {
+                    let current_reward = reward_scaling.0.calculate(level.active as f32);
                     **text = format!("Reward: {:.2}", current_reward);
                 }
             }
@@ -524,7 +523,10 @@ mod tests {
 
     #[test]
     fn test_portal_ui_lifecycle() {
-        use portal::{MonsterScaling, PortalLevel, UpgradeCost};
+        use portal::{
+            BaseMonsterHealth, BaseMonsterLifetime, BaseMonsterReward, BaseMonsterSpeed,
+            PortalLevel, UpgradeCost,
+        };
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_plugins(StatesPlugin)
@@ -563,7 +565,10 @@ mod tests {
                     },
                     current_price: 100.0,
                 },
-                MonsterScaling::default(), // Can populate if needed
+                BaseMonsterHealth::default(),
+                BaseMonsterReward::default(),
+                BaseMonsterSpeed::default(),
+                BaseMonsterLifetime::default(),
             ))
             .id();
 
