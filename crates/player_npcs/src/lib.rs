@@ -2,7 +2,7 @@
 
 use {
     bevy::{prelude::*, scene::DynamicScene},
-    common::{events::DamageMessage, GameState, VoidGameStage},
+    common::{messages::DamageMessage, GameState, VoidGameStage},
     items::{
         AttackRange as ItemAttackRange, BaseDamage, Melee, ProjectileStats as ItemProjectileStats,
         Ranged,
@@ -281,7 +281,7 @@ pub fn melee_attack_emit(
                             source: npc_entity,
                             target: *target_entity,
                             amount: final_damage,
-                            damage_type: common::events::DamageType::Physical,
+                            damage_type: common::messages::DamageType::Physical,
                         });
 
                         cooldown.timer.reset();
@@ -398,7 +398,7 @@ pub fn projectile_collision(
                     source: projectile.source,
                     target: monster_entity,
                     amount: projectile.damage,
-                    damage_type: common::events::DamageType::Physical,
+                    damage_type: common::messages::DamageType::Physical,
                 });
                 hit = true;
                 break;

@@ -4,7 +4,7 @@ use {
     bevy::prelude::*,
     bevy_common_assets::ron::RonAssetPlugin,
     common::{
-        events::DamageMessage, Dead, GameState, MonsterKilled, MonsterScavenged, Reward,
+        messages::DamageMessage, Dead, GameState, MonsterKilled, MonsterScavenged, Reward,
         ScavengeModifier, VoidGameStage,
     },
     serde::Deserialize,

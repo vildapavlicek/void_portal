@@ -2,8 +2,8 @@
 
 use bevy::prelude::*;
 
-pub mod events;
-pub use events::*;
+pub mod messages;
+pub use messages::*;
 
 pub mod stats;
 pub use stats::*;
