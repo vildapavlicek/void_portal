@@ -18,18 +18,55 @@ pub struct CommonPlugin;
 
 impl Plugin for CommonPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<LockedFeature>();
-        app.register_type::<BaseMonsterArmor>();
+        // Messages
+        app.add_message::<SpawnMonsterRequest>()
+            .add_message::<MonsterKilled>()
+            .add_message::<UpgradePortal>()
+            .add_message::<RequestUpgrade>()
+            .add_message::<ChangeActiveLevel>()
+            .add_message::<MonsterScavenged>()
+            .add_message::<DamageMessage>()
+            .add_message::<SpawnFloatingText>();
+
+        // Components & Types
+        app
+            // components.rs
+            .register_type::<PortalRoot>()
+            .register_type::<PortalLevel>()
+            .register_type::<UpgradeCost>()
+            .register_type::<PortalSpawner>()
+            .register_type::<BaseMonsterHealth>()
+            .register_type::<BaseMonsterReward>()
+            .register_type::<BaseMonsterSpeed>()
+            .register_type::<BaseMonsterLifetime>()
+            .register_type::<BaseMonsterArmor>()
+            .register_type::<ScavengerPenalty>()
+            .register_type::<UpgradeSlot>()
+            .register_type::<PortalUpgrades>()
+            .register_type::<LockedFeature>()
+            // lib.rs
+            .register_type::<Reward>()
+            .register_type::<ScavengeModifier>()
+            .register_type::<Dead>()
+            // stats.rs
+            .register_type::<GrowthStrategy>()
+            .register_type::<ConditionalUpgrade>()
+            .register_type::<UpgradeableStat>()
+            // requirements.rs
+            .register_type::<Requirement>();
     }
 }
 
 #[derive(Component, Debug, Clone, Reflect)]
+#[reflect(Component)]
 pub struct Reward(pub f32);
 
-#[derive(Component, Debug, Clone, Reflect)]
+#[derive(Component, Debug, Clone, Reflect, Default)]
+#[reflect(Component, Default)]
 pub struct ScavengeModifier(pub f32);
 
-#[derive(Component, Debug, Clone, Reflect)]
+#[derive(Component, Debug, Clone, Reflect, Default)]
+#[reflect(Component, Default)]
 pub struct Dead {
     pub despawn_timer: Timer,
 }

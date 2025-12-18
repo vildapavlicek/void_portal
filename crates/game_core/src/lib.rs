@@ -29,9 +29,6 @@ struct GameConfigHandles {
 impl Plugin for VoidPortalPlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<GameState>();
-        app.add_message::<MonsterKilled>();
-        app.add_message::<UpgradePortal>();
-        app.add_message::<RequestUpgrade>();
 
         app.add_plugins((
             CommonPlugin,

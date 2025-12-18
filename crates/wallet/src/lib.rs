@@ -10,7 +10,6 @@ pub struct VoidWalletPlugin;
 impl Plugin for VoidWalletPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Wallet>()
-            .add_message::<common::MonsterScavenged>()
             .add_systems(
                 Update,
                 (

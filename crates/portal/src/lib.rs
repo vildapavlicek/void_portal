@@ -22,24 +22,7 @@ pub struct PortalPlugin;
 
 impl Plugin for PortalPlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<ChangeActiveLevel>();
-
-        app.register_type::<PortalRoot>()
-            .register_type::<PortalLevel>()
-            .register_type::<UpgradeCost>()
-            .register_type::<PortalSpawner>()
-            .register_type::<BaseMonsterHealth>()
-            .register_type::<BaseMonsterReward>()
-            .register_type::<BaseMonsterSpeed>()
-            .register_type::<BaseMonsterLifetime>()
-            .register_type::<ScavengerPenalty>()
-            .register_type::<UpgradeSlot>()
-            .register_type::<UpgradeableStat>()
-            .register_type::<PortalUpgrades>();
-
         app.init_resource::<PortalSpawnTracker>();
-
-        app.add_message::<SpawnMonsterRequest>();
 
         app.add_systems(
             Update,

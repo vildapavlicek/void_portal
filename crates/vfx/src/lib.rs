@@ -7,8 +7,6 @@ pub struct VfxPlugin;
 
 impl Plugin for VfxPlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<SpawnFloatingText>();
-
         app.register_type::<FloatingText>()
             .register_type::<FloatingTextAnim>();
 
