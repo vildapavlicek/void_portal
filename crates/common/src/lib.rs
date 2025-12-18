@@ -11,6 +11,9 @@ pub use stats::*;
 pub mod components;
 pub use components::*;
 
+pub mod requirements;
+pub use requirements::*;
+
 #[derive(Component, Debug, Clone, Reflect)]
 pub struct Reward(pub f32);
 
