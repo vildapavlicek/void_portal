@@ -1,4 +1,8 @@
-use {crate::GrowthStrategy, bevy::prelude::*, std::collections::HashMap};
+use {
+    crate::{ConditionalUpgrade, GrowthStrategy},
+    bevy::prelude::*,
+    std::collections::HashMap,
+};
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
@@ -41,6 +45,10 @@ pub struct BaseMonsterSpeed(pub GrowthStrategy);
 #[reflect(Component)]
 pub struct BaseMonsterLifetime(pub GrowthStrategy);
 
+#[derive(Component, Reflect, Default, Debug, Deref, DerefMut)]
+#[reflect(Component)]
+pub struct BaseMonsterArmor(pub ConditionalUpgrade);
+
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
 pub struct ScavengerPenalty(pub f32);
@@ -54,3 +62,7 @@ pub struct UpgradeSlot {
 #[derive(Component, Default, Reflect)]
 #[reflect(Component)]
 pub struct PortalUpgrades(pub HashMap<String, Entity>);
+
+#[derive(Component, Reflect, Default, Clone)]
+#[reflect(Component)]
+pub struct LockedFeature;
