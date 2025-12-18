@@ -41,16 +41,18 @@
 
 ## 4. The Core Game Loop Architecture
 
-Gameplay logic must follow this 4-phase execution flow (enforced via System Sets):
+Gameplay logic follows a 5-phase execution flow enforced via `VoidGameStage` SystemSets:
 
-1.  **Phase 1: Decision (Intent)**
-    - Entities decide _what_ to do (e.g., `npc_decision_system` sets `Intent::Attack`).
-2.  **Phase 2: Execution (Resolution)**
-    - Systems resolve `Intent` into **Messages** (e.g., `melee_execution_system` emits `DamageMessage`).
-3.  **Phase 3: Application (Effects)**
-    - Systems consume Messages to mutate state (e.g., `damage_application_system` applies mitigation and reduces `Health`).
-4.  **Phase 4: Cleanup & Lifecycle**
-    - Handle consequences (e.g., `death_system` handles 0 HP entities, rewards, and despawning).
+1.  **Phase 0: FrameStart** (`VoidGameStage::FrameStart`)
+    - Pre-processing tasks (e.g., ticking cooldowns) before decisions are made.
+2.  **Phase 1: Decision (Intent)** (`VoidGameStage::ResolveIntent`)
+    - Entities decide _what_ to do (e.g., `player_npc_decision_logic` sets `Intent::Attack`).
+3.  **Phase 2: Execution (Resolution)** (`VoidGameStage::Actions`)
+    - Systems resolve `Intent` into **Messages** (e.g., `melee_attack_emit` emits `DamageMessage`) or perform movement.
+4.  **Phase 3: Application (Effects)** (`VoidGameStage::Effect`)
+    - Systems consume Messages to mutate state (e.g., `apply_damage_logic` reduces `Health`).
+5.  **Phase 4: Cleanup & Lifecycle** (`VoidGameStage::FrameEnd`)
+    - Handle consequences (e.g., `manage_monster_lifecycle` handles 0 HP entities, rewards, and despawning).
 
 ## 5. Project Structure
 
@@ -58,12 +60,15 @@ The project is organized as a Cargo workspace with the following crates:
 
 - **`common`**: Shared types, `GameState`, and global **Messages** (Events).
 - **`game_core`**: Main glue crate, global setup.
-- **`monster`**: Monster logic and configurations.
+- **`monsters`**: Monster logic and configurations.
+- **`monster_factory`**: Monster spawning infrastructure.
 - **`player_npcs`**: Player ally logic (Soldiers, Heroes).
+- **`player_npcs_ui`**: UI systems for Player NPCs.
 - **`portal`**: Core portal mechanics, upgrades, spawning.
 - **`items`**: Itemization components (`Melee`, `Ranged`, `Armor`).
-- **`ui`**: User Interface systems.
+- **`ui`**: General User Interface systems.
 - **`wallet`**: Resource/currency management.
+- **`vfx`**: Visual effects (e.g., floating text).
 - **`assets`**: Asset loading and management.
 - **`src/` (Root)**: Main binary entry point.
 

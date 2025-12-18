@@ -61,7 +61,7 @@ fn update_wallet_from_scavenge(
 ) {
     for event in events.read() {
         wallet.void_shards += event.amount;
-        
+
         vfx_events.write(SpawnFloatingText {
             text: format!("+{:.0}", event.amount),
             location: event.location,
