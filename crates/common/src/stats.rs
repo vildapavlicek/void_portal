@@ -1,4 +1,4 @@
-use {bevy::prelude::*, serde::Deserialize};
+use {crate::requirements::Requirement, bevy::prelude::*, serde::Deserialize};
 
 #[derive(Debug, Clone, Reflect, Deserialize, PartialEq)]
 pub enum GrowthStrategy {
@@ -25,6 +25,29 @@ impl GrowthStrategy {
             Self::Linear { base, coefficient } => base + (level * coefficient),
             Self::Exponential { base, factor } => base * factor.powf(level),
             Self::Incremental { base, step } => base + (level * step),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Reflect, Deserialize, PartialEq, Default)]
+pub struct ConditionalUpgrade {
+    requirement: Requirement,
+    strategy: GrowthStrategy,
+}
+
+impl ConditionalUpgrade {
+    pub fn new(requirement: Requirement, strategy: GrowthStrategy) -> Self {
+        Self {
+            requirement,
+            strategy,
+        }
+    }
+
+    pub fn calculate(&self, level: u32) -> Option<f32> {
+        if self.requirement.is_satisfied(level) {
+            Some(self.strategy.calculate(level as f32))
+        } else {
+            None
         }
     }
 }
@@ -151,5 +174,26 @@ mod tests {
         assert_eq!(stat.level, 1.0);
         assert_eq!(stat.value, 11.0);
         assert_eq!(stat.price, 150.0);
+    }
+
+    #[test]
+    fn test_conditional_upgrade() {
+        let conditional = ConditionalUpgrade::new(
+            Requirement::MinLevel(2),
+            GrowthStrategy::Static(10.0),
+        );
+
+        assert_eq!(conditional.calculate(0), None);
+        assert_eq!(conditional.calculate(1), None);
+        assert_eq!(conditional.calculate(2), Some(10.0));
+        assert_eq!(conditional.calculate(3), Some(10.0));
+    }
+
+    #[test]
+    fn test_conditional_upgrade_default() {
+        let conditional = ConditionalUpgrade::default();
+        // Default requirement is Always, default strategy is Static(0.0)
+        assert_eq!(conditional.calculate(0), Some(0.0));
+        assert_eq!(conditional.calculate(10), Some(0.0));
     }
 }
