@@ -14,6 +14,15 @@ pub use components::*;
 pub mod requirements;
 pub use requirements::*;
 
+pub struct CommonPlugin;
+
+impl Plugin for CommonPlugin {
+    fn build(&self, app: &mut App) {
+        app.register_type::<LockedFeature>();
+        app.register_type::<BaseMonsterArmor>();
+    }
+}
+
 #[derive(Component, Debug, Clone, Reflect)]
 pub struct Reward(pub f32);
 

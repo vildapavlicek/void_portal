@@ -4,7 +4,9 @@
 use {
     assets::VoidAssetsPlugin,
     bevy::{asset::LoadedFolder, prelude::*},
-    common::{GameState, MonsterKilled, RequestUpgrade, UpgradePortal, VoidGameStage},
+    common::{
+        CommonPlugin, GameState, MonsterKilled, RequestUpgrade, UpgradePortal, VoidGameStage,
+    },
     items::ItemsPlugin,
     monster_factory::MonsterFactoryPlugin,
     monsters::{AvailableEnemies, MonsterConfig, MonsterPlugin},
@@ -32,16 +34,17 @@ impl Plugin for VoidPortalPlugin {
         app.add_message::<RequestUpgrade>();
 
         app.add_plugins((
-            VoidAssetsPlugin,
-            VoidWalletPlugin,
-            MonsterPlugin,
-            PortalPlugin,
-            PlayerNpcsPlugin,
-            PlayerNpcsUiPlugin,
-            VoidUiPlugin,
+            CommonPlugin,
             ItemsPlugin,
             MonsterFactoryPlugin,
+            MonsterPlugin,
+            PlayerNpcsPlugin,
+            PlayerNpcsUiPlugin,
+            PortalPlugin,
             VfxPlugin,
+            VoidAssetsPlugin,
+            VoidUiPlugin,
+            VoidWalletPlugin,
         ));
 
         app.init_resource::<GameConfigHandles>();
