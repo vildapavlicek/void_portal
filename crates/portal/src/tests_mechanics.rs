@@ -1,11 +1,13 @@
 use {
     crate::{
         handle_generic_upgrades, handle_portal_upgrade, portal_spawn_logic, portal_tick_logic,
-        MonsterScaling, PortalLevel, PortalSpawnTracker, PortalSpawner, UpgradeCost, UpgradeSlot,
+        PortalLevel, PortalSpawnTracker, PortalSpawner, UpgradeCost, UpgradeSlot,
     },
     bevy::{prelude::*, time::TimePlugin},
     common::{
-        GrowthStrategy, RequestUpgrade, Reward, SpawnMonsterRequest, UpgradePortal, UpgradeableStat,
+        BaseMonsterHealth, BaseMonsterLifetime, BaseMonsterReward, BaseMonsterSpeed,
+        GrowthStrategy, RequestUpgrade, Reward, SpawnMonsterRequest, UpgradePortal,
+        UpgradeableStat,
     },
     monsters::{AvailableEnemies, Health, Lifetime, Monster, MonsterConfig},
     wallet::Wallet,
@@ -33,21 +35,19 @@ fn spawn_test_portal(commands: &mut Commands) -> Entity {
                     coefficient: 0.1,
                 },
             },
-            MonsterScaling {
-                health_strategy: GrowthStrategy::Linear {
-                    base: 50.0,
-                    coefficient: 10.0,
-                },
-                reward_strategy: GrowthStrategy::Linear {
-                    base: 10.0,
-                    coefficient: 0.0,
-                },
-                speed_strategy: GrowthStrategy::Static(20.0),
-                lifetime_strategy: GrowthStrategy::Linear {
-                    base: 5.0,
-                    coefficient: 0.5,
-                },
-            },
+            BaseMonsterHealth(GrowthStrategy::Linear {
+                base: 50.0,
+                coefficient: 10.0,
+            }),
+            BaseMonsterReward(GrowthStrategy::Linear {
+                base: 10.0,
+                coefficient: 0.0,
+            }),
+            BaseMonsterSpeed(GrowthStrategy::Static(20.0)),
+            BaseMonsterLifetime(GrowthStrategy::Linear {
+                base: 5.0,
+                coefficient: 0.5,
+            }),
         ))
         .id();
 
