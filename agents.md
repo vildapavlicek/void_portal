@@ -2,11 +2,11 @@
 
 ## 1. Game Design Overview
 
-**Title/Concept:** Sci-Fi Fantasy Incremental Idle Game (2D)
+**Title/Concept:** Void Portal - Sci-Fi Fantasy Incremental Idle Game (2D)
 
 **Core Mechanics:**
 
-- **The Loop:** A central Portal spawns waves of monsters. Heroes automatically engage and battle these monsters.
+- **The Loop:** A central Portal spawns waves of monsters. Heroes (Soldiers) automatically engage and battle these monsters.
 - **Player Interaction:** The player acts as the manager—upgrading the Portal (to increase monster difficulty/rewards) and managing/upgrading Heroes.
 - **Progression:** There is no "Game Over" or "Win" state. The goal is infinite growth and optimization of numbers and efficiency.
 
@@ -41,28 +41,33 @@
 
 ## 4. The Core Game Loop Architecture
 
-Gameplay logic must follow this 4-phase execution flow (enforced via System Sets):
+Gameplay logic must follow this 5-phase execution flow (enforced via `VoidGameStage` System Sets):
 
-1.  **Phase 1: Decision (Intent)**
-    - Entities decide _what_ to do (e.g., `npc_decision_system` sets `Intent::Attack`).
-2.  **Phase 2: Execution (Resolution)**
-    - Systems resolve `Intent` into **Messages** (e.g., `melee_execution_system` emits `DamageMessage`).
-3.  **Phase 3: Application (Effects)**
-    - Systems consume Messages to mutate state (e.g., `damage_application_system` applies mitigation and reduces `Health`).
-4.  **Phase 4: Cleanup & Lifecycle**
-    - Handle consequences (e.g., `death_system` handles 0 HP entities, rewards, and despawning).
+1.  **Phase 0: FrameStart**
+    - Setup and maintenance tasks that must happen before decision logic (e.g., ticking cooldowns).
+2.  **Phase 1: Decision (ResolveIntent)**
+    - Entities decide _what_ to do (e.g., `player_npc_decision_logic` sets `Intent::Attack`).
+3.  **Phase 2: Execution (Actions)**
+    - Systems resolve `Intent` into actions and **Messages** (e.g., movement, `melee_attack_emit` emits `DamageMessage`).
+4.  **Phase 3: Application (Effect)**
+    - Systems consume Messages to mutate state (e.g., `apply_damage_logic` reduces `Health`).
+5.  **Phase 4: Cleanup & Lifecycle (FrameEnd)**
+    - Handle consequences (e.g., `manage_monster_lifecycle` handles death/rewards, UI updates).
 
 ## 5. Project Structure
 
 The project is organized as a Cargo workspace with the following crates:
 
-- **`common`**: Shared types, `GameState`, and global **Messages** (Events).
+- **`common`**: Shared types, `GameState`, `VoidGameStage`, and global **Messages** (Events).
 - **`game_core`**: Main glue crate, global setup.
-- **`monster`**: Monster logic and configurations.
+- **`monsters`**: Monster logic (AI, Health, Death) and configurations.
+- **`monster_factory`**: Spawning infrastructure and hydration logic.
 - **`player_npcs`**: Player ally logic (Soldiers, Heroes).
-- **`portal`**: Core portal mechanics, upgrades, spawning.
-- **`items`**: Itemization components (`Melee`, `Ranged`, `Armor`).
-- **`ui`**: User Interface systems.
+- **`player_npcs_ui`**: Soldier UI systems and observers.
+- **`portal`**: Core portal mechanics, upgrades, spawning logic.
+- **`items`**: Itemization components (`Melee`, `AttackRange`, `Damage`).
+- **`ui`**: General User Interface systems.
+- **`vfx`**: Visual effects (e.g., Floating Text).
 - **`wallet`**: Resource/currency management.
 - **`assets`**: Asset loading and management.
 - **`src/` (Root)**: Main binary entry point.
