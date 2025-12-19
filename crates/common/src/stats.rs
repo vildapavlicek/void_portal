@@ -178,10 +178,8 @@ mod tests {
 
     #[test]
     fn test_conditional_upgrade() {
-        let conditional = ConditionalUpgrade::new(
-            Requirement::MinLevel(2),
-            GrowthStrategy::Static(10.0),
-        );
+        let conditional =
+            ConditionalUpgrade::new(Requirement::MinLevel(2), GrowthStrategy::Static(10.0));
 
         assert_eq!(conditional.calculate(0), None);
         assert_eq!(conditional.calculate(1), None);
