@@ -419,7 +419,7 @@ pub fn apply_melee_damage(
 ) {
     for ctx in contexts {
         if let Ok(mut health) = monster_query.get_mut(ctx.target) {
-            health.current -= ctx.current_value;
+            health.current -= ctx.current_value.round();
             debug!(
                 "Unit {:?} took {} damage from melee source {:?}",
                 ctx.target, ctx.current_value, ctx.source
@@ -456,7 +456,7 @@ pub fn apply_projectile_damage(
 ) {
     for ctx in contexts {
         if let Ok(mut health) = monster_query.get_mut(ctx.target) {
-            health.current -= ctx.current_value;
+            health.current -= ctx.current_value.round();
             debug!(
                 "Unit {:?} took {} damage from projectile {:?} fired by {:?}",
                 ctx.target, ctx.current_value, ctx.source, ctx.weapons
