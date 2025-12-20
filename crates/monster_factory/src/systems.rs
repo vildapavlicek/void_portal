@@ -7,7 +7,7 @@ use {
             BaseMonsterHealth, BaseMonsterLifetime, BaseMonsterReward, BaseMonsterSpeed,
             PortalLevel, PortalRoot, ScavengerPenalty,
         },
-        Reward, ScavengeModifier, UpgradeSlot, UpgradeableStat,
+        BaseMonsterArmor, Reward, ScavengeModifier, UpgradeSlot, UpgradeableStat,
     },
     monsters::{Health, Lifetime, Monster, SpawnIndex, Speed},
     std::collections::HashMap,
@@ -111,6 +111,7 @@ pub fn hydrate_monster_stats(
             &BaseMonsterLifetime,
             &Children,
             Option<&ScavengerPenalty>,
+            &BaseMonsterArmor,
         ),
         With<PortalRoot>,
     >,
@@ -129,6 +130,7 @@ pub fn hydrate_monster_stats(
             lifetime_scaling,
             children,
             scav_penalty_opt,
+            base_armor,
         )) = portal_query.get(builder.portal_entity)
         else {
             warn!(
@@ -154,6 +156,9 @@ pub fn hydrate_monster_stats(
         let base_speed = speed_scaling.0.calculate(level.active as f32);
         let base_reward = reward_scaling.0.calculate(level.active as f32);
         let base_lifetime = lifetime_scaling.0.calculate(level.active as f32);
+        let base_armor = base_armor.calculate(level.active as f32);
+
+        debug!(%base_health, %base_speed, %base_reward, %base_lifetime, %base_armor, "monster base stats");
 
         // 4. Apply Coefficients and Insert Components
 

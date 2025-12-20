@@ -47,7 +47,7 @@ pub struct BaseMonsterLifetime(pub GrowthStrategy);
 
 #[derive(Component, Reflect, Default, Debug, Deref, DerefMut)]
 #[reflect(Component)]
-pub struct BaseMonsterArmor(pub ConditionalUpgrade);
+pub struct BaseMonsterArmor(pub GrowthStrategy);
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]

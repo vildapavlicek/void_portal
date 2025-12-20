@@ -17,7 +17,7 @@
         ),
 
         "common::components::UpgradeCost": (
-            strategy: Exponential(base: 100.0, factor: 3.25),
+            strategy: Exponential(base: 100.0, factor: 2.0),
             current_price: 100.0,
         ),
 
@@ -29,13 +29,14 @@
                 finished: true,
                 times_finished_this_tick: 1,
             ),
-            interval_strategy: Static(2.0),
+            interval_strategy: Static(6.0),
         ),
 
         "common::components::BaseMonsterReward": (Linear(base: 10.0, coefficient: 7.5)),
         "common::components::BaseMonsterHealth": (Exponential(base: 5.0, factor: 1.5)),
         "common::components::BaseMonsterSpeed": (Static(150.0)),
         "common::components::BaseMonsterLifetime": (Static(10.0)),
+        "common::components::BaseMonsterArmor": (Chunked( base: 0, interval: 10, step: 5)),
 
         "common::components::ScavengerPenalty": (1.0),
 
