@@ -2,7 +2,9 @@
 
 use {
     bevy::{prelude::*, scene::DynamicScene},
-    common::{messages::DamageMessage, GameState, VoidGameStage},
+    common::{
+        DamageMessage, GameState, MeleeHitMessage, ProjectileCollisionMessage, VoidGameStage,
+    },
     items::{
         AttackRange as ItemAttackRange, BaseDamage, Melee, ProjectileStats as ItemProjectileStats,
         Ranged,
@@ -253,6 +255,7 @@ pub fn melee_attack_emit(
         (With<Weapon>, With<Melee>),
     >,
     mut damage_events: MessageWriter<DamageMessage>,
+    mut melee_hit_events: MessageWriter<MeleeHitMessage>,
 ) {
     for (npc_entity, intent, children, mut proficiency) in player_npc_query.iter_mut() {
         if let Intent::Attack(target_entity) = intent {
@@ -282,6 +285,11 @@ pub fn melee_attack_emit(
                             target: *target_entity,
                             amount: final_damage,
                             damage_type: common::messages::DamageType::Physical,
+                        });
+
+                        melee_hit_events.write(MeleeHitMessage {
+                            attacker: npc_entity,
+                            target: *target_entity,
                         });
 
                         cooldown.timer.reset();
@@ -385,6 +393,7 @@ pub fn projectile_collision(
     projectile_query: Query<(Entity, &Transform, &Projectile)>,
     monster_query: Query<(Entity, &Transform), With<Monster>>,
     mut damage_events: MessageWriter<DamageMessage>,
+    mut collision_events: MessageWriter<ProjectileCollisionMessage>,
 ) {
     for (proj_entity, proj_transform, projectile) in projectile_query.iter() {
         let mut hit = false;
@@ -399,6 +408,12 @@ pub fn projectile_collision(
                     target: monster_entity,
                     amount: projectile.damage,
                     damage_type: common::messages::DamageType::Physical,
+                });
+
+                collision_events.write(ProjectileCollisionMessage {
+                    projectile: proj_entity,
+                    source: projectile.source,
+                    target: monster_entity,
                 });
                 hit = true;
                 break;

@@ -1,7 +1,7 @@
 use {
     crate::*,
     bevy::time::{Time, TimePlugin},
-    common::{messages::DamageMessage, MonsterKilled},
+    common::{messages::DamageMessage, MeleeHitMessage, MonsterKilled, ProjectileCollisionMessage},
     items::{AttackRange as ItemAttackRange, BaseDamage, Melee, ProjectileStats, Ranged},
     monsters::{apply_damage_logic, Health, Monster, SpawnIndex},
     portal::PortalSpawnTracker,
@@ -15,6 +15,8 @@ fn create_app_with_minimal_plugins() -> App {
     app.insert_resource(Time::<()>::default());
     app.add_message::<MonsterKilled>(); // Register MonsterKilled message
     app.add_message::<DamageMessage>(); // Register DamageMessage
+    app.add_message::<MeleeHitMessage>();
+    app.add_message::<ProjectileCollisionMessage>();
 
     // Register types
     app.register_type::<PlayerNpc>()
@@ -200,6 +202,7 @@ fn test_melee_attack() {
     app.add_systems(
         Update,
         (
+            tick_weapon_cooldowns,
             player_npc_decision_logic,
             melee_attack_emit,
             apply_damage_logic,
@@ -274,6 +277,7 @@ fn test_ranged_attack_spawns_projectile() {
     app.add_systems(
         Update,
         (
+            tick_weapon_cooldowns,
             player_npc_decision_logic,
             ranged_attack_logic,
             move_projectiles,
@@ -345,4 +349,119 @@ fn test_ranged_attack_spawns_projectile() {
     let mut query = app.world_mut().query::<&Projectile>();
     let projectile_count = query.iter(app.world()).count();
     assert_eq!(projectile_count, 1, "Should spawn 1 projectile");
+}
+
+#[test]
+fn test_melee_attack_emits_hit_message() {
+    let mut app = create_app_with_minimal_plugins();
+    spawn_portal_and_tracker(&mut app);
+
+    app.add_systems(
+        Update,
+        (
+            tick_weapon_cooldowns,
+            player_npc_decision_logic,
+            melee_attack_emit,
+        )
+            .chain(),
+    );
+
+    let npc = app
+        .world_mut()
+        .spawn((
+            PlayerNpc,
+            Target(None),
+            Transform::from_xyz(90.0, 0.0, 0.0),
+            Intent::Idle,
+        ))
+        .id();
+
+    let child = app
+        .world_mut()
+        .spawn((
+            Weapon,
+            Melee,
+            BaseDamage(10.0),
+            ItemAttackRange(20.0),
+            WeaponCooldown {
+                timer: Timer::from_seconds(1.0, TimerMode::Repeating),
+            },
+        ))
+        .id();
+    app.world_mut().entity_mut(npc).add_child(child);
+
+    let monster = app
+        .world_mut()
+        .spawn((
+            Monster {
+                target_position: Vec2::ZERO,
+            },
+            Health {
+                current: 50.0,
+                max: 50.0,
+            },
+            SpawnIndex(0),
+            Transform::from_xyz(100.0, 0.0, 0.0),
+        ))
+        .id();
+
+    app.world_mut().resource_mut::<PortalSpawnTracker>().0 = 1;
+
+    app.update(); // Decision
+
+    {
+        let mut time = app.world_mut().resource_mut::<Time>();
+        time.advance_by(std::time::Duration::from_secs_f32(1.1));
+    }
+    app.update(); // Attack logic
+
+    let messages = app.world().resource::<Messages<MeleeHitMessage>>();
+    let mut reader = messages.get_cursor();
+    let hit_msgs: Vec<_> = reader.read(messages).collect();
+    
+    assert_eq!(hit_msgs.len(), 1, "Should emit 1 MeleeHitMessage");
+    assert_eq!(hit_msgs[0].attacker, npc);
+    assert_eq!(hit_msgs[0].target, monster);
+}
+
+#[test]
+fn test_projectile_collision_emits_collision_message() {
+    let mut app = create_app_with_minimal_plugins();
+
+    app.add_systems(Update, projectile_collision);
+
+    let source = app.world_mut().spawn_empty().id();
+    let monster = app
+        .world_mut()
+        .spawn((
+            Monster {
+                target_position: Vec2::ZERO,
+            },
+            Transform::from_xyz(50.0, 0.0, 0.0),
+        ))
+        .id();
+
+    let proj = app
+        .world_mut()
+        .spawn((
+            Projectile {
+                velocity: Vec3::ZERO,
+                damage: 10.0,
+                lifetime: Timer::from_seconds(5.0, TimerMode::Once),
+                source,
+            },
+            Transform::from_xyz(50.0, 0.0, 0.0),
+        ))
+        .id();
+
+    app.update();
+
+    let messages = app.world().resource::<Messages<ProjectileCollisionMessage>>();
+    let mut reader = messages.get_cursor();
+    let collision_msgs: Vec<_> = reader.read(messages).collect();
+
+    assert_eq!(collision_msgs.len(), 1, "Should emit 1 ProjectileCollisionMessage");
+    assert_eq!(collision_msgs[0].projectile, proj);
+    assert_eq!(collision_msgs[0].source, source);
+    assert_eq!(collision_msgs[0].target, monster);
 }
