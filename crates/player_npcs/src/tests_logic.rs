@@ -417,7 +417,7 @@ fn test_melee_attack_emits_hit_message() {
     let messages = app.world().resource::<Messages<MeleeHitMessage>>();
     let mut reader = messages.get_cursor();
     let hit_msgs: Vec<_> = reader.read(messages).collect();
-    
+
     assert_eq!(hit_msgs.len(), 1, "Should emit 1 MeleeHitMessage");
     assert_eq!(hit_msgs[0].attacker, child);
     assert_eq!(hit_msgs[0].target, monster);
@@ -445,7 +445,6 @@ fn test_projectile_collision_emits_collision_message() {
         .spawn((
             Projectile {
                 velocity: Vec3::ZERO,
-                damage: 10.0,
                 lifetime: Timer::from_seconds(5.0, TimerMode::Once),
                 source,
                 weapon: source, // Dummy weapon for test
@@ -456,11 +455,17 @@ fn test_projectile_collision_emits_collision_message() {
 
     app.update();
 
-    let messages = app.world().resource::<Messages<ProjectileCollisionMessage>>();
+    let messages = app
+        .world()
+        .resource::<Messages<ProjectileCollisionMessage>>();
     let mut reader = messages.get_cursor();
     let collision_msgs: Vec<_> = reader.read(messages).collect();
 
-    assert_eq!(collision_msgs.len(), 1, "Should emit 1 ProjectileCollisionMessage");
+    assert_eq!(
+        collision_msgs.len(),
+        1,
+        "Should emit 1 ProjectileCollisionMessage"
+    );
     assert_eq!(collision_msgs[0].projectile, proj);
     assert_eq!(collision_msgs[0].source, source);
     assert_eq!(collision_msgs[0].target, monster);
