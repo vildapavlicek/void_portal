@@ -46,6 +46,19 @@ pub struct DamageMessage {
 }
 
 #[derive(Message, Debug, Clone)]
+pub struct MeleeHitMessage {
+    pub attacker: Entity,
+    pub target: Entity,
+}
+
+#[derive(Message, Debug, Clone)]
+pub struct ProjectileCollisionMessage {
+    pub projectile: Entity,
+    pub source: Entity,
+    pub target: Entity,
+}
+
+#[derive(Message, Debug, Clone)]
 pub struct SpawnFloatingText {
     pub text: String,
     pub location: Vec3,

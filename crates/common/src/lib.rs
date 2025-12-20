@@ -26,6 +26,8 @@ impl Plugin for CommonPlugin {
             .add_message::<ChangeActiveLevel>()
             .add_message::<MonsterScavenged>()
             .add_message::<DamageMessage>()
+            .add_message::<MeleeHitMessage>()
+            .add_message::<ProjectileCollisionMessage>()
             .add_message::<SpawnFloatingText>();
 
         // Components & Types
