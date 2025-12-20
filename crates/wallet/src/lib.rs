@@ -27,7 +27,7 @@ pub struct Wallet {
 impl Default for Wallet {
     fn default() -> Self {
         Self {
-            void_shards: 99_000.0,
+            void_shards: 999_999_999_000.0,
         }
     }
 }
