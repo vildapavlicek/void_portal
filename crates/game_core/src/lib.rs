@@ -4,9 +4,7 @@
 use {
     assets::VoidAssetsPlugin,
     bevy::{asset::LoadedFolder, prelude::*},
-    common::{
-        CommonPlugin, GameState, MonsterKilled, RequestUpgrade, UpgradePortal, VoidGameStage,
-    },
+    common::{CommonPlugin, GameState, VoidGameStage},
     items::ItemsPlugin,
     monster_factory::MonsterFactoryPlugin,
     monsters::{AvailableEnemies, MonsterConfig, MonsterPlugin},
