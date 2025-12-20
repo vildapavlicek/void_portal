@@ -277,14 +277,23 @@ pub fn melee_attack_emit(
 pub fn ranged_attack_logic(
     mut commands: Commands,
     // time: Res<Time>, // Removed
-    mut player_npc_query: Query<(Entity, &Transform, &Intent, &Children), With<PlayerNpc>>,
+    mut player_npc_query: Query<
+        (
+            Entity,
+            &Transform,
+            &Intent,
+            &Children,
+            Option<&mut WeaponProficiency>,
+        ),
+        With<PlayerNpc>,
+    >,
     mut weapon_query: Query<
         (&mut WeaponCooldown, &ItemAttackRange, &ItemProjectileStats),
         (With<Weapon>, With<Ranged>),
     >,
     monster_query: Query<&Transform, With<Monster>>,
 ) {
-    for (npc_entity, npc_tf, intent, children) in player_npc_query.iter_mut() {
+    for (npc_entity, npc_tf, intent, children, mut proficiency) in player_npc_query.iter_mut() {
         let Intent::Attack(target_entity) = intent else {
             continue;
         };
@@ -298,6 +307,11 @@ pub fn ranged_attack_logic(
                 if cooldown.timer.is_finished() {
                     let direction =
                         (target_tf.translation - npc_tf.translation).normalize_or_zero();
+
+                    if let Some(ref mut prof) = proficiency {
+                        // 1. Add XP
+                        prof.ranged.add_xp(5.0);
+                    }
 
                     // Spawn Projectile
                     commands.spawn((
