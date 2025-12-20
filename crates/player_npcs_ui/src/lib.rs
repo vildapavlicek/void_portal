@@ -45,7 +45,7 @@ fn attach_soldier_ui_observer(
 fn on_soldier_click(
     trigger: On<Pointer<Click>>,
     mut commands: Commands,
-    soldier_query: Query<(&MovementSpeed, &Children, Option<&WeaponExpertise>)>,
+    soldier_query: Query<(&MovementSpeed, &Children, &WeaponExpertise)>,
     weapon_query: Query<
         (
             &Item,
@@ -96,7 +96,7 @@ fn spawn_soldier_ui(
     commands: &mut Commands,
     movement_speed: f32,
     weapon_info: Option<(String, &str, f32, f32, f32)>, // Name, Type, Damage, Range, Cooldown
-    proficiency: Option<&WeaponExpertise>,
+    proficiency: &WeaponExpertise,
 ) {
     commands
         .spawn((
@@ -222,7 +222,8 @@ fn spawn_soldier_ui(
                     }
 
                     // Proficiency Section
-                    if let Some(prof) = proficiency {
+                    {
+                        let prof = proficiency;
                         p.spawn((
                             Node {
                                 width: Val::Percent(100.0),
@@ -419,7 +420,7 @@ mod tests {
             &mut app.world_mut().commands(),
             100.0,
             Some(("Test Sword".to_string(), "Melee", 10.0, 30.0, 1.0)),
-            Some(&WeaponExpertise::default()),
+            &WeaponExpertise::default(),
         );
         app.update();
 

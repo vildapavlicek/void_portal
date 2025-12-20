@@ -264,14 +264,14 @@ pub fn player_npc_movement_logic(
 
 pub fn melee_attack_emit(
     mut player_npc_query: Query<
-        (Entity, &Intent, &Children, Option<&mut WeaponExpertise>),
+        (Entity, &Intent, &Children, &mut WeaponExpertise),
         With<PlayerNpc>,
     >,
     mut weapon_query: Query<
         (
             &mut WeaponCooldown,
             &ItemAttackRange,
-            Option<&WeaponExpertiseXp>,
+            &WeaponExpertiseXp,
         ),
         (With<Weapon>, With<Melee>),
     >,
@@ -297,10 +297,7 @@ pub fn melee_attack_emit(
             });
 
             // add XP for weapon proficiency
-            if let Some(prof) = proficiency.as_mut() {
-                let xp = xp_reward.map(|r| r.0).unwrap_or(10.0);
-                prof.melee.add_xp(xp);
-            }
+            proficiency.melee.add_xp(xp_reward.0);
 
             cooldown.timer.reset();
         }
@@ -316,7 +313,7 @@ pub fn ranged_attack_logic(
             &Transform,
             &Intent,
             &Children,
-            Option<&mut WeaponExpertise>,
+            &mut WeaponExpertise,
         ),
         With<PlayerNpc>,
     >,
@@ -325,7 +322,7 @@ pub fn ranged_attack_logic(
             &mut WeaponCooldown,
             &ItemAttackRange,
             &ItemProjectileStats,
-            Option<&WeaponExpertiseXp>,
+            &WeaponExpertiseXp,
         ),
         (With<Weapon>, With<Ranged>),
     >,
@@ -346,11 +343,8 @@ pub fn ranged_attack_logic(
                     let direction =
                         (target_tf.translation - npc_tf.translation).normalize_or_zero();
 
-                    if let Some(ref mut prof) = proficiency {
-                        // 1. Add XP
-                        let xp = xp_reward.map(|r| r.0).unwrap_or(10.0);
-                        prof.ranged.add_xp(xp);
-                    }
+                    // 1. Add XP
+                    proficiency.ranged.add_xp(xp_reward.0);
 
                     // Spawn Projectile
                     commands.spawn((

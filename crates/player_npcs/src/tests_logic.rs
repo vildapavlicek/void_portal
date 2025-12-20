@@ -48,7 +48,13 @@ fn test_npc_acquires_target() {
     // Spawn PlayerNpc
     let npc = app
         .world_mut()
-        .spawn((PlayerNpc, Target(None), Transform::default(), Intent::Idle))
+        .spawn((
+            PlayerNpc,
+            Target(None),
+            Transform::default(),
+            Intent::Idle,
+            WeaponExpertise::default(),
+        ))
         .id();
 
     // Spawn Monster
@@ -95,6 +101,7 @@ fn test_npc_moves_to_target() {
             MovementSpeed(100.0),
             Transform::from_xyz(0.0, 0.0, 0.0),
             Intent::Idle,
+            WeaponExpertise::default(),
         ))
         .id();
 
@@ -161,6 +168,7 @@ fn test_npc_stops_in_range() {
             MovementSpeed(100.0),
             Transform::from_xyz(80.0, 0.0, 0.0),
             Intent::Idle,
+            WeaponExpertise::default(),
         ))
         .id();
 
@@ -217,6 +225,7 @@ fn test_melee_attack() {
             Target(None),
             Transform::from_xyz(90.0, 0.0, 0.0),
             Intent::Idle,
+            WeaponExpertise::default(),
         ))
         .id();
 
@@ -231,6 +240,7 @@ fn test_melee_attack() {
             WeaponCooldown {
                 timer: Timer::from_seconds(1.0, TimerMode::Repeating),
             },
+            WeaponExpertiseXp::default(),
         ))
         .id();
     app.world_mut().entity_mut(npc).add_child(child);
@@ -294,6 +304,7 @@ fn test_ranged_attack_spawns_projectile() {
             Target(None),
             Transform::from_xyz(0.0, 0.0, 0.0),
             Intent::Idle,
+            WeaponExpertise::default(),
         ))
         .id();
 
@@ -312,6 +323,7 @@ fn test_ranged_attack_spawns_projectile() {
                 speed: 100.0,
                 lifetime: 5.0,
             },
+            WeaponExpertiseXp::default(),
         ))
         .id();
     app.world_mut().entity_mut(npc).add_child(child);
@@ -372,6 +384,7 @@ fn test_melee_attack_emits_hit_message() {
             Target(None),
             Transform::from_xyz(90.0, 0.0, 0.0),
             Intent::Idle,
+            WeaponExpertise::default(),
         ))
         .id();
 
@@ -385,6 +398,7 @@ fn test_melee_attack_emits_hit_message() {
             WeaponCooldown {
                 timer: Timer::from_seconds(1.0, TimerMode::Repeating),
             },
+            WeaponExpertiseXp::default(),
         ))
         .id();
     app.world_mut().entity_mut(npc).add_child(child);
