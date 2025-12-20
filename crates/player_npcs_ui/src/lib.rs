@@ -65,7 +65,7 @@ fn on_soldier_click(
     }
 
     let entity = trigger.entity;
-    if let Ok((speed, children, proficiency)) = soldier_query.get(entity) {
+    if let Ok((speed, children, expertise)) = soldier_query.get(entity) {
         // Find Weapon
         let mut weapon_info = None;
         for &child in children {
@@ -88,7 +88,7 @@ fn on_soldier_click(
             }
         }
 
-        spawn_soldier_ui(&mut commands, speed.0, weapon_info, proficiency);
+        spawn_soldier_ui(&mut commands, speed.0, weapon_info, expertise);
     }
 }
 
@@ -96,7 +96,7 @@ fn spawn_soldier_ui(
     commands: &mut Commands,
     movement_speed: f32,
     weapon_info: Option<(String, &str, f32, f32, f32)>, // Name, Type, Damage, Range, Cooldown
-    proficiency: &WeaponExpertise,
+    expertise: &WeaponExpertise,
 ) {
     commands
         .spawn((
@@ -221,9 +221,9 @@ fn spawn_soldier_ui(
                         ));
                     }
 
-                    // Proficiency Section
+                    // Expertise Section
                     {
-                        let prof = proficiency;
+                        let exp = expertise;
                         p.spawn((
                             Node {
                                 width: Val::Percent(100.0),
@@ -235,7 +235,7 @@ fn spawn_soldier_ui(
                         ));
 
                         p.spawn((
-                            Text::new("Weapon Proficiency"),
+                            Text::new("Weapon Expertise"),
                             TextFont {
                                 font_size: 18.0,
                                 ..default()
@@ -243,7 +243,7 @@ fn spawn_soldier_ui(
                             TextColor(Color::srgb(0.9, 0.9, 0.5)),
                         ));
 
-                        let tracks = [("Melee", &prof.melee), ("Ranged", &prof.ranged)];
+                        let tracks = [("Melee", &exp.melee), ("Ranged", &exp.ranged)];
 
                         for (name, track) in tracks {
                             let xp_needed = track.xp_for_next_level();

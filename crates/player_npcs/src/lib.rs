@@ -277,7 +277,7 @@ pub fn melee_attack_emit(
     >,
     mut melee_hit_events: MessageWriter<MeleeHitMessage>,
 ) {
-    for (_npc_entity, intent, children, mut proficiency) in player_npc_query.iter_mut() {
+    for (_npc_entity, intent, children, mut expertise) in player_npc_query.iter_mut() {
         let Intent::Attack(target_entity) = intent else {
             continue;
         };
@@ -296,8 +296,8 @@ pub fn melee_attack_emit(
                 target: *target_entity,
             });
 
-            // add XP for weapon proficiency
-            proficiency.melee.add_xp(xp_reward.0);
+            // add XP for weapon expertise
+            expertise.melee.add_xp(xp_reward.0);
 
             cooldown.timer.reset();
         }
@@ -328,7 +328,7 @@ pub fn ranged_attack_logic(
     >,
     monster_query: Query<&Transform, With<Monster>>,
 ) {
-    for (npc_entity, npc_tf, intent, children, mut proficiency) in player_npc_query.iter_mut() {
+    for (npc_entity, npc_tf, intent, children, mut expertise) in player_npc_query.iter_mut() {
         let Intent::Attack(target_entity) = intent else {
             continue;
         };
@@ -344,7 +344,7 @@ pub fn ranged_attack_logic(
                         (target_tf.translation - npc_tf.translation).normalize_or_zero();
 
                     // 1. Add XP
-                    proficiency.ranged.add_xp(xp_reward.0);
+                    expertise.ranged.add_xp(xp_reward.0);
 
                     // Spawn Projectile
                     commands.spawn((
