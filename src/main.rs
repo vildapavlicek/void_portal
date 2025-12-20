@@ -17,7 +17,7 @@ fn main() {
                     ..default()
                 })
                 .set(LogPlugin {
-                    filter: "error,player_npcs=trace,monsters=trace".into(),
+                    filter: "error,player_npcs=trace,monsters=trace,monster_factory=trace".into(),
                     level: bevy::log::Level::TRACE,
                     ..Default::default()
                 }),
