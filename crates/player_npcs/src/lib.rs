@@ -162,11 +162,11 @@ pub fn spawn_player_npc(
         return;
     }
 
-    // let soldier_handle = asset_server.load::<DynamicScene>("prefabs/player_npcs/soldier.scn.ron");
-    // scene_spawner.spawn_dynamic(soldier_handle);
-
-    let soldier_handle = asset_server.load::<DynamicScene>("prefabs/player_npcs/ranged.scn.ron");
+    let soldier_handle = asset_server.load::<DynamicScene>("prefabs/player_npcs/soldier.scn.ron");
     scene_spawner.spawn_dynamic(soldier_handle);
+
+    // let soldier_handle = asset_server.load::<DynamicScene>("prefabs/player_npcs/ranged.scn.ron");
+    // scene_spawner.spawn_dynamic(soldier_handle);
 }
 
 pub fn player_npc_decision_logic(
@@ -252,11 +252,14 @@ pub fn player_npc_movement_logic(
 }
 
 pub fn melee_attack_emit(
-    mut player_npc_query: Query<(Entity, &Intent, &Children), With<PlayerNpc>>,
+    mut player_npc_query: Query<
+        (Entity, &Intent, &Children, Option<&mut WeaponProficiency>),
+        With<PlayerNpc>,
+    >,
     mut weapon_query: Query<(&mut WeaponCooldown, &ItemAttackRange), (With<Weapon>, With<Melee>)>,
     mut melee_hit_events: MessageWriter<MeleeHitMessage>,
 ) {
-    for (_npc_entity, intent, children) in player_npc_query.iter_mut() {
+    for (_npc_entity, intent, children, mut proficiency) in player_npc_query.iter_mut() {
         if let Intent::Attack(target_entity) = intent {
             for child in children.iter() {
                 if let Ok((mut cooldown, _range)) = weapon_query.get_mut(child) {
@@ -265,6 +268,11 @@ pub fn melee_attack_emit(
                             attacker: child, // Pass the weapon entity
                             target: *target_entity,
                         });
+
+                        // add XP for weapon proficiency
+                        if let Some(prof) = proficiency.as_mut() {
+                            prof.melee.add_xp(5.0);
+                        }
 
                         cooldown.timer.reset();
                     }
