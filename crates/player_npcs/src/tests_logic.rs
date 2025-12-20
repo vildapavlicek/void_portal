@@ -1,9 +1,9 @@
 use {
     crate::*,
     bevy::time::{Time, TimePlugin},
-    common::{messages::DamageMessage, MeleeHitMessage, MonsterKilled, ProjectileCollisionMessage},
+    common::{MeleeHitMessage, MonsterKilled, ProjectileCollisionMessage},
     items::{AttackRange as ItemAttackRange, BaseDamage, Melee, ProjectileStats, Ranged},
-    monsters::{apply_damage_logic, Health, Monster, SpawnIndex},
+    monsters::{Health, Monster, SpawnIndex},
     portal::PortalSpawnTracker,
 };
 
@@ -14,7 +14,6 @@ fn create_app_with_minimal_plugins() -> App {
     app.add_plugins(MinimalPlugins.build().disable::<TimePlugin>()); // Manually inserting Time to control it
     app.insert_resource(Time::<()>::default());
     app.add_message::<MonsterKilled>(); // Register MonsterKilled message
-    app.add_message::<DamageMessage>(); // Register DamageMessage
     app.add_message::<MeleeHitMessage>();
     app.add_message::<ProjectileCollisionMessage>();
 
@@ -205,7 +204,7 @@ fn test_melee_attack() {
             tick_weapon_cooldowns,
             player_npc_decision_logic,
             melee_attack_emit,
-            apply_damage_logic,
+            apply_melee_damage,
         )
             .chain(),
     );
@@ -282,7 +281,7 @@ fn test_ranged_attack_spawns_projectile() {
             ranged_attack_logic,
             move_projectiles,
             projectile_collision,
-            apply_damage_logic,
+            apply_projectile_damage,
         )
             .chain(),
     );
@@ -420,7 +419,7 @@ fn test_melee_attack_emits_hit_message() {
     let hit_msgs: Vec<_> = reader.read(messages).collect();
     
     assert_eq!(hit_msgs.len(), 1, "Should emit 1 MeleeHitMessage");
-    assert_eq!(hit_msgs[0].attacker, npc);
+    assert_eq!(hit_msgs[0].attacker, child);
     assert_eq!(hit_msgs[0].target, monster);
 }
 

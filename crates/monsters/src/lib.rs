@@ -4,8 +4,8 @@ use {
     bevy::prelude::*,
     bevy_common_assets::ron::RonAssetPlugin,
     common::{
-        messages::DamageMessage, GameState, MarkedForCleanUp, MonsterKilled, MonsterScavenged,
-        Reward, ScavengeModifier, VoidGameStage,
+        GameState, MarkedForCleanUp, MonsterKilled, MonsterScavenged, Reward, ScavengeModifier,
+        VoidGameStage,
     },
     serde::Deserialize,
 };
@@ -30,7 +30,6 @@ impl Plugin for MonsterPlugin {
             Update,
             (
                 move_monsters.in_set(VoidGameStage::Actions),
-                apply_damage_logic.in_set(VoidGameStage::Effect),
                 (
                     manage_monster_lifecycle,
                     process_marked_cleanup,
@@ -107,17 +106,6 @@ pub fn move_monsters(
     }
 }
 
-pub fn apply_damage_logic(
-    mut messages: MessageReader<DamageMessage>,
-    mut monster_query: Query<(Entity, &mut Health), With<Monster>>,
-) {
-    for msg in messages.read() {
-        if let Ok((entity, mut health)) = monster_query.get_mut(msg.target) {
-            health.current -= msg.amount;
-            debug!("Unit {:?} took {} damage", entity, msg.amount);
-        }
-    }
-}
 pub fn manage_monster_lifecycle(
     mut commands: Commands,
     time: Res<Time>,

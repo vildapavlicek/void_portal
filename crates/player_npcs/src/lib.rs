@@ -42,6 +42,7 @@ impl Plugin for PlayerNpcsPlugin {
                     (move_projectiles, projectile_collision).chain(),
                 )
                     .in_set(VoidGameStage::Actions),
+                (apply_melee_damage, apply_projectile_damage).in_set(VoidGameStage::Effect),
                 update_cooldown_text.in_set(VoidGameStage::FrameEnd),
             )
                 .run_if(in_state(GameState::Playing)),
@@ -245,50 +246,23 @@ pub fn player_npc_movement_logic(
 }
 
 pub fn melee_attack_emit(
-    // time: Res<Time>, // Removed
     mut player_npc_query: Query<
-        (Entity, &Intent, &Children, Option<&mut WeaponProficiency>),
+        (Entity, &Intent, &Children),
         With<PlayerNpc>,
     >,
     mut weapon_query: Query<
-        (&mut WeaponCooldown, &ItemAttackRange, &BaseDamage),
+        (&mut WeaponCooldown, &ItemAttackRange),
         (With<Weapon>, With<Melee>),
     >,
-    mut damage_events: MessageWriter<DamageMessage>,
     mut melee_hit_events: MessageWriter<MeleeHitMessage>,
 ) {
-    for (npc_entity, intent, children, mut proficiency) in player_npc_query.iter_mut() {
+    for (_npc_entity, intent, children) in player_npc_query.iter_mut() {
         if let Intent::Attack(target_entity) = intent {
             for child in children.iter() {
-                if let Ok((mut cooldown, _range, damage)) = weapon_query.get_mut(child) {
+                if let Ok((mut cooldown, _range)) = weapon_query.get_mut(child) {
                     if cooldown.timer.is_finished() {
-                        let mut multiplier = 1.0;
-
-                        if let Some(ref mut prof) = proficiency {
-                            // 1. Add XP
-                            let leveled_up = prof.melee.add_xp(5.0);
-                            if leveled_up {
-                                info!(
-                                    "Soldier {:?} reached Melee Level {}",
-                                    npc_entity, prof.melee.level
-                                );
-                            }
-                            // 2. Calculate Bonus
-                            multiplier = prof.melee.get_damage_bonus();
-                        }
-
-                        let final_damage = damage.0 * multiplier;
-
-                        // EMIT MESSAGE
-                        damage_events.write(DamageMessage {
-                            source: npc_entity,
-                            target: *target_entity,
-                            amount: final_damage,
-                            damage_type: common::messages::DamageType::Physical,
-                        });
-
                         melee_hit_events.write(MeleeHitMessage {
-                            attacker: npc_entity,
+                            attacker: child, // Pass the weapon entity
                             target: *target_entity,
                         });
 
@@ -392,7 +366,6 @@ pub fn projectile_collision(
     mut commands: Commands,
     projectile_query: Query<(Entity, &Transform, &Projectile)>,
     monster_query: Query<(Entity, &Transform), With<Monster>>,
-    mut damage_events: MessageWriter<DamageMessage>,
     mut collision_events: MessageWriter<ProjectileCollisionMessage>,
 ) {
     for (proj_entity, proj_transform, projectile) in projectile_query.iter() {
@@ -403,13 +376,6 @@ pub fn projectile_collision(
                 .distance(monster_transform.translation);
             // Monster size is 24, Projectile 8. Radius approx 12 + 4 = 16. Use 20 for buffer.
             if distance < 20.0 {
-                damage_events.write(DamageMessage {
-                    source: projectile.source,
-                    target: monster_entity,
-                    amount: projectile.damage,
-                    damage_type: common::messages::DamageType::Physical,
-                });
-
                 collision_events.write(ProjectileCollisionMessage {
                     projectile: proj_entity,
                     source: projectile.source,
@@ -422,6 +388,41 @@ pub fn projectile_collision(
 
         if hit {
             commands.entity(proj_entity).despawn();
+        }
+    }
+}
+
+pub fn apply_melee_damage(
+    mut messages: MessageReader<MeleeHitMessage>,
+    weapon_query: Query<&BaseDamage, With<Weapon>>,
+    mut monster_query: Query<&mut monsters::Health, With<Monster>>,
+) {
+    for msg in messages.read() {
+        let Ok(damage) = weapon_query.get(msg.attacker) else {
+            continue;
+        };
+        if let Ok(mut health) = monster_query.get_mut(msg.target) {
+            health.current -= damage.0;
+            debug!("Unit {:?} took {} damage from melee", msg.target, damage.0);
+        }
+    }
+}
+
+pub fn apply_projectile_damage(
+    mut messages: MessageReader<ProjectileCollisionMessage>,
+    projectile_query: Query<&Projectile>,
+    mut monster_query: Query<&mut monsters::Health, With<Monster>>,
+) {
+    for msg in messages.read() {
+        let Ok(projectile) = projectile_query.get(msg.projectile) else {
+            continue;
+        };
+        if let Ok(mut health) = monster_query.get_mut(msg.target) {
+            health.current -= projectile.damage;
+            debug!(
+                "Unit {:?} took {} damage from projectile",
+                msg.target, projectile.damage
+            );
         }
     }
 }
