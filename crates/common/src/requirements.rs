@@ -1,5 +1,4 @@
-use bevy::prelude::*;
-use serde::Deserialize;
+use {bevy::prelude::*, serde::Deserialize};
 
 #[derive(Debug, Clone, Reflect, Deserialize, PartialEq, Default)]
 pub enum Requirement {
@@ -27,7 +26,11 @@ impl Requirement {
             Self::MinLevel(min) => current_level >= *min,
             Self::LevelRange(min, max) => current_level >= *min && current_level <= *max,
             Self::Periodic { interval, offset } => {
-                current_level >= *offset && (current_level - offset) % interval == 0
+                // is_multiple_of is unstable
+                #[allow(clippy::manual_is_multiple_of)]
+                {
+                    current_level >= *offset && (current_level - offset) % interval == 0
+                }
             }
         }
     }
@@ -64,7 +67,10 @@ mod tests {
 
     #[test]
     fn test_requirement_periodic() {
-        let req = Requirement::Periodic { interval: 5, offset: 2 };
+        let req = Requirement::Periodic {
+            interval: 5,
+            offset: 2,
+        };
         assert!(!req.is_satisfied(0));
         assert!(!req.is_satisfied(1));
         assert!(req.is_satisfied(2)); // 2

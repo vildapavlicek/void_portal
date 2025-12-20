@@ -9,14 +9,13 @@ pub struct VoidWalletPlugin;
 
 impl Plugin for VoidWalletPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<Wallet>()
-            .add_systems(
-                Update,
-                (
-                    update_wallet_from_monster_killed,
-                    update_wallet_from_scavenge,
-                ),
-            );
+        app.init_resource::<Wallet>().add_systems(
+            Update,
+            (
+                update_wallet_from_monster_killed,
+                update_wallet_from_scavenge,
+            ),
+        );
     }
 }
 
@@ -60,7 +59,7 @@ fn update_wallet_from_scavenge(
 ) {
     for event in events.read() {
         wallet.void_shards += event.amount;
-        
+
         vfx_events.write(SpawnFloatingText {
             text: format!("+{:.0}", event.amount),
             location: event.location,
