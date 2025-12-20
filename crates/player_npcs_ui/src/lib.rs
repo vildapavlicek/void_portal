@@ -4,7 +4,7 @@ use {
     bevy::prelude::*,
     common::GameState,
     items::{AttackRange as ItemAttackRange, BaseDamage, Item, Melee, Ranged},
-    player_npcs::{MovementSpeed, PlayerNpc, Weapon, WeaponCooldown, WeaponProficiency},
+    player_npcs::{MovementSpeed, PlayerNpc, Weapon, WeaponCooldown, WeaponExpertise},
 };
 
 pub struct PlayerNpcsUiPlugin;
@@ -45,7 +45,7 @@ fn attach_soldier_ui_observer(
 fn on_soldier_click(
     trigger: On<Pointer<Click>>,
     mut commands: Commands,
-    soldier_query: Query<(&MovementSpeed, &Children, Option<&WeaponProficiency>)>,
+    soldier_query: Query<(&MovementSpeed, &Children, Option<&WeaponExpertise>)>,
     weapon_query: Query<
         (
             &Item,
@@ -96,7 +96,7 @@ fn spawn_soldier_ui(
     commands: &mut Commands,
     movement_speed: f32,
     weapon_info: Option<(String, &str, f32, f32, f32)>, // Name, Type, Damage, Range, Cooldown
-    proficiency: Option<&WeaponProficiency>,
+    proficiency: Option<&WeaponExpertise>,
 ) {
     commands
         .spawn((
@@ -419,7 +419,7 @@ mod tests {
             &mut app.world_mut().commands(),
             100.0,
             Some(("Test Sword".to_string(), "Melee", 10.0, 30.0, 1.0)),
-            Some(&WeaponProficiency::default()),
+            Some(&WeaponExpertise::default()),
         );
         app.update();
 

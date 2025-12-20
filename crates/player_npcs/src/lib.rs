@@ -27,7 +27,7 @@ impl Plugin for PlayerNpcsPlugin {
             .register_type::<WeaponCooldown>()
             .register_type::<Projectile>()
             .register_type::<MasteryTrack>()
-            .register_type::<WeaponProficiency>()
+            .register_type::<WeaponExpertise>()
             .register_type::<CooldownText>();
 
         app.add_systems(OnEnter(GameState::Playing), spawn_player_npc);
@@ -140,7 +140,7 @@ impl MasteryTrack {
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
-pub struct WeaponProficiency {
+pub struct WeaponExpertise {
     pub melee: MasteryTrack,
     pub ranged: MasteryTrack,
 }
@@ -253,7 +253,7 @@ pub fn player_npc_movement_logic(
 
 pub fn melee_attack_emit(
     mut player_npc_query: Query<
-        (Entity, &Intent, &Children, Option<&mut WeaponProficiency>),
+        (Entity, &Intent, &Children, Option<&mut WeaponExpertise>),
         With<PlayerNpc>,
     >,
     mut weapon_query: Query<(&mut WeaponCooldown, &ItemAttackRange), (With<Weapon>, With<Melee>)>,
@@ -291,7 +291,7 @@ pub fn ranged_attack_logic(
             &Transform,
             &Intent,
             &Children,
-            Option<&mut WeaponProficiency>,
+            Option<&mut WeaponExpertise>,
         ),
         With<PlayerNpc>,
     >,
