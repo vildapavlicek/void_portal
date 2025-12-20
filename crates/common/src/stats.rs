@@ -29,26 +29,11 @@ impl GrowthStrategy {
     }
 }
 
-#[derive(Debug, Clone, Reflect, Deserialize, PartialEq, Default)]
-pub struct ConditionalUpgrade {
-    requirement: Requirement,
-    strategy: GrowthStrategy,
-}
+pub type ConditionalUpgrade = Requirement<GrowthStrategy>;
 
 impl ConditionalUpgrade {
-    pub fn new(requirement: Requirement, strategy: GrowthStrategy) -> Self {
-        Self {
-            requirement,
-            strategy,
-        }
-    }
-
     pub fn calculate(&self, level: u32) -> Option<f32> {
-        if self.requirement.is_satisfied(level) {
-            Some(self.strategy.calculate(level as f32))
-        } else {
-            None
-        }
+        self.get(level).map(|strategy| strategy.calculate(level as f32))
     }
 }
 
@@ -110,6 +95,7 @@ impl UpgradeableStat {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::requirements::Condition;
 
     #[test]
     fn test_static_strategy() {
@@ -179,7 +165,7 @@ mod tests {
     #[test]
     fn test_conditional_upgrade() {
         let conditional = ConditionalUpgrade::new(
-            Requirement::MinLevel(2),
+            Condition::MinLevel(2),
             GrowthStrategy::Static(10.0),
         );
 

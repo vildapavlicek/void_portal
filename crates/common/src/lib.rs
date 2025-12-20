@@ -52,12 +52,11 @@ impl Plugin for CommonPlugin {
             .register_type::<MarkedForCleanUp>()
             // stats.rs
             .register_type::<GrowthStrategy>()
+            .register_type::<Condition>()
             .register_type::<ConditionalUpgrade>()
             .register_type::<UpgradeableStat>()
             .register_type::<MeleeDamageContext>()
-            .register_type::<ProjectileDamageContext>()
-            // requirements.rs
-            .register_type::<Requirement>();
+            .register_type::<ProjectileDamageContext>();
     }
 }
 

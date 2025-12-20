@@ -47,7 +47,6 @@
         "bevy_ecs::hierarchy::Children": ([2, 3]),
       },
     ),
-
     // Child: Capacity Upgrade
     2: (
       components: {
