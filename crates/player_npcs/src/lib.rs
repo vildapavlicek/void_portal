@@ -1,9 +1,10 @@
 #![allow(clippy::type_complexity)]
 
 use {
-    bevy::{prelude::*, scene::DynamicScene},
+    bevy::{ecs::relationship::Relationship, prelude::*, scene::DynamicScene},
     common::{
-        DamageMessage, GameState, MeleeHitMessage, ProjectileCollisionMessage, VoidGameStage,
+        DamageMessage, GameState, MarkedForCleanUp, MeleeDamageContext, MeleeHitMessage,
+        ProjectileCollisionMessage, ProjectileDamageContext, VoidGameStage,
     },
     items::{
         AttackRange as ItemAttackRange, BaseDamage, Melee, ProjectileStats as ItemProjectileStats,
@@ -11,6 +12,7 @@ use {
     },
     monsters::{Monster, SpawnIndex},
     portal::PortalSpawnTracker,
+    std::time::Duration,
 };
 
 pub struct PlayerNpcsPlugin;
@@ -42,7 +44,11 @@ impl Plugin for PlayerNpcsPlugin {
                     (move_projectiles, projectile_collision).chain(),
                 )
                     .in_set(VoidGameStage::Actions),
-                (apply_melee_damage, apply_projectile_damage).in_set(VoidGameStage::Effect),
+                (
+                    resolve_melee_base_damage.pipe(apply_melee_damage),
+                    resolve_projectile_base_damage.pipe(apply_projectile_damage),
+                )
+                    .in_set(VoidGameStage::Effect),
                 update_cooldown_text.in_set(VoidGameStage::FrameEnd),
             )
                 .run_if(in_state(GameState::Playing)),
@@ -93,9 +99,9 @@ pub struct WeaponCooldown {
 #[reflect(Component)]
 pub struct Projectile {
     pub velocity: Vec3,
-    pub damage: f32,
     pub lifetime: Timer,
     pub source: Entity,
+    pub weapon: Entity,
 }
 
 #[derive(Debug, Clone, Reflect, Default)]
@@ -156,8 +162,8 @@ pub fn spawn_player_npc(
         return;
     }
 
-    let soldier_handle = asset_server.load::<DynamicScene>("prefabs/player_npcs/soldier.scn.ron");
-    scene_spawner.spawn_dynamic(soldier_handle);
+    // let soldier_handle = asset_server.load::<DynamicScene>("prefabs/player_npcs/soldier.scn.ron");
+    // scene_spawner.spawn_dynamic(soldier_handle);
 
     let soldier_handle = asset_server.load::<DynamicScene>("prefabs/player_npcs/ranged.scn.ron");
     scene_spawner.spawn_dynamic(soldier_handle);
@@ -246,14 +252,8 @@ pub fn player_npc_movement_logic(
 }
 
 pub fn melee_attack_emit(
-    mut player_npc_query: Query<
-        (Entity, &Intent, &Children),
-        With<PlayerNpc>,
-    >,
-    mut weapon_query: Query<
-        (&mut WeaponCooldown, &ItemAttackRange),
-        (With<Weapon>, With<Melee>),
-    >,
+    mut player_npc_query: Query<(Entity, &Intent, &Children), With<PlayerNpc>>,
+    mut weapon_query: Query<(&mut WeaponCooldown, &ItemAttackRange), (With<Weapon>, With<Melee>)>,
     mut melee_hit_events: MessageWriter<MeleeHitMessage>,
 ) {
     for (_npc_entity, intent, children) in player_npc_query.iter_mut() {
@@ -277,28 +277,14 @@ pub fn melee_attack_emit(
 pub fn ranged_attack_logic(
     mut commands: Commands,
     // time: Res<Time>, // Removed
-    mut player_npc_query: Query<
-        (
-            Entity,
-            &Transform,
-            &Intent,
-            &Children,
-            Option<&mut WeaponProficiency>,
-        ),
-        With<PlayerNpc>,
-    >,
+    mut player_npc_query: Query<(Entity, &Transform, &Intent, &Children), With<PlayerNpc>>,
     mut weapon_query: Query<
-        (
-            &mut WeaponCooldown,
-            &ItemAttackRange,
-            &BaseDamage,
-            &ItemProjectileStats,
-        ),
+        (&mut WeaponCooldown, &ItemAttackRange, &ItemProjectileStats),
         (With<Weapon>, With<Ranged>),
     >,
     monster_query: Query<&Transform, With<Monster>>,
 ) {
-    for (npc_entity, npc_tf, intent, children, mut proficiency) in player_npc_query.iter_mut() {
+    for (npc_entity, npc_tf, intent, children) in player_npc_query.iter_mut() {
         let Intent::Attack(target_entity) = intent else {
             continue;
         };
@@ -308,20 +294,10 @@ pub fn ranged_attack_logic(
         };
 
         for child in children.iter() {
-            if let Ok((mut cooldown, _range, damage, proj_stats)) = weapon_query.get_mut(child) {
+            if let Ok((mut cooldown, _range, proj_stats)) = weapon_query.get_mut(child) {
                 if cooldown.timer.is_finished() {
                     let direction =
                         (target_tf.translation - npc_tf.translation).normalize_or_zero();
-
-                    let mut multiplier = 1.0;
-                    if let Some(ref mut prof) = proficiency {
-                        // 1. Add XP
-                        prof.ranged.add_xp(5.0);
-                        // 2. Calculate Bonus
-                        multiplier = prof.ranged.get_damage_bonus();
-                    }
-
-                    let final_damage = damage.0 * multiplier;
 
                     // Spawn Projectile
                     commands.spawn((
@@ -333,9 +309,9 @@ pub fn ranged_attack_logic(
                         Transform::from_translation(npc_tf.translation),
                         Projectile {
                             velocity: direction * proj_stats.speed,
-                            damage: final_damage,
                             lifetime: Timer::from_seconds(proj_stats.lifetime, TimerMode::Once),
                             source: npc_entity,
+                            weapon: child,
                         },
                     ));
 
@@ -387,41 +363,81 @@ pub fn projectile_collision(
         }
 
         if hit {
-            commands.entity(proj_entity).despawn();
+            commands
+                .entity(proj_entity)
+                .remove::<Transform>()
+                .remove::<Sprite>()
+                .insert(MarkedForCleanUp {
+                    despawn_timer: Timer::new(Duration::from_secs(60), TimerMode::Once),
+                });
         }
     }
+}
+
+pub fn resolve_melee_base_damage(
+    mut messages: MessageReader<MeleeHitMessage>,
+    weapon_query: Query<(&BaseDamage, &ChildOf), With<Weapon>>,
+) -> Vec<MeleeDamageContext> {
+    let mut contexts = Vec::new();
+    for msg in messages.read() {
+        if let Ok((damage, parent)) = weapon_query.get(msg.attacker) {
+            contexts.push(MeleeDamageContext {
+                source: parent.get(),
+                target: msg.target,
+                current_value: damage.0,
+            });
+        }
+    }
+    contexts
 }
 
 pub fn apply_melee_damage(
-    mut messages: MessageReader<MeleeHitMessage>,
-    weapon_query: Query<&BaseDamage, With<Weapon>>,
+    In(contexts): In<Vec<MeleeDamageContext>>,
     mut monster_query: Query<&mut monsters::Health, With<Monster>>,
 ) {
-    for msg in messages.read() {
-        let Ok(damage) = weapon_query.get(msg.attacker) else {
-            continue;
-        };
-        if let Ok(mut health) = monster_query.get_mut(msg.target) {
-            health.current -= damage.0;
-            debug!("Unit {:?} took {} damage from melee", msg.target, damage.0);
+    for ctx in contexts {
+        if let Ok(mut health) = monster_query.get_mut(ctx.target) {
+            health.current -= ctx.current_value;
+            debug!(
+                "Unit {:?} took {} damage from melee source {:?}",
+                ctx.target, ctx.current_value, ctx.source
+            );
         }
     }
 }
 
-pub fn apply_projectile_damage(
+pub fn resolve_projectile_base_damage(
     mut messages: MessageReader<ProjectileCollisionMessage>,
     projectile_query: Query<&Projectile>,
+    base_damage: Query<&BaseDamage, With<Ranged>>,
+) -> Vec<ProjectileDamageContext> {
+    let mut contexts = Vec::new();
+    for msg in messages.read() {
+        if let Ok(projectile) = projectile_query.get(msg.projectile) {
+            let base_damage = base_damage
+                .get(projectile.weapon)
+                .expect("projectile must be paired to weapon");
+            contexts.push(ProjectileDamageContext {
+                weapons: projectile.weapon,
+                source: msg.projectile,
+                target: msg.target,
+                current_value: base_damage.0,
+            });
+        }
+    }
+    contexts
+}
+
+pub fn apply_projectile_damage(
+    In(contexts): In<Vec<ProjectileDamageContext>>,
     mut monster_query: Query<&mut monsters::Health, With<Monster>>,
 ) {
-    for msg in messages.read() {
-        let Ok(projectile) = projectile_query.get(msg.projectile) else {
-            continue;
-        };
-        if let Ok(mut health) = monster_query.get_mut(msg.target) {
-            health.current -= projectile.damage;
+    for ctx in contexts {
+        if let Ok(mut health) = monster_query.get_mut(ctx.target) {
+            health.current -= ctx.current_value;
             debug!(
-                "Unit {:?} took {} damage from projectile",
-                msg.target, projectile.damage
+                "Unit {:?} took {} damage from projectile {:?} fired by {:?}",
+                ctx.target, ctx.current_value, ctx.source, ctx.weapons
             );
         }
     }

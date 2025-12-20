@@ -58,6 +58,23 @@ pub struct ProjectileCollisionMessage {
     pub target: Entity,
 }
 
+#[derive(Debug, Clone, Reflect)]
+pub struct MeleeDamageContext {
+    pub source: Entity,
+    pub target: Entity,
+    pub current_value: f32,
+}
+
+#[derive(Debug, Clone, Reflect)]
+pub struct ProjectileDamageContext {
+    // who fired the projectile
+    pub weapons: Entity,
+    // projectile
+    pub source: Entity,
+    pub target: Entity,
+    pub current_value: f32,
+}
+
 #[derive(Message, Debug, Clone)]
 pub struct SpawnFloatingText {
     pub text: String,

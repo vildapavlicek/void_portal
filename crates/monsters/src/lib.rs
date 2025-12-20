@@ -135,7 +135,7 @@ pub fn manage_monster_lifecycle(
                 .insert(Visibility::Hidden);
 
             kill_events.write(MonsterKilled { entity });
-            info!("Monster died, hidden and scheduled for despawn");
+            info!(%entity, "Monster died, hidden and scheduled for despawn");
 
             // Critical: Continue to next entity so we don't process lifetime for a dead unit
             continue;
@@ -156,12 +156,12 @@ pub fn manage_monster_lifecycle(
                         amount,
                         location: transform.translation,
                     });
-                    info!("Monster scavenged for {}", amount);
+                    info!(%entity, "Monster scavenged for {}", amount);
                 }
             }
 
             commands.entity(entity).despawn();
-            info!("Monster despawned due to lifetime expiry");
+            info!(%entity, "Monster despawned due to lifetime expiry");
         }
     }
 }
@@ -175,7 +175,7 @@ pub fn process_marked_cleanup(
         cleanup.despawn_timer.tick(time.delta());
         if cleanup.despawn_timer.is_finished() {
             commands.entity(entity).despawn();
-            info!("Marked entity despawned");
+            info!(%entity, "Marked entity despawned");
         }
     }
 }

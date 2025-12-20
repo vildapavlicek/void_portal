@@ -204,7 +204,7 @@ fn test_melee_attack() {
             tick_weapon_cooldowns,
             player_npc_decision_logic,
             melee_attack_emit,
-            apply_melee_damage,
+            resolve_melee_base_damage.pipe(apply_melee_damage),
         )
             .chain(),
     );
@@ -281,7 +281,7 @@ fn test_ranged_attack_spawns_projectile() {
             ranged_attack_logic,
             move_projectiles,
             projectile_collision,
-            apply_projectile_damage,
+            resolve_projectile_base_damage.pipe(apply_projectile_damage),
         )
             .chain(),
     );
@@ -448,6 +448,7 @@ fn test_projectile_collision_emits_collision_message() {
                 damage: 10.0,
                 lifetime: Timer::from_seconds(5.0, TimerMode::Once),
                 source,
+                weapon: source, // Dummy weapon for test
             },
             Transform::from_xyz(50.0, 0.0, 0.0),
         ))

@@ -7,8 +7,8 @@ use {
     },
     monster_factory::SpawnMonsterEvent,
     monsters::{
-        despawn_dead_bodies, manage_monster_lifecycle, move_monsters, update_monster_health_ui,
-        AvailableEnemies, Health, Lifetime, Monster, MonsterConfig, Speed,
+        manage_monster_lifecycle, move_monsters, update_monster_health_ui, AvailableEnemies,
+        Health, Lifetime, Monster, MonsterConfig, Speed,
     },
     player_npcs::{move_projectiles, projectile_collision},
     portal::{portal_spawn_logic, portal_tick_logic, PortalSpawnTracker},
@@ -46,7 +46,7 @@ fn setup_app() -> App {
         (
             (portal_tick_logic, portal_spawn_logic).chain(),
             move_monsters,
-            (manage_monster_lifecycle, despawn_dead_bodies),
+            (manage_monster_lifecycle),
             update_monster_health_ui,
             move_projectiles,
             projectile_collision,
