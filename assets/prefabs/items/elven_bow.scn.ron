@@ -8,6 +8,7 @@
         "items::AttackRange": (200.0),
         "items::AttackSpeed": (0.8),
         "items::ProjectileStats": ( speed: 300.0, lifetime: 1.0 ),
+        "player_npcs::WeaponExpertiseXp": (10.0),
       },
     ),
   },

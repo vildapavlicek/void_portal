@@ -20,7 +20,7 @@
           3,
         ]),
         "player_npcs::Intent": Idle,
-        "player_npcs::WeaponProficiency": (
+        "player_npcs::WeaponExpertise": (
             melee: ( level: 0, current_xp: 0.0 ),
             ranged: ( level: 0, current_xp: 0.0 ),
         ),
@@ -41,12 +41,13 @@
         "player_npcs::WeaponCooldown": (
             timer: (
                 stopwatch: ( elapsed: ( secs: 0, nanos: 0 ), is_paused: false ),
-                duration: ( secs: 1, nanos: 0 ),
+                duration: ( secs: 1, nanos: 500 ),
                 mode: Once,
                 finished: false,
                 times_finished_this_tick: 0,
             ),
         ),
+        "player_npcs::WeaponExpertiseXp": (20.0),
       },
     ),
     3: (

@@ -28,6 +28,7 @@ impl Plugin for PlayerNpcsPlugin {
             .register_type::<Projectile>()
             .register_type::<MasteryTrack>()
             .register_type::<WeaponExpertise>()
+            .register_type::<WeaponExpertiseXp>()
             .register_type::<CooldownText>();
 
         app.add_systems(OnEnter(GameState::Playing), spawn_player_npc);
@@ -93,6 +94,16 @@ pub struct Weapon;
 #[reflect(Component)]
 pub struct WeaponCooldown {
     pub timer: Timer,
+}
+
+#[derive(Component, Reflect)]
+#[reflect(Component, Default)]
+pub struct WeaponExpertiseXp(pub f32);
+
+impl Default for WeaponExpertiseXp {
+    fn default() -> Self {
+        Self(10.0)
+    }
 }
 
 #[derive(Component, Reflect)]
@@ -256,28 +267,42 @@ pub fn melee_attack_emit(
         (Entity, &Intent, &Children, Option<&mut WeaponExpertise>),
         With<PlayerNpc>,
     >,
-    mut weapon_query: Query<(&mut WeaponCooldown, &ItemAttackRange), (With<Weapon>, With<Melee>)>,
+    mut weapon_query: Query<
+        (
+            &mut WeaponCooldown,
+            &ItemAttackRange,
+            Option<&WeaponExpertiseXp>,
+        ),
+        (With<Weapon>, With<Melee>),
+    >,
     mut melee_hit_events: MessageWriter<MeleeHitMessage>,
 ) {
     for (_npc_entity, intent, children, mut proficiency) in player_npc_query.iter_mut() {
-        if let Intent::Attack(target_entity) = intent {
-            for child in children.iter() {
-                if let Ok((mut cooldown, _range)) = weapon_query.get_mut(child) {
-                    if cooldown.timer.is_finished() {
-                        melee_hit_events.write(MeleeHitMessage {
-                            attacker: child, // Pass the weapon entity
-                            target: *target_entity,
-                        });
+        let Intent::Attack(target_entity) = intent else {
+            continue;
+        };
 
-                        // add XP for weapon proficiency
-                        if let Some(prof) = proficiency.as_mut() {
-                            prof.melee.add_xp(5.0);
-                        }
+        for child in children.iter() {
+            let Ok((mut cooldown, _range, xp_reward)) = weapon_query.get_mut(child) else {
+                continue;
+            };
 
-                        cooldown.timer.reset();
-                    }
-                }
+            if !cooldown.timer.is_finished() {
+                continue;
             }
+
+            melee_hit_events.write(MeleeHitMessage {
+                attacker: child, // Pass the weapon entity
+                target: *target_entity,
+            });
+
+            // add XP for weapon proficiency
+            if let Some(prof) = proficiency.as_mut() {
+                let xp = xp_reward.map(|r| r.0).unwrap_or(10.0);
+                prof.melee.add_xp(xp);
+            }
+
+            cooldown.timer.reset();
         }
     }
 }
@@ -296,7 +321,12 @@ pub fn ranged_attack_logic(
         With<PlayerNpc>,
     >,
     mut weapon_query: Query<
-        (&mut WeaponCooldown, &ItemAttackRange, &ItemProjectileStats),
+        (
+            &mut WeaponCooldown,
+            &ItemAttackRange,
+            &ItemProjectileStats,
+            Option<&WeaponExpertiseXp>,
+        ),
         (With<Weapon>, With<Ranged>),
     >,
     monster_query: Query<&Transform, With<Monster>>,
@@ -311,14 +341,15 @@ pub fn ranged_attack_logic(
         };
 
         for child in children.iter() {
-            if let Ok((mut cooldown, _range, proj_stats)) = weapon_query.get_mut(child) {
+            if let Ok((mut cooldown, _range, proj_stats, xp_reward)) = weapon_query.get_mut(child) {
                 if cooldown.timer.is_finished() {
                     let direction =
                         (target_tf.translation - npc_tf.translation).normalize_or_zero();
 
                     if let Some(ref mut prof) = proficiency {
                         // 1. Add XP
-                        prof.ranged.add_xp(5.0);
+                        let xp = xp_reward.map(|r| r.0).unwrap_or(10.0);
+                        prof.ranged.add_xp(xp);
                     }
 
                     // Spawn Projectile

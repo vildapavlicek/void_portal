@@ -8,6 +8,7 @@
         "items::AttackRange": (30.0),
         "items::AttackSpeed": (1.0),
         "items::AreaOfEffect": ( radius: 20.0, angle: 1.57 ),
+        "player_npcs::WeaponExpertiseXp": (10.0),
       },
     ),
   },
