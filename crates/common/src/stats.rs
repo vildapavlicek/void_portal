@@ -10,6 +10,12 @@ pub enum GrowthStrategy {
     Exponential { base: f32, factor: f32 },
     /// Calculation: base + (level * step)
     Incremental { base: f32, step: f32 },
+    /// Calculation: base + floor(level / interval) * step
+    Chunked {
+        base: f32,
+        interval: f32,
+        step: f32,
+    },
 }
 
 impl Default for GrowthStrategy {
@@ -25,6 +31,11 @@ impl GrowthStrategy {
             Self::Linear { base, coefficient } => base + (level * coefficient),
             Self::Exponential { base, factor } => base * factor.powf(level),
             Self::Incremental { base, step } => base + (level * step),
+            Self::Chunked {
+                base,
+                interval,
+                step,
+            } => base + (level / interval).floor() * step,
         }
     }
 }
@@ -181,5 +192,28 @@ mod tests {
         // Default requirement is Always, default strategy is Static(0.0)
         assert_eq!(conditional.calculate(0), Some(0.0));
         assert_eq!(conditional.calculate(10), Some(0.0));
+    }
+
+    #[test]
+    fn test_chunked_strategy() {
+        let strategy = GrowthStrategy::Chunked {
+            base: 0.0,
+            interval: 10.0,
+            step: 5.0,
+        };
+        // 0-9 -> 0
+        assert_eq!(strategy.calculate(0.0), 0.0);
+        assert_eq!(strategy.calculate(5.0), 0.0);
+        assert_eq!(strategy.calculate(9.0), 0.0);
+        // 10-19 -> 5
+        assert_eq!(strategy.calculate(10.0), 5.0);
+        assert_eq!(strategy.calculate(15.0), 5.0);
+        assert_eq!(strategy.calculate(19.0), 5.0);
+        // 20-29 -> 10
+        assert_eq!(strategy.calculate(20.0), 10.0);
+        assert_eq!(strategy.calculate(25.0), 10.0);
+        assert_eq!(strategy.calculate(29.0), 10.0);
+        // 30 -> 15
+        assert_eq!(strategy.calculate(30.0), 15.0);
     }
 }
