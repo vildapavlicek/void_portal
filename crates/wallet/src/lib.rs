@@ -84,7 +84,7 @@ fn update_wallet_from_scavenge(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, common::Dead};
+    use {super::*, common::MarkedForCleanUp};
 
     #[test]
     fn test_wallet_update() {
@@ -104,7 +104,7 @@ mod tests {
             .spawn((
                 Reward(10.0),
                 Transform::default(),
-                Dead {
+                MarkedForCleanUp {
                     despawn_timer: Timer::from_seconds(1.0, TimerMode::Once),
                 },
             ))
@@ -126,7 +126,7 @@ mod tests {
             .spawn((
                 Reward(5.5),
                 Transform::default(),
-                Dead {
+                MarkedForCleanUp {
                     despawn_timer: Timer::from_seconds(1.0, TimerMode::Once),
                 },
             ))

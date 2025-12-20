@@ -1,7 +1,7 @@
 use {
-    crate::{despawn_dead_bodies, manage_monster_lifecycle, Health, Lifetime, Monster},
+    crate::{manage_monster_lifecycle, process_marked_cleanup, Health, Lifetime, Monster},
     bevy::{prelude::*, time::TimePlugin},
-    common::{Dead, MonsterKilled, MonsterScavenged, Reward},
+    common::{MarkedForCleanUp, MonsterKilled, MonsterScavenged, Reward},
 };
 
 #[test]
@@ -32,7 +32,7 @@ fn test_monster_death_lifecycle() {
     // manage_monster_lifecycle runs, emits event, modifies entity.
     // event reader runs (order undefined unless explicit, but next frame definitely catches it).
     // despawn_dead_bodies runs.
-    app.add_systems(Update, (manage_monster_lifecycle, despawn_dead_bodies));
+    app.add_systems(Update, (manage_monster_lifecycle, process_marked_cleanup));
 
     // Spawn an monster with 0 health
     let reward_amount = 10.0;
@@ -82,10 +82,10 @@ fn test_monster_death_lifecycle() {
         "Monster component should be removed"
     );
 
-    // 4. Verify Dead component added
+    // 4. Verify MarkedForCleanUp component added
     assert!(
-        app.world().get::<Dead>(monster_entity).is_some(),
-        "Dead component should be added"
+        app.world().get::<MarkedForCleanUp>(monster_entity).is_some(),
+        "MarkedForCleanUp component should be added"
     );
 
     // 5. Verify Hidden

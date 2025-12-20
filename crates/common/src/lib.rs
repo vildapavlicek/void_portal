@@ -47,7 +47,7 @@ impl Plugin for CommonPlugin {
             // lib.rs
             .register_type::<Reward>()
             .register_type::<ScavengeModifier>()
-            .register_type::<Dead>()
+            .register_type::<MarkedForCleanUp>()
             // stats.rs
             .register_type::<GrowthStrategy>()
             .register_type::<ConditionalUpgrade>()
@@ -67,7 +67,7 @@ pub struct ScavengeModifier(pub f32);
 
 #[derive(Component, Debug, Clone, Reflect, Default)]
 #[reflect(Component, Default)]
-pub struct Dead {
+pub struct MarkedForCleanUp {
     pub despawn_timer: Timer,
 }
 

@@ -4,8 +4,8 @@ use {
     bevy::prelude::*,
     bevy_common_assets::ron::RonAssetPlugin,
     common::{
-        messages::DamageMessage, Dead, GameState, MonsterKilled, MonsterScavenged, Reward,
-        ScavengeModifier, VoidGameStage,
+        messages::DamageMessage, GameState, MarkedForCleanUp, MonsterKilled, MonsterScavenged,
+        Reward, ScavengeModifier, VoidGameStage,
     },
     serde::Deserialize,
 };
@@ -33,7 +33,7 @@ impl Plugin for MonsterPlugin {
                 apply_damage_logic.in_set(VoidGameStage::Effect),
                 (
                     manage_monster_lifecycle,
-                    despawn_dead_bodies,
+                    process_marked_cleanup,
                     update_monster_health_ui,
                     update_lifetime_text,
                 )
@@ -91,7 +91,7 @@ pub struct LifetimeText;
 // Systems
 pub fn move_monsters(
     time: Res<Time>,
-    mut monster_query: Query<(&mut Transform, &Monster, &Speed), Without<Dead>>,
+    mut monster_query: Query<(&mut Transform, &Monster, &Speed), Without<MarkedForCleanUp>>,
 ) {
     for (mut transform, monster, speed) in monster_query.iter_mut() {
         let direction =
@@ -130,7 +130,7 @@ pub fn manage_monster_lifecycle(
             &Transform,
             Option<&ScavengeModifier>,
         ),
-        (With<Monster>, Without<Dead>),
+        (With<Monster>, Without<MarkedForCleanUp>),
     >,
     mut kill_events: MessageWriter<MonsterKilled>,
     mut scavenge_events: MessageWriter<MonsterScavenged>,
@@ -141,7 +141,7 @@ pub fn manage_monster_lifecycle(
             commands
                 .entity(entity)
                 .remove::<Monster>()
-                .insert(Dead {
+                .insert(MarkedForCleanUp {
                     despawn_timer: Timer::from_seconds(1.0, TimerMode::Once),
                 })
                 .insert(Visibility::Hidden);
@@ -178,16 +178,16 @@ pub fn manage_monster_lifecycle(
     }
 }
 
-pub fn despawn_dead_bodies(
+pub fn process_marked_cleanup(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(Entity, &mut Dead)>,
+    mut query: Query<(Entity, &mut MarkedForCleanUp)>,
 ) {
-    for (entity, mut dead) in query.iter_mut() {
-        dead.despawn_timer.tick(time.delta());
-        if dead.despawn_timer.is_finished() {
+    for (entity, mut cleanup) in query.iter_mut() {
+        cleanup.despawn_timer.tick(time.delta());
+        if cleanup.despawn_timer.is_finished() {
             commands.entity(entity).despawn();
-            info!("Dead monster body despawned");
+            info!("Marked entity despawned");
         }
     }
 }
