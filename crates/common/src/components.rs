@@ -1,8 +1,4 @@
-use {
-    crate::{ConditionalUpgrade, GrowthStrategy},
-    bevy::prelude::*,
-    std::collections::HashMap,
-};
+use {crate::GrowthStrategy, bevy::prelude::*, std::collections::HashMap};
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
