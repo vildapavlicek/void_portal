@@ -26,7 +26,9 @@ impl Condition {
             Self::MinLevel(min) => current_level >= *min,
             Self::LevelRange(min, max) => current_level >= *min && current_level <= *max,
             Self::Periodic { interval, offset } => {
-                current_level >= *offset && (current_level - offset) % interval == 0
+                #[allow(clippy::manual_is_multiple_of)]
+                let is_multiple = (current_level - offset) % interval == 0;
+                current_level >= *offset && is_multiple
             }
         }
     }
