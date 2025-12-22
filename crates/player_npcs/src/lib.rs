@@ -268,11 +268,7 @@ pub fn melee_attack_emit(
         With<PlayerNpc>,
     >,
     mut weapon_query: Query<
-        (
-            &mut WeaponCooldown,
-            &ItemAttackRange,
-            &WeaponExpertiseXp,
-        ),
+        (&mut WeaponCooldown, &ItemAttackRange, &WeaponExpertiseXp),
         (With<Weapon>, With<Melee>),
     >,
     mut melee_hit_events: MessageWriter<MeleeHitMessage>,
@@ -308,13 +304,7 @@ pub fn ranged_attack_logic(
     mut commands: Commands,
     // time: Res<Time>, // Removed
     mut player_npc_query: Query<
-        (
-            Entity,
-            &Transform,
-            &Intent,
-            &Children,
-            &mut WeaponExpertise,
-        ),
+        (Entity, &Transform, &Intent, &Children, &mut WeaponExpertise),
         With<PlayerNpc>,
     >,
     mut weapon_query: Query<

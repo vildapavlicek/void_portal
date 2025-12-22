@@ -84,7 +84,9 @@ fn test_monster_death_lifecycle() {
 
     // 4. Verify MarkedForCleanUp component added
     assert!(
-        app.world().get::<MarkedForCleanUp>(monster_entity).is_some(),
+        app.world()
+            .get::<MarkedForCleanUp>(monster_entity)
+            .is_some(),
         "MarkedForCleanUp component should be added"
     );
 
