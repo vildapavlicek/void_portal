@@ -11,11 +11,7 @@ pub enum GrowthStrategy {
     /// Calculation: base + (level * step)
     Incremental { base: f32, step: f32 },
     /// Calculation: base + floor(level / interval) * step
-    Chunked {
-        base: f32,
-        interval: f32,
-        step: f32,
-    },
+    Chunked { base: f32, interval: f32, step: f32 },
 }
 
 impl Default for GrowthStrategy {
@@ -44,7 +40,8 @@ pub type ConditionalUpgrade = Requirement<GrowthStrategy>;
 
 impl ConditionalUpgrade {
     pub fn calculate(&self, level: u32) -> Option<f32> {
-        self.get(level).map(|strategy| strategy.calculate(level as f32))
+        self.get(level)
+            .map(|strategy| strategy.calculate(level as f32))
     }
 }
 
@@ -105,8 +102,7 @@ impl UpgradeableStat {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::requirements::Condition;
+    use {super::*, crate::requirements::Condition};
 
     #[test]
     fn test_static_strategy() {
@@ -175,10 +171,8 @@ mod tests {
 
     #[test]
     fn test_conditional_upgrade() {
-        let conditional = ConditionalUpgrade::new(
-            Condition::MinLevel(2),
-            GrowthStrategy::Static(10.0),
-        );
+        let conditional =
+            ConditionalUpgrade::new(Condition::MinLevel(2), GrowthStrategy::Static(10.0));
 
         assert_eq!(conditional.calculate(0), None);
         assert_eq!(conditional.calculate(1), None);
