@@ -1,3 +1,5 @@
+#![allow(clippy::manual_is_multiple_of)]
+
 use {bevy::prelude::*, serde::Deserialize};
 
 #[derive(Debug, Clone, Reflect, Deserialize, PartialEq, Default)]
