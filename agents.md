@@ -41,34 +41,39 @@
 
 ## 4. The Core Game Loop Architecture
 
-Gameplay logic must follow this 4-phase execution flow (enforced via System Sets):
+Gameplay logic must follow this 5-phase execution flow (enforced via `VoidGameStage` System Sets chained in `game_core`):
 
-1.  **Phase 1: Decision (Intent)**
+1.  **Phase 0: FrameStart**
+    - Preamble processing before logic begins.
+2.  **Phase 1: Decision (ResolveIntent)**
     - Entities decide _what_ to do (e.g., `npc_decision_system` sets `Intent::Attack`).
-2.  **Phase 2: Execution (Resolution)**
+3.  **Phase 2: Execution (Actions)**
     - Systems resolve `Intent` into **Messages** (e.g., `melee_execution_system` emits `DamageMessage`).
-3.  **Phase 3: Application (Effects)**
+4.  **Phase 3: Application (Effect)**
     - Systems consume Messages to mutate state (e.g., `damage_application_system` applies mitigation and reduces `Health`).
-4.  **Phase 4: Cleanup & Lifecycle**
+5.  **Phase 4: Cleanup & Lifecycle (FrameEnd)**
     - Handle consequences (e.g., `death_system` handles 0 HP entities, rewards, and despawning).
 
 ## 5. Project Structure
 
 The project is organized as a Cargo workspace with the following crates:
 
-- **`common`**: Shared types, `GameState`, and global **Messages** (Events).
-- **`game_core`**: Main glue crate, global setup.
-- **`monster`**: Monster logic and configurations.
+- **`common`**: Shared types, `GameState`, `VoidGameStage`, and global **Messages** (Events).
+- **`game_core`**: Main glue crate, global setup, system scheduling.
+- **`monsters`**: Monster logic and configurations.
+- **`monster_factory`**: Spawning infrastructure and scaling logic.
 - **`player_npcs`**: Player ally logic (Soldiers, Heroes).
+- **`player_npcs_ui`**: UI specific to player NPCs (e.g. Soldier proficiency details).
 - **`portal`**: Core portal mechanics, upgrades, spawning.
 - **`items`**: Itemization components (`Melee`, `Ranged`, `Armor`).
-- **`ui`**: User Interface systems.
+- **`ui`**: General User Interface systems (Wallet, Portal Panel).
+- **`vfx`**: Visual effects (Floating Text).
 - **`wallet`**: Resource/currency management.
-- **`assets`**: Asset loading and management.
+- **`assets`**: Asset loading and management plugin.
 - **`src/` (Root)**: Main binary entry point.
 
 # Pre-commit
 
-- Run `cargo +nightly fmt`.
+- Run `cargo +nightly fmt` (workspace-wide) or `cargo +nightly fmt -p <crate>` (specific crate).
 - Run `cargo check` and `cargo clippy`.
-- **Architecture Check:** Ensure new systems are added to the correct Phase/SystemSet.
+- **Architecture Check:** Ensure new systems are added to the correct Phase/SystemSet (`VoidGameStage`).
